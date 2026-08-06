@@ -1,0 +1,27 @@
+{
+  "name": "@ryvra/markets-web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "lint": "eslint --max-warnings 0 --no-error-on-unmatched-pattern --ext .ts,.tsx,.mjs app lib next.config.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "build": "next build",
+    "start": "next start",
+    "test": "node -e \"console.log('No tests configured for @ryvra/markets-web')\""
+  },
+  "dependencies": {
+    "@ryvra/api-client": "workspace:*",
+    "@ryvra/auth": "workspace:*",
+    "@ryvra/config": "workspace:*",
+    "@ryvra/domain-markets": "workspace:*",
+    "@ryvra/domain-payments": "workspace:*",
+    "@ryvra/domain-tokenomics": "workspace:*",
+    "@ryvra/observability": "workspace:*",
+    "@ryvra/ui": "workspace:*",
+    "next": "^14.2.24",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  }
+}
