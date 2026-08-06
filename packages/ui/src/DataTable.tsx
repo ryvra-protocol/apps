@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { themeTokens } from "./theme";
 
 export interface DataTableColumn<Row extends object, Key extends keyof Row = keyof Row> {
   key: Key;
@@ -22,33 +23,57 @@ export function DataTable<Row extends object>({
   }
 
   return (
-    <table style={{ width: "100%", borderCollapse: "collapse" }}>
-      <thead>
-        <tr>
-          {columns.map((column) => (
-            <th
-              key={String(column.key)}
-              style={{ textAlign: "left", borderBottom: "1px solid #334155", paddingBottom: "0.5rem" }}
-            >
-              {column.header}
-            </th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((row, rowIndex) => (
-          <tr key={rowIndex}>
-            {columns.map((column) => {
-              const value = row[column.key];
-              return (
-                <td key={String(column.key)} style={{ padding: "0.5rem 0" }}>
-                  {column.render ? column.render(value as Row[keyof Row], row) : String(value)}
-                </td>
-              );
-            })}
+    <>
+      <style>{`
+        .ryvra-data-table {
+          width: 100%;
+          border-collapse: collapse;
+          border: 1px solid ${themeTokens.color.border};
+          border-radius: ${themeTokens.radius.md};
+          overflow: hidden;
+          background: ${themeTokens.color.surface};
+        }
+
+        .ryvra-data-table th,
+        .ryvra-data-table td {
+          text-align: left;
+          padding: ${themeTokens.spacing.sm} ${themeTokens.spacing.md};
+          border-bottom: 1px solid ${themeTokens.color.border};
+          font-size: ${themeTokens.typography.size.sm};
+        }
+
+        .ryvra-data-table th {
+          background: ${themeTokens.color.surfaceMuted};
+          color: ${themeTokens.color.textMuted};
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+          font-weight: ${themeTokens.typography.weight.semibold};
+          font-size: ${themeTokens.typography.size.xs};
+        }
+
+        .ryvra-data-table tr:last-child td {
+          border-bottom: none;
+        }
+      `}</style>
+      <table className="ryvra-data-table">
+        <thead>
+          <tr>
+            {columns.map((column) => (
+              <th key={String(column.key)}>{column.header}</th>
+            ))}
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {rows.map((row, rowIndex) => (
+            <tr key={rowIndex}>
+              {columns.map((column) => {
+                const value = row[column.key];
+                return <td key={String(column.key)}>{column.render ? column.render(value as Row[keyof Row], row) : String(value)}</td>;
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </>
   );
 }

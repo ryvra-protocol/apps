@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { ShellFrame } from "./shell-frame";
 
 export const metadata: Metadata = {
   title: "Ryvra Markets",
@@ -13,16 +14,8 @@ interface RootLayoutProps {
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="en">
-      <body
-        style={{
-          margin: 0,
-          padding: "1.5rem",
-          fontFamily: "Inter, system-ui, sans-serif",
-          background: "#0f172a",
-          color: "#e2e8f0",
-        }}
-      >
-        {children}
+      <body style={{ margin: 0 }}>
+        <ShellFrame>{children}</ShellFrame>
       </body>
     </html>
   );

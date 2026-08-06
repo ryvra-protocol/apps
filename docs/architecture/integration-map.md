@@ -6,6 +6,12 @@
 - `apps/pay-web` -> `@ryvra/ui`, `@ryvra/auth`, `@ryvra/config`, `@ryvra/api-client`, `@ryvra/observability`, `@ryvra/domain-payments`
 - `apps/points-tasks-web` -> `@ryvra/ui`, `@ryvra/auth`, `@ryvra/config`, `@ryvra/api-client`, `@ryvra/observability`, `@ryvra/domain-tokenomics`
 
+## Cross-app routing foundation
+
+- `@ryvra/config` exposes canonical global + product navigation maps and deep-link helpers.
+- `@ryvra/ui` provides shared shell/navigation primitives consumed by all three apps.
+- Cross-app context handoff uses query params (`ref`, `entity`, `id`, `ctx`) validated by shared schema utilities.
+
 ## External Ryvra touchpoints (future integration targets)
 
 - **Ryvra Identity/Auth services:** concrete session validation and role claims.

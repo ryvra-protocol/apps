@@ -1,6 +1,6 @@
 # Ryvra Apps Platform Monorepo
 
-This repository hosts the Phase 6 scaffold for the Ryvra web app platform:
+This repository hosts the Phase 7 unified-shell foundation for the Ryvra web app platform:
 
 - `apps/markets-web`
 - `apps/pay-web`
@@ -42,6 +42,20 @@ pnpm dev:points
 
 Default app runtime mode is mock-safe and uses typed contracts from shared packages.
 
+## Unified shell + cross-app routing
+
+The three apps share a common shell and typed cross-app routing contract:
+
+- shell components and design tokens: `@ryvra/ui`
+- global/local route registry and deep-link helpers: `@ryvra/config`
+- deep-link params: `ref`, `entity`, `id`, optional `ctx`
+
+Cross-app base URLs are configurable through:
+
+- `NEXT_PUBLIC_MARKETS_APP_URL`
+- `NEXT_PUBLIC_PAY_APP_URL`
+- `NEXT_PUBLIC_POINTS_APP_URL`
+
 ## CI expectations
 
 Pull requests into `main` must pass:
@@ -69,3 +83,6 @@ Pull requests into `main` must pass:
 ## Architecture docs
 
 See `docs/architecture/` for boundaries, responsibilities, and integration mapping.
+
+- `docs/architecture/unified-shell.md`
+- `docs/architecture/cross-app-routing.md`
