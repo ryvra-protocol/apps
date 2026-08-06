@@ -375,10 +375,10 @@ export function parseDeepLink(searchParams: DeepLinkSearchParams): ParsedDeepLin
 
 export function buildDeepLink({ product, path, baseUrls, ref, entity, id, ctx }: BuildDeepLinkInput): string {
   const parsedParams = deepLinkContractSchema.parse({
-  ref,
-  entity,
-  id,
-  ctx,
+    ref,
+    entity,
+    id,
+    ctx,
   });
   const parsedProduct = productIdSchema.parse(product);
   const parsedPath = z.string().trim().min(1).parse(path);
@@ -386,7 +386,7 @@ export function buildDeepLink({ product, path, baseUrls, ref, entity, id, ctx }:
   const url = new URL(normalizePath(parsedPath), withTrailingSlash(resolveBaseUrls(baseUrls)[parsedProduct]));
 
   if (parsedParams.ref) {
-  url.searchParams.set("ref", parsedParams.ref);
+    url.searchParams.set("ref", parsedParams.ref);
   }
   if (parsedParams.entity) {
     url.searchParams.set("entity", parsedParams.entity);
