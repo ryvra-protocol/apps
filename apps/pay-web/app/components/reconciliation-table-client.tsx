@@ -1,6 +1,6 @@
 "use client";
 
-import { type PayPaginationMeta, type ReconciliationItemDto } from "@ryvra/domain-payments";
+import { reconciliationStatuses, type PayPaginationMeta, type ReconciliationItemDto } from "@ryvra/domain-payments";
 import { Button, Card, DataTable, themeTokens } from "@ryvra/ui";
 import { useMemo, useState } from "react";
 import { formatCurrencyMinor, formatDateTime } from "../lib/format";
@@ -12,14 +12,14 @@ interface ReconciliationTableClientProps {
   pagination: PayPaginationMeta;
 }
 
-const reconciliationStatuses = ["ALL", "QUEUED", "RUNNING", "MATCHED", "MISMATCH", "FAILED"] as const;
+const reconciliationStatusOptions = ["ALL", ...reconciliationStatuses] as const;
 
 export function ReconciliationTableClient({ items, pagination }: ReconciliationTableClientProps) {
   const { searchParams, updateQuery, clearQuery } = useQueryFilters();
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
 
   const statusParam = (searchParams.get("status") ?? "ALL").toUpperCase();
-  const status = reconciliationStatuses.includes(statusParam as (typeof reconciliationStatuses)[number])
+  const status = reconciliationStatusOptions.includes(statusParam as (typeof reconciliationStatusOptions)[number])
     ? statusParam
     : "ALL";
   const exceptionOnly = searchParams.get("exceptionOnly") === "true";
@@ -70,7 +70,7 @@ export function ReconciliationTableClient({ items, pagination }: ReconciliationT
               value={status}
               onChange={(event) => updateQuery({ status: event.currentTarget.value === "ALL" ? undefined : event.currentTarget.value })}
             >
-              {reconciliationStatuses.map((option) => (
+              {reconciliationStatusOptions.map((option) => (
                 <option key={option} value={option}>
                   {option}
                 </option>

@@ -1,6 +1,6 @@
 "use client";
 
-import { type InvoiceDto, type PayPaginationMeta } from "@ryvra/domain-payments";
+import { invoiceStatuses, type InvoiceDto, type PayPaginationMeta } from "@ryvra/domain-payments";
 import { Button, Card, DataTable, themeTokens } from "@ryvra/ui";
 import { useMemo, useState } from "react";
 import { formatCurrencyMinor, formatDateTime } from "../lib/format";
@@ -12,14 +12,14 @@ interface InvoicesTableClientProps {
   pagination: PayPaginationMeta;
 }
 
-const invoiceStatuses = ["ALL", "DRAFT", "PENDING", "PAID", "FAILED", "VOID"] as const;
+const invoiceStatusOptions = ["ALL", ...invoiceStatuses] as const;
 
 export function InvoicesTableClient({ items, pagination }: InvoicesTableClientProps) {
   const { searchParams, updateQuery, clearQuery } = useQueryFilters();
   const [expandedInvoiceId, setExpandedInvoiceId] = useState<string | null>(null);
 
   const statusParam = (searchParams.get("status") ?? "ALL").toUpperCase();
-  const status = invoiceStatuses.includes(statusParam as (typeof invoiceStatuses)[number])
+  const status = invoiceStatusOptions.includes(statusParam as (typeof invoiceStatusOptions)[number])
     ? statusParam
     : "ALL";
   const search = searchParams.get("search") ?? "";
@@ -70,7 +70,7 @@ export function InvoicesTableClient({ items, pagination }: InvoicesTableClientPr
               value={status}
               onChange={(event) => updateQuery({ status: event.currentTarget.value === "ALL" ? undefined : event.currentTarget.value })}
             >
-              {invoiceStatuses.map((option) => (
+              {invoiceStatusOptions.map((option) => (
                 <option key={option} value={option}>
                   {option}
                 </option>

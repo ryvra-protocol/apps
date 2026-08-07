@@ -40,30 +40,39 @@ pnpm dev:pay
 pnpm dev:points
 ```
 
-## Pay MVP development (Phase 8)
+## Pay integration parity development (Phase 8.5)
 
-`apps/pay-web` supports typed Pay data wiring via `@ryvra/api-client` with `mock` and `http` runtime transport modes.
+`apps/pay-web` continues to support typed Pay data wiring with preserved dual mode transport:
+
+- `mock` for deterministic local development
+- `http` for live integration parity checks
 
 ### Environment variables
 
-Use shared variables for all apps, or Pay-specific overrides for Pay only:
+Core mode/base URL:
 
 - `RYVRA_RUNTIME_MODE` (`mock` or `http`)
 - `RYVRA_API_BASE_URL` (default: `http://localhost:4000`)
-- `RYVRA_PAY_RUNTIME_MODE` (optional override for Pay app only)
-- `RYVRA_PAY_API_BASE_URL` (optional override for Pay app only)
+- `RYVRA_PAY_RUNTIME_MODE` (optional Pay-only override)
+- `RYVRA_PAY_API_BASE_URL` (optional Pay-only override)
+
+Pay parity/auth/header controls:
+
+- `RYVRA_PAY_AUTH_TOKEN` (optional bearer token)
+- `RYVRA_PAY_AUTH_SCHEME` (default: `Bearer`)
+- `RYVRA_PAY_REQUEST_ID_HEADER` (default: `x-request-id`)
+- `RYVRA_PAY_CORRELATION_ID_HEADER` (default: `x-correlation-id`)
+- `RYVRA_PAY_IDEMPOTENCY_HEADER` (default: `idempotency-key`)
+- `RYVRA_PAY_CONNECTIVITY_PATH` (default probe: `/health`, fallback `/pay/overview`)
+- `RYVRA_PAY_COMPATIBILITY_VERSION` (optional override)
+- `RYVRA_PAY_PARITY_CHECK_MARKER` (optional override)
+
+Optional smoke-test guard:
+
+- `RYVRA_PAY_CONNECTIVITY_SMOKE_URL`
+- `RYVRA_PAY_CONNECTIVITY_SMOKE_PATH` (optional, defaults to `/health`)
 
 > Note: legacy `live` values are normalized to `http` for backward compatibility.
-
-### Mock vs HTTP mode
-
-- **mock mode**
-  - deterministic seeded invoice/payout/reconciliation/overview data
-  - no backend dependency required
-  - UI shows a non-intrusive mode badge
-- **http mode**
-  - routes call endpoint-ready Pay paths through fetch transport
-  - expected paths include `/pay/overview`, `/pay/invoices`, `/pay/payouts`, `/pay/reconciliation/*`
 
 ### Useful commands
 
@@ -71,6 +80,7 @@ Use shared variables for all apps, or Pay-specific overrides for Pay only:
 pnpm --filter @ryvra/pay-web dev
 pnpm --filter @ryvra/pay-web typecheck
 pnpm --filter @ryvra/pay-web build
+pnpm --filter @ryvra/api-client test:parity
 ```
 
 ## Unified shell + cross-app routing
@@ -118,3 +128,4 @@ See `docs/architecture/` for boundaries, responsibilities, and integration mappi
 - `docs/architecture/unified-shell.md`
 - `docs/architecture/cross-app-routing.md`
 - `docs/architecture/pay-mvp-data-flow.md`
+- `docs/architecture/pay-integration-parity.md`

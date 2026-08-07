@@ -12,25 +12,34 @@
 - `@ryvra/ui` provides shared shell/navigation primitives consumed by all three apps.
 - Cross-app context handoff uses query params (`ref`, `entity`, `id`, `ctx`) validated by shared schema utilities.
 
-## Pay MVP data paths (Phase 8)
+## Pay integration map (Phase 8.5 parity hardening)
 
-- `apps/pay-web` route runtime (`app/lib/runtime.ts`) loads mode/API URL from `@ryvra/config` and constructs `createPayClient(...)`.
-- `@ryvra/domain-payments` owns Pay DTOs for invoices, payouts, reconciliation, overview, and shared filter/pagination contracts.
-- `@ryvra/api-client` exposes typed Pay methods and transport switching:
-  - `mock`: deterministic seeded data via `createMockTransport()`
-  - `http`: endpoint-ready fetch transport via `createFetchTransport(...)`
-- Route-level data boundaries:
-  - `/` and `/overview` -> `getPayOverview`
-  - `/invoices` -> `listInvoices` + `getInvoiceSummary`
-  - `/payouts` -> `listPayouts` + `getPayoutSummary`
-  - `/reconciliation` -> `listReconciliationItems` + `getReconciliationSummary`
-- Fetch and critical route errors are logged through `@ryvra/observability`.
+- `apps/pay-web` runtime (`app/lib/runtime.ts`) loads mode/API config and constructs `createPayClient(...)` with parity-aware auth/header settings.
+- `@ryvra/domain-payments` now exports:
+  - dashboard read-model DTOs (invoices/payouts/reconciliation/overview)
+  - canonical pay protocol contracts (payment intents/events/reconciliation primitives)
+- `@ryvra/api-client` pay surface now includes:
+  - read-model methods used by current UI
+  - parity write methods (`createPaymentIntent`, `transitionPaymentIntent`, `reconcileSettlement`)
+  - runtime payload decoding and parity diagnostics (`getParityDiagnostics`)
+- query/filter parity in HTTP mode uses snake_case compatibility keys.
+- `/pay/status` displays mode, base URL, compatibility version, parity marker, and connectivity probe result.
+
+## Pay source-of-truth linkage (`ryvra-protocol/pay`)
+
+- Canonical source files currently define domain/service contracts (no published HTTP router/spec yet):
+  - `src/types/payment-intent.ts`
+  - `src/types/payment-events.ts`
+  - `src/service/pay-service.ts`
+  - `src/service/reconciliation.ts`
+  - `src/service/state-machine.ts`
+  - `docs/rfc-0006-pay-rails-and-payment-intents.md`
 
 ## External Ryvra touchpoints (future integration targets)
 
 - **Ryvra Identity/Auth services:** concrete session validation and role claims.
 - **Ryvra Markets services:** market data, execution, and risk APIs.
-- **Ryvra Pay services:** invoicing, payouts, subscriptions, and reconciliation APIs.
+- **Ryvra Pay services:** canonical HTTP/API publication still pending.
 - **Ryvra Points/Tasks services:** eligibility, conversion, and task event APIs.
 - **Ryvra observability stack:** structured logs, tracing, and alerting pipeline.
 

@@ -1,17 +1,21 @@
 import type { AssetDto, OrderDto, PositionDto } from "@ryvra/domain-markets";
-import type {
-  InvoiceDto,
-  InvoiceSummaryDto,
-  PayActivityItemDto,
-  PayListResponse,
-  PayOverviewDto,
-  PayoutDto,
-  PayoutSummaryDto,
-  ReconciliationItemDto,
-  ReconciliationSummaryDto,
-  SubscriptionDto,
+import {
+  type InvoiceDto,
+  type InvoiceSummaryDto,
+  type PayActivityItemDto,
+  type PayListResponse,
+  type PayOverviewDto,
+  type PaymentIntent,
+  type PayoutDto,
+  type PayoutSummaryDto,
+  type ReconciliationResult,
+  type ReconciliationItemDto,
+  type ReconciliationSummaryDto,
+  type SettlementSnapshot,
+  type SubscriptionDto,
 } from "@ryvra/domain-payments";
 import type { ConversionPreviewDto, EligibilityResult } from "@ryvra/domain-tokenomics";
+import { payCanonicalPaymentIntentStates } from "./pay-parity";
 import type { ApiRequest, ApiResult, Transport } from "./types";
 
 const mockAssets: AssetDto[] = [
@@ -222,6 +226,34 @@ const mockSubscriptions: SubscriptionDto[] = [
   { id: "sub-1", customerId: "cust-1", status: "ACTIVE", renewalAt: "2026-12-01T00:00:00Z" },
 ];
 
+const paymentIntentStateSet = new Set(payCanonicalPaymentIntentStates);
+
+const mockPaymentIntents = new Map<string, PaymentIntent>([
+  [
+    "pi-4001",
+    {
+      intent_id: "pi-4001",
+      reference_id: "ref-4001",
+      idempotency_key: "idem-4001",
+      kind: "payout",
+      sourceAccountId: "acct-treasury",
+      destinationAccountId: "acct-vendor",
+      asset: {
+        chain: "eip155:1",
+        asset: "usd_stable",
+        decimals: 2,
+      },
+      assetId: "usd_stable",
+      amount: "250.00",
+      reason_code: "PAYMENT_PAYOUT_OK",
+      state: "created",
+      created_at: "2026-08-01T00:00:00.000Z",
+    },
+  ],
+]);
+
+type PaymentExecutionShape = NonNullable<PaymentIntent["execution"]>;
+
 function success<T>(data: T): ApiResult<T> {
   return { ok: true, data };
 }
@@ -299,6 +331,15 @@ function parseSortField<T extends string>(value: string | null, allowed: readonl
   }
 
   return fallback;
+}
+
+function getParam(searchParams: URLSearchParams, key: string, legacyKey?: string): string | null {
+  const primary = searchParams.get(key);
+  if (primary !== null) {
+    return primary;
+  }
+
+  return legacyKey ? searchParams.get(legacyKey) : null;
 }
 
 function paginate<T>(items: T[], pageValue: string | null, pageSizeValue: string | null): PayListResponse<T> {
@@ -430,16 +471,16 @@ function filterInvoices(searchParams: URLSearchParams): InvoiceDto[] {
 }
 
 function listInvoices(searchParams: URLSearchParams): PayListResponse<InvoiceDto> {
-  const sortField = parseSortField(searchParams.get("sortField"), ["issuedAt", "dueAt", "amountMinor", "status"], "issuedAt");
-  const sortDirection = searchParams.get("sortDirection") === "asc" ? "asc" : "desc";
+  const sortField = parseSortField(getParam(searchParams, "sort_field", "sortField"), ["issuedAt", "dueAt", "amountMinor", "status"], "issuedAt");
+  const sortDirection = getParam(searchParams, "sort_direction", "sortDirection") === "asc" ? "asc" : "desc";
   const filtered = filterInvoices(searchParams);
   const sorted = sortRows(filtered, sortField, sortDirection);
-  return paginate(sorted, searchParams.get("page"), searchParams.get("pageSize"));
+  return paginate(sorted, searchParams.get("page"), getParam(searchParams, "page_size", "pageSize"));
 }
 
 function filterPayouts(searchParams: URLSearchParams): PayoutDto[] {
   const statusFilter = searchParams.get("status")?.toUpperCase();
-  const destinationType = searchParams.get("destinationType")?.toUpperCase();
+  const destinationType = getParam(searchParams, "destination_type", "destinationType")?.toUpperCase();
   const from = normalizeDateInput(searchParams.get("from"));
   const to = normalizeDateInput(searchParams.get("to"));
 
@@ -457,16 +498,16 @@ function filterPayouts(searchParams: URLSearchParams): PayoutDto[] {
 }
 
 function listPayouts(searchParams: URLSearchParams): PayListResponse<PayoutDto> {
-  const sortField = parseSortField(searchParams.get("sortField"), ["createdAt", "amountMinor", "status"], "createdAt");
-  const sortDirection = searchParams.get("sortDirection") === "asc" ? "asc" : "desc";
+  const sortField = parseSortField(getParam(searchParams, "sort_field", "sortField"), ["createdAt", "amountMinor", "status"], "createdAt");
+  const sortDirection = getParam(searchParams, "sort_direction", "sortDirection") === "asc" ? "asc" : "desc";
   const filtered = filterPayouts(searchParams);
   const sorted = sortRows(filtered, sortField, sortDirection);
-  return paginate(sorted, searchParams.get("page"), searchParams.get("pageSize"));
+  return paginate(sorted, searchParams.get("page"), getParam(searchParams, "page_size", "pageSize"));
 }
 
 function filterReconciliation(searchParams: URLSearchParams): ReconciliationItemDto[] {
   const statusFilter = searchParams.get("status")?.toUpperCase();
-  const exceptionOnly = searchParams.get("exceptionOnly") === "true";
+  const exceptionOnly = getParam(searchParams, "exception_only", "exceptionOnly") === "true";
   const from = normalizeDateInput(searchParams.get("from"));
   const to = normalizeDateInput(searchParams.get("to"));
 
@@ -484,11 +525,138 @@ function filterReconciliation(searchParams: URLSearchParams): ReconciliationItem
 }
 
 function listReconciliation(searchParams: URLSearchParams): PayListResponse<ReconciliationItemDto> {
-  const sortField = parseSortField(searchParams.get("sortField"), ["updatedAt", "deltaMinor", "status"], "updatedAt");
-  const sortDirection = searchParams.get("sortDirection") === "asc" ? "asc" : "desc";
+  const sortField = parseSortField(getParam(searchParams, "sort_field", "sortField"), ["updatedAt", "deltaMinor", "status"], "updatedAt");
+  const sortDirection = getParam(searchParams, "sort_direction", "sortDirection") === "asc" ? "asc" : "desc";
   const filtered = filterReconciliation(searchParams);
   const sorted = sortRows(filtered, sortField, sortDirection);
-  return paginate(sorted, searchParams.get("page"), searchParams.get("pageSize"));
+  return paginate(sorted, searchParams.get("page"), getParam(searchParams, "page_size", "pageSize"));
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function ensureString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim().length > 0 ? value : undefined;
+}
+
+function toMockPaymentIntent(payload: unknown): PaymentIntent | null {
+  if (!isObject(payload)) {
+    return null;
+  }
+
+  const state = ensureString(payload.state) ?? "created";
+  if (!paymentIntentStateSet.has(state as PaymentIntent["state"])) {
+    return null;
+  }
+
+  const intentId = ensureString(payload.intent_id) ?? `pi-${Date.now()}`;
+  const referenceId = ensureString(payload.reference_id) ?? `ref-${intentId}`;
+  const idempotencyKey = ensureString(payload.idempotency_key) ?? `idem-${intentId}`;
+  const reasonCodes = Array.isArray(payload.reason_codes)
+    ? payload.reason_codes.filter((entry): entry is string => typeof entry === "string")
+    : undefined;
+  const userOpHash = ensureString(payload.user_op_hash);
+  const execution = isObject(payload.execution)
+    ? (() => {
+        const mode = (ensureString(payload.execution.mode) ?? "legacy") as PaymentExecutionShape["mode"];
+        const smartAccountId = ensureString(payload.execution.smart_account_id);
+        const entryPoint = ensureString(payload.execution.entry_point);
+        const sponsorshipMode = ensureString(payload.execution.sponsorship_mode) as PaymentExecutionShape["sponsorship_mode"] | undefined;
+        const sponsorAccountId = ensureString(payload.execution.sponsor_account_id);
+        const sponsorChain = ensureString(payload.execution.sponsor_chain);
+        const sponsorAsset = ensureString(payload.execution.sponsor_asset);
+        const allowLegacyFallback =
+          typeof payload.execution.allow_legacy_fallback === "boolean" ? payload.execution.allow_legacy_fallback : undefined;
+
+        return {
+          mode,
+          ...(smartAccountId ? { smart_account_id: smartAccountId } : {}),
+          ...(entryPoint ? { entry_point: entryPoint } : {}),
+          ...(sponsorshipMode ? { sponsorship_mode: sponsorshipMode } : {}),
+          ...(sponsorAccountId ? { sponsor_account_id: sponsorAccountId } : {}),
+          ...(sponsorChain ? { sponsor_chain: sponsorChain } : {}),
+          ...(sponsorAsset ? { sponsor_asset: sponsorAsset } : {}),
+          ...(typeof allowLegacyFallback === "boolean" ? { allow_legacy_fallback: allowLegacyFallback } : {}),
+        } as PaymentExecutionShape;
+      })()
+    : undefined;
+  const metadata = isObject(payload.metadata)
+    ? Object.fromEntries(
+        Object.entries(payload.metadata).map(([key, value]) => [key, typeof value === "string" ? value : String(value)]),
+      )
+    : undefined;
+
+  return {
+    intent_id: intentId,
+    reference_id: referenceId,
+    idempotency_key: idempotencyKey,
+    kind: (ensureString(payload.kind) ?? "payout") as PaymentIntent["kind"],
+    sourceAccountId: ensureString(payload.sourceAccountId) ?? "acct-source",
+    destinationAccountId: ensureString(payload.destinationAccountId) ?? "acct-destination",
+    asset: {
+      chain: ensureString((payload.asset as Record<string, unknown> | undefined)?.chain) ?? "eip155:1",
+      asset: ensureString((payload.asset as Record<string, unknown> | undefined)?.asset) ?? "usd_stable",
+      decimals: Number((payload.asset as Record<string, unknown> | undefined)?.decimals ?? 2),
+    },
+    assetId: ensureString(payload.assetId) ?? "usd_stable",
+    amount: ensureString(payload.amount) ?? "0",
+    reason_code: ensureString(payload.reason_code) ?? "PAYMENT_PAYOUT_OK",
+    ...(reasonCodes ? { reason_codes: reasonCodes } : {}),
+    ...(userOpHash ? { user_op_hash: userOpHash } : {}),
+    ...(execution ? { execution } : {}),
+    ...(metadata ? { metadata } : {}),
+    state: state as PaymentIntent["state"],
+    created_at: ensureString(payload.created_at) ?? new Date().toISOString(),
+  };
+}
+
+function toSettlementSnapshot(payload: unknown): SettlementSnapshot | null {
+  if (!isObject(payload) || !isObject(payload.asset)) {
+    return null;
+  }
+
+  const state = ensureString(payload.state);
+  if (!state || !["pending", "settled", "failed"].includes(state)) {
+    return null;
+  }
+
+  return {
+    reference_id: ensureString(payload.reference_id) ?? "unknown-reference",
+    state: state as SettlementSnapshot["state"],
+    amount: ensureString(payload.amount) ?? "0",
+    asset: {
+      chain: ensureString(payload.asset.chain) ?? "eip155:1",
+      asset: ensureString(payload.asset.asset) ?? "usd_stable",
+      decimals: Number(payload.asset.decimals ?? 2),
+    },
+    observed_at: ensureString(payload.observed_at) ?? new Date().toISOString(),
+  };
+}
+
+function reconcileIntentSettlement(intent: PaymentIntent, settlement: SettlementSnapshot): ReconciliationResult {
+  if (intent.reference_id !== settlement.reference_id) {
+    return { status: "mismatch", reason_code: "RECON_REFERENCE_MISMATCH" };
+  }
+
+  if (settlement.state === "pending") {
+    return { status: "pending", reason_code: "SETTLEMENT_PENDING" };
+  }
+
+  const amountMatches = intent.amount.trim() === settlement.amount.trim();
+  const assetMatches =
+    intent.asset.chain === settlement.asset.chain &&
+    intent.asset.asset === settlement.asset.asset &&
+    intent.asset.decimals === settlement.asset.decimals;
+
+  if (amountMatches && assetMatches) {
+    return { status: "matched", reason_code: "RECON_MATCHED" };
+  }
+
+  return {
+    status: "mismatch",
+    reason_code: amountMatches ? "RECON_ASSET_MISMATCH" : "RECON_AMOUNT_MISMATCH",
+  };
 }
 
 function errorNotFound<T>(request: ApiRequest): ApiResult<T> {
@@ -500,6 +668,20 @@ function errorNotFound<T>(request: ApiRequest): ApiResult<T> {
       message: `No mock route for ${request.method} ${request.path}`,
       retryable: false,
       source: "mock",
+    },
+  };
+}
+
+function errorBadRequest<T>(code: string, message: string, details?: unknown): ApiResult<T> {
+  return {
+    ok: false,
+    error: {
+      status: 400,
+      code,
+      message,
+      retryable: false,
+      source: "mock",
+      ...(typeof details === "undefined" ? {} : { details }),
     },
   };
 }
@@ -529,6 +711,97 @@ export function createMockTransport(): Transport {
         return success(order as T);
       }
 
+      if (request.method === "GET" && pathname === "/health") {
+        return success(
+          {
+            service: "pay",
+            status: "ok",
+            timestamp: new Date().toISOString(),
+          } as T,
+        );
+      }
+
+      if (request.method === "POST" && pathname === "/pay/intents") {
+        const intent = toMockPaymentIntent(request.body);
+        if (!intent) {
+          return errorBadRequest<T>("mock_invalid_intent_payload", "Invalid payment intent payload", request.body);
+        }
+
+        mockPaymentIntents.set(intent.intent_id, intent);
+        return success(intent as T);
+      }
+
+      const transitionMatch = pathname.match(/^\/pay\/intents\/([^/]+)\/transitions$/u);
+      if (request.method === "POST" && transitionMatch) {
+        const intentId = decodeURIComponent(transitionMatch[1] ?? "");
+        const existing = mockPaymentIntents.get(intentId);
+        if (!existing) {
+          return {
+            ok: false,
+            error: {
+              status: 404,
+              code: "mock_intent_not_found",
+              message: `No mock payment intent for ${intentId}`,
+              retryable: false,
+              source: "mock",
+            },
+          };
+        }
+
+        const body = isObject(request.body) ? request.body : undefined;
+        const toState = ensureString(body?.to_state);
+        if (!toState || !paymentIntentStateSet.has(toState as PaymentIntent["state"])) {
+          return errorBadRequest<T>(
+            "mock_invalid_intent_state",
+            "to_state must match canonical payment intent states",
+            request.body,
+          );
+        }
+
+        const transitionedReasonCodes = Array.isArray(body?.reason_codes)
+          ? body.reason_codes.filter((entry): entry is string => typeof entry === "string")
+          : existing.reason_codes;
+        const transitioned: PaymentIntent = {
+          ...existing,
+          state: toState as PaymentIntent["state"],
+          reason_code: ensureString(body?.reason_code) ?? existing.reason_code,
+          ...(transitionedReasonCodes ? { reason_codes: transitionedReasonCodes } : {}),
+        };
+        mockPaymentIntents.set(intentId, transitioned);
+        return success(transitioned as T);
+      }
+
+      const reconciliationMatch = pathname.match(/^\/pay\/reconciliation\/intents\/([^/]+)$/u);
+      if (request.method === "POST" && reconciliationMatch) {
+        const intentId = decodeURIComponent(reconciliationMatch[1] ?? "");
+        const body = isObject(request.body) ? request.body : undefined;
+        const intentFromBody = toMockPaymentIntent(body?.intent);
+        const intent = intentFromBody ?? mockPaymentIntents.get(intentId);
+
+        if (!intent) {
+          return {
+            ok: false,
+            error: {
+              status: 404,
+              code: "mock_intent_not_found",
+              message: `No mock payment intent for ${intentId}`,
+              retryable: false,
+              source: "mock",
+            },
+          };
+        }
+
+        const settlement = toSettlementSnapshot(body?.settlement);
+        if (!settlement) {
+          return errorBadRequest<T>(
+            "mock_invalid_settlement_payload",
+            "Settlement payload must include canonical settlement fields",
+            body?.settlement,
+          );
+        }
+
+        return success(reconcileIntentSettlement(intent, settlement) as T);
+      }
       if (request.method === "GET" && pathname === "/pay/invoices") {
         return success(listInvoices(searchParams) as T);
       }

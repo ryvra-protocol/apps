@@ -1,6 +1,11 @@
 "use client";
 
-import { type PayPaginationMeta, type PayoutDto } from "@ryvra/domain-payments";
+import {
+  payoutDestinationTypes,
+  payoutStatuses,
+  type PayPaginationMeta,
+  type PayoutDto,
+} from "@ryvra/domain-payments";
 import { Button, Card, DataTable, themeTokens } from "@ryvra/ui";
 import { useMemo } from "react";
 import { formatCurrencyMinor, formatDateTime } from "../lib/format";
@@ -12,16 +17,16 @@ interface PayoutsTableClientProps {
   pagination: PayPaginationMeta;
 }
 
-const payoutStatuses = ["ALL", "SCHEDULED", "PROCESSING", "COMPLETED", "FAILED"] as const;
-const payoutDestinations = ["ALL", "BANK_ACCOUNT", "WALLET", "CARD"] as const;
+const payoutStatusOptions = ["ALL", ...payoutStatuses] as const;
+const payoutDestinationOptions = ["ALL", ...payoutDestinationTypes] as const;
 
 export function PayoutsTableClient({ items, pagination }: PayoutsTableClientProps) {
   const { searchParams, updateQuery, clearQuery } = useQueryFilters();
 
   const statusParam = (searchParams.get("status") ?? "ALL").toUpperCase();
   const destinationTypeParam = (searchParams.get("destinationType") ?? "ALL").toUpperCase();
-  const status = payoutStatuses.includes(statusParam as (typeof payoutStatuses)[number]) ? statusParam : "ALL";
-  const destinationType = payoutDestinations.includes(destinationTypeParam as (typeof payoutDestinations)[number])
+  const status = payoutStatusOptions.includes(statusParam as (typeof payoutStatusOptions)[number]) ? statusParam : "ALL";
+  const destinationType = payoutDestinationOptions.includes(destinationTypeParam as (typeof payoutDestinationOptions)[number])
     ? destinationTypeParam
     : "ALL";
   const from = searchParams.get("from") ?? "";
@@ -71,7 +76,7 @@ export function PayoutsTableClient({ items, pagination }: PayoutsTableClientProp
               value={status}
               onChange={(event) => updateQuery({ status: event.currentTarget.value === "ALL" ? undefined : event.currentTarget.value })}
             >
-              {payoutStatuses.map((option) => (
+              {payoutStatusOptions.map((option) => (
                 <option key={option} value={option}>
                   {option}
                 </option>
@@ -88,7 +93,7 @@ export function PayoutsTableClient({ items, pagination }: PayoutsTableClientProp
                 updateQuery({ destinationType: event.currentTarget.value === "ALL" ? undefined : event.currentTarget.value })
               }
             >
-              {payoutDestinations.map((option) => (
+              {payoutDestinationOptions.map((option) => (
                 <option key={option} value={option}>
                   {option}
                 </option>

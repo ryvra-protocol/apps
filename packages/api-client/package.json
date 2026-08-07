@@ -9,11 +9,15 @@
     "lint": "eslint --max-warnings 0 --ext .ts src",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "build": "tsc -p tsconfig.json",
-    "test": "node -e \"console.log('No tests configured for @ryvra/api-client')\""
+    "test": "tsx --test src/__tests__/**/*.spec.ts",
+    "test:parity": "tsx --test src/__tests__/**/*.spec.ts"
   },
   "dependencies": {
     "@ryvra/domain-markets": "workspace:*",
     "@ryvra/domain-payments": "workspace:*",
     "@ryvra/domain-tokenomics": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "4.23.9"
   }
 }

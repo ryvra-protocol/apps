@@ -19,6 +19,32 @@ function tryParseJson(payload: string): unknown {
   }
 }
 
+function extractHttpErrorMessage(statusText: string, payload: unknown): string {
+  if (typeof payload === "string" && payload.trim().length > 0) {
+    return payload;
+  }
+
+  if (typeof payload === "object" && payload !== null) {
+    const objectPayload = payload as Record<string, unknown>;
+    if (typeof objectPayload.message === "string" && objectPayload.message.trim().length > 0) {
+      return objectPayload.message;
+    }
+
+    if (
+      typeof objectPayload.error === "object" &&
+      objectPayload.error !== null &&
+      typeof (objectPayload.error as Record<string, unknown>).message === "string"
+    ) {
+      const nestedMessage = (objectPayload.error as Record<string, unknown>).message as string;
+      if (nestedMessage.trim().length > 0) {
+        return nestedMessage;
+      }
+    }
+  }
+
+  return statusText || "Request failed";
+}
+
 export function createFetchTransport(options: FetchTransportOptions): Transport {
   const fetchImpl = options.fetchImpl ?? fetch;
 
@@ -49,7 +75,7 @@ export function createFetchTransport(options: FetchTransportOptions): Transport 
               {
                 status: response.status,
                 code: "http_request_failed",
-                message: response.statusText || "Request failed",
+                message: extractHttpErrorMessage(response.statusText, payload),
                 details: payload,
               },
               { fallbackStatus: response.status, source: "http" },
