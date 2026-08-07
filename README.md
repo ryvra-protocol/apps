@@ -15,11 +15,16 @@ This repository hosts the Phase 8 unified-shell + Pay MVP data wiring foundation
 - **Shared contracts:** TypeScript packages (UI, auth, config, API, domain, observability)
 - **Code quality:** ESLint + Prettier
 
+## Runtime requirements
+
+- **Node.js:** `24.19.0` (or any `24.x` compatible with `>=24.19.0 <25`)
+- **pnpm:** `10.16.0` (via Corepack)
+
 ## Setup
 
 ```bash
 corepack enable
-corepack prepare pnpm@9.15.4 --activate
+corepack prepare pnpm@10.16.0 --activate
 pnpm install
 ```
 
@@ -106,6 +111,8 @@ Pull requests into `main` must pass:
 - `pnpm typecheck`
 - `pnpm build`
 - `pnpm test`
+
+> Contributor caveat: keep Corepack pinned to `pnpm@10.16.0` when regenerating `pnpm-lock.yaml` to avoid lockfile churn.
 
 ## Contribution guidance
 
