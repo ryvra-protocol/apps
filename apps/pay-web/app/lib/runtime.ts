@@ -17,10 +17,23 @@ export interface PayUiError {
   source: string;
 }
 
+function getOptionalEnvValue(key: string): string | undefined {
+  const value = process.env[key]?.trim();
+  return value && value.length > 0 ? value : undefined;
+}
+
 export function createPayRuntimeContext(scope: string): PayRuntimeContext {
   const config = loadPayConfig(process.env);
   const logger = createConsoleLogger(scope);
   const authGuard = createStubAuthGuard([Role.Member, Role.Admin]);
+  const authToken = getOptionalEnvValue("RYVRA_PAY_AUTH_TOKEN");
+  const authScheme = getOptionalEnvValue("RYVRA_PAY_AUTH_SCHEME");
+  const requestIdHeader = getOptionalEnvValue("RYVRA_PAY_REQUEST_ID_HEADER");
+  const correlationIdHeader = getOptionalEnvValue("RYVRA_PAY_CORRELATION_ID_HEADER");
+  const idempotencyHeader = getOptionalEnvValue("RYVRA_PAY_IDEMPOTENCY_HEADER");
+  const connectivityPath = getOptionalEnvValue("RYVRA_PAY_CONNECTIVITY_PATH");
+  const payCompatibilityVersion = getOptionalEnvValue("RYVRA_PAY_COMPATIBILITY_VERSION");
+  const payParityCheckMarker = getOptionalEnvValue("RYVRA_PAY_PARITY_CHECK_MARKER");
   const session: Session = {
     user: { id: "local-member", roles: [Role.Member] },
     issuedAt: new Date().toISOString(),
@@ -33,6 +46,16 @@ export function createPayRuntimeContext(scope: string): PayRuntimeContext {
     payClient: createPayClient({
       mode: config.mode,
       baseUrl: config.apiBaseUrl,
+      pay: {
+        ...(authToken ? { authToken } : {}),
+        ...(authScheme ? { authScheme } : {}),
+        ...(requestIdHeader ? { requestIdHeader } : {}),
+        ...(correlationIdHeader ? { correlationIdHeader } : {}),
+        ...(idempotencyHeader ? { idempotencyHeader } : {}),
+        ...(connectivityPath ? { connectivityPath } : {}),
+      },
+      ...(payCompatibilityVersion ? { payCompatibilityVersion } : {}),
+      ...(payParityCheckMarker ? { payParityCheckMarker } : {}),
     }),
   };
 }
