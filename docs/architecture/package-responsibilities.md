@@ -2,7 +2,7 @@
 
 ## @ryvra/ui
 
-Typed, minimal design primitives and theme tokens used by app shells.
+Typed design system and unified shell primitives (header, sidebar, product switcher, breadcrumbs, contextual nav, command trigger, user menu), plus shared visual tokens.
 
 ## @ryvra/auth
 
@@ -14,7 +14,7 @@ Typed boundary clients for Markets, Pay, and Points/Tasks with transport abstrac
 
 ## @ryvra/config
 
-Environment schema parsing, typed feature flags, and app-specific config loaders.
+Environment schema parsing, typed feature flags, app-specific config loaders, and typed cross-app route/deep-link registry helpers.
 
 ## @ryvra/domain-tokenomics
 

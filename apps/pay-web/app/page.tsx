@@ -1,11 +1,19 @@
 import { createApiClient, createMockTransport } from "@ryvra/api-client";
 import { createStubAuthGuard, Role, type Session } from "@ryvra/auth";
-import { loadPayConfig } from "@ryvra/config";
+import { buildDeepLink, loadPayConfig, parseDeepLink } from "@ryvra/config";
 import type { InvoiceDto } from "@ryvra/domain-payments";
 import { createConsoleLogger } from "@ryvra/observability";
-import { Button, Card, DataTable, Section } from "@ryvra/ui";
+import { Button, Card, DataTable, Section, themeTokens } from "@ryvra/ui";
 
-export default async function PayHomePage() {
+interface PayHomePageProps {
+  searchParams?: Record<string, string | string[] | undefined>;
+}
+
+function hasContextParams(value: ReturnType<typeof parseDeepLink>): boolean {
+  return Object.values(value.params).some((param) => typeof param === "string" && param.length > 0);
+}
+
+export default async function PayHomePage({ searchParams }: PayHomePageProps) {
   const config = loadPayConfig(process.env);
   const logger = createConsoleLogger("pay-web");
   const authGuard = createStubAuthGuard([Role.Member, Role.Admin]);
@@ -23,23 +31,52 @@ export default async function PayHomePage() {
 
   const invoices = await api.pay.listInvoices();
   const typedInvoiceExample: InvoiceDto | undefined = invoices[0];
+  const deepLinkContext = parseDeepLink(searchParams);
+  const contextAvailable = hasContextParams(deepLinkContext);
 
-  logger.info("Loaded pay scaffold page", {
+  const crossAppLinks = [
+    {
+      label: "Open related order in Markets",
+      href: buildDeepLink({
+        product: "markets",
+        path: "/orders",
+        ref: "pay",
+        entity: "invoice",
+        id: typedInvoiceExample?.id ?? "invoice-fallback",
+        ctx: "handoff=collections",
+      }),
+    },
+    {
+      label: "Open points task queue",
+      href: buildDeepLink({
+        product: "points",
+        path: "/tasks",
+        ref: "pay",
+        entity: "invoice",
+        id: typedInvoiceExample?.id ?? "invoice-fallback",
+        ctx: "queue=follow-up",
+      }),
+    },
+  ];
+
+  logger.info("Loaded pay unified shell dashboard", {
     authorized: authDecision.allowed,
     invoiceCount: invoices.length,
+    deepLinkValid: deepLinkContext.valid,
   });
 
   return (
-    <main style={{ display: "grid", gap: "1rem" }}>
-      <Section title="Pay Platform" description="Scaffolded Pay app shell using shared package boundaries.">
+    <section style={{ display: "grid", gap: themeTokens.spacing.lg }}>
+      <Section title="Pay Dashboard" description="Unified shell entry for invoicing and payouts across products.">
         <Card title="Access State">
-          <p>Authorized: {String(authDecision.allowed)}</p>
+          <p style={{ margin: 0 }}>Authorized: {String(authDecision.allowed)}</p>
+          <p style={{ marginBottom: 0, color: themeTokens.color.textMuted }}>Runtime mode: {config.mode}</p>
         </Card>
 
         <Card title="Invoice Boundary">
-          <p>Sample invoice id: {typedInvoiceExample?.id ?? "n/a"}</p>
+          <p style={{ marginTop: 0 }}>Sample invoice id: {typedInvoiceExample?.id ?? "n/a"}</p>
           <Button type="button" variant="secondary">
-            Shared UI Primitive
+            Create Follow-up
           </Button>
         </Card>
 
@@ -53,7 +90,32 @@ export default async function PayHomePage() {
             rows={invoices}
           />
         </Card>
+
+        <Card title="Cross-App Workflow Links">
+          <p style={{ marginTop: 0 }}>Jump into trading or rewards flows while preserving work context.</p>
+          <ul style={{ margin: 0, paddingLeft: "1.2rem", display: "grid", gap: "0.5rem" }}>
+            {crossAppLinks.map((link) => (
+              <li key={link.href}>
+                <a href={link.href} style={{ color: themeTokens.color.primary }}>
+                  {link.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </Card>
+
+        <Card title="Incoming Deep-Link Context">
+          {deepLinkContext.valid ? (
+            contextAvailable ? (
+              <pre style={{ margin: 0 }}>{JSON.stringify(deepLinkContext.params, null, 2)}</pre>
+            ) : (
+              <p style={{ margin: 0 }}>No inbound deep-link context detected.</p>
+            )
+          ) : (
+            <p style={{ margin: 0 }}>Deep-link parse error: {deepLinkContext.errors.join("; ")}</p>
+          )}
+        </Card>
       </Section>
-    </main>
+    </section>
   );
 }

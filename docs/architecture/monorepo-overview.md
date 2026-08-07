@@ -20,3 +20,9 @@ This monorepo establishes a shared platform foundation for the Ryvra Markets, Pa
 ## Consumption model
 
 Apps consume shared packages through workspace dependencies. Shared packages expose typed interfaces and safe placeholders, allowing app-level integration while business implementations evolve in later phases.
+
+## Phase 7 additions
+
+- unified app shell primitives in `@ryvra/ui`
+- typed global/local routing registry in `@ryvra/config`
+- standardized deep-link contract for cross-product context transfer
