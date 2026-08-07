@@ -12,6 +12,20 @@
 - `@ryvra/ui` provides shared shell/navigation primitives consumed by all three apps.
 - Cross-app context handoff uses query params (`ref`, `entity`, `id`, `ctx`) validated by shared schema utilities.
 
+## Pay MVP data paths (Phase 8)
+
+- `apps/pay-web` route runtime (`app/lib/runtime.ts`) loads mode/API URL from `@ryvra/config` and constructs `createPayClient(...)`.
+- `@ryvra/domain-payments` owns Pay DTOs for invoices, payouts, reconciliation, overview, and shared filter/pagination contracts.
+- `@ryvra/api-client` exposes typed Pay methods and transport switching:
+  - `mock`: deterministic seeded data via `createMockTransport()`
+  - `http`: endpoint-ready fetch transport via `createFetchTransport(...)`
+- Route-level data boundaries:
+  - `/` and `/overview` -> `getPayOverview`
+  - `/invoices` -> `listInvoices` + `getInvoiceSummary`
+  - `/payouts` -> `listPayouts` + `getPayoutSummary`
+  - `/reconciliation` -> `listReconciliationItems` + `getReconciliationSummary`
+- Fetch and critical route errors are logged through `@ryvra/observability`.
+
 ## External Ryvra touchpoints (future integration targets)
 
 - **Ryvra Identity/Auth services:** concrete session validation and role claims.

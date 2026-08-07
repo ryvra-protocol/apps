@@ -1,8 +1,24 @@
 import type { AssetDto, ExecutionIntent, OrderDto, PositionDto } from "@ryvra/domain-markets";
-import type { InvoiceDto, PayoutDto, SubscriptionDto } from "@ryvra/domain-payments";
+import type {
+  InvoiceDto,
+  InvoiceFilters,
+  InvoiceSummaryDto,
+  PayListRequest,
+  PayListResponse,
+  PayOverviewDto,
+  PayoutDto,
+  PayoutFilters,
+  PayoutSummaryDto,
+  ReconciliationFilters,
+  ReconciliationItemDto,
+  ReconciliationSummaryDto,
+  SubscriptionDto,
+} from "@ryvra/domain-payments";
 import type { ConversionPreviewDto, EligibilityResult } from "@ryvra/domain-tokenomics";
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+
+export type ApiErrorSource = "mock" | "http" | "runtime" | "unknown";
 
 export interface ApiRequest {
   method: HttpMethod;
@@ -12,9 +28,11 @@ export interface ApiRequest {
 }
 
 export interface ApiError {
-  status: number;
   code: string;
   message: string;
+  retryable: boolean;
+  source: ApiErrorSource;
+  status?: number;
   details?: unknown;
 }
 
@@ -41,8 +59,15 @@ export interface MarketsClient {
 }
 
 export interface PayClient {
-  listInvoices(): Promise<InvoiceDto[]>;
-  listPayouts(): Promise<PayoutDto[]>;
+  listInvoices(request?: PayListRequest<InvoiceFilters>): Promise<PayListResponse<InvoiceDto>>;
+  getInvoiceSummary(filters?: InvoiceFilters): Promise<InvoiceSummaryDto>;
+  listPayouts(request?: PayListRequest<PayoutFilters>): Promise<PayListResponse<PayoutDto>>;
+  getPayoutSummary(filters?: PayoutFilters): Promise<PayoutSummaryDto>;
+  listReconciliationItems(
+    request?: PayListRequest<ReconciliationFilters>,
+  ): Promise<PayListResponse<ReconciliationItemDto>>;
+  getReconciliationSummary(filters?: ReconciliationFilters): Promise<ReconciliationSummaryDto>;
+  getPayOverview(): Promise<PayOverviewDto>;
   listSubscriptions(): Promise<SubscriptionDto[]>;
 }
 
@@ -57,10 +82,12 @@ export interface ApiClient {
   pointsTasks: PointsTasksClient;
 }
 
-export type ApiClientMode = "mock" | "live";
+export type ApiClientMode = "mock" | "http";
 
 export interface CreateApiClientOptions {
   mode?: ApiClientMode;
   baseUrl?: string;
   transport?: Transport;
 }
+
+export type CreatePayClientOptions = CreateApiClientOptions;

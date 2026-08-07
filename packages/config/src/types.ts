@@ -1,5 +1,5 @@
 export type AppId = "markets" | "pay" | "points-tasks";
-export type RuntimeMode = "mock" | "live";
+export type RuntimeMode = "mock" | "http";
 
 export interface FeatureFlags {
   marketsEnabled: boolean;

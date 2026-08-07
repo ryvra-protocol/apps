@@ -1,0 +1,78 @@
+import type {
+  InvoiceStatus,
+  PayDateRangeFilter,
+  PayoutDestinationType,
+  PayoutStatus,
+  ReconciliationStatus,
+  SortDirection,
+} from "@ryvra/domain-payments";
+
+export type RouteSearchParams = Record<string, string | string[] | undefined> | undefined;
+
+const invoiceStatuses = new Set<InvoiceStatus>(["DRAFT", "PENDING", "PAID", "FAILED", "VOID"]);
+const payoutStatuses = new Set<PayoutStatus>(["SCHEDULED", "PROCESSING", "COMPLETED", "FAILED"]);
+const payoutDestinationTypes = new Set<PayoutDestinationType>(["BANK_ACCOUNT", "WALLET", "CARD"]);
+const reconciliationStatuses = new Set<ReconciliationStatus>(["QUEUED", "RUNNING", "MATCHED", "MISMATCH", "FAILED"]);
+
+export function getFirstParam(searchParams: RouteSearchParams, key: string): string | undefined {
+  const raw = searchParams?.[key];
+  if (Array.isArray(raw)) {
+    return raw[0];
+  }
+
+  return raw;
+}
+
+export function parseDateRange(searchParams: RouteSearchParams): PayDateRangeFilter | undefined {
+  const from = getFirstParam(searchParams, "from")?.trim();
+  const to = getFirstParam(searchParams, "to")?.trim();
+
+  if (!from && !to) {
+    return undefined;
+  }
+
+  return {
+    ...(from ? { from } : {}),
+    ...(to ? { to } : {}),
+  };
+}
+
+export function parseSortDirection(searchParams: RouteSearchParams): SortDirection {
+  return getFirstParam(searchParams, "sortDirection") === "asc" ? "asc" : "desc";
+}
+
+export function parsePage(searchParams: RouteSearchParams): number {
+  const pageValue = Number.parseInt(getFirstParam(searchParams, "page") ?? "1", 10);
+  return Number.isFinite(pageValue) && pageValue > 0 ? pageValue : 1;
+}
+
+export function parsePageSize(searchParams: RouteSearchParams, fallback = 20): number {
+  const pageSizeValue = Number.parseInt(getFirstParam(searchParams, "pageSize") ?? String(fallback), 10);
+  return Number.isFinite(pageSizeValue) && pageSizeValue > 0 ? pageSizeValue : fallback;
+}
+
+export function parseInvoiceStatus(searchParams: RouteSearchParams): InvoiceStatus | undefined {
+  const status = getFirstParam(searchParams, "status")?.toUpperCase();
+  return status && invoiceStatuses.has(status as InvoiceStatus) ? (status as InvoiceStatus) : undefined;
+}
+
+export function parsePayoutStatus(searchParams: RouteSearchParams): PayoutStatus | undefined {
+  const status = getFirstParam(searchParams, "status")?.toUpperCase();
+  return status && payoutStatuses.has(status as PayoutStatus) ? (status as PayoutStatus) : undefined;
+}
+
+export function parsePayoutDestinationType(searchParams: RouteSearchParams): PayoutDestinationType | undefined {
+  const destinationType = getFirstParam(searchParams, "destinationType")?.toUpperCase();
+  return destinationType && payoutDestinationTypes.has(destinationType as PayoutDestinationType)
+    ? (destinationType as PayoutDestinationType)
+    : undefined;
+}
+
+export function parseReconciliationStatus(searchParams: RouteSearchParams): ReconciliationStatus | undefined {
+  const status = getFirstParam(searchParams, "status")?.toUpperCase();
+  return status && reconciliationStatuses.has(status as ReconciliationStatus) ? (status as ReconciliationStatus) : undefined;
+}
+
+export function parseExceptionOnly(searchParams: RouteSearchParams): boolean {
+  return getFirstParam(searchParams, "exceptionOnly") === "true";
+}

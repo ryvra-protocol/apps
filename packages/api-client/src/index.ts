@@ -1,7 +1,7 @@
-export { createApiClient } from "./client";
+export { createApiClient, createPayClient } from "./client";
 export { createFetchTransport } from "./transport";
 export { createMockTransport } from "./mock-transport";
-export { normalizeApiError } from "./errors";
+export { ApiClientError, normalizeApiError } from "./errors";
 export type {
   ApiClient,
   MarketsClient,
@@ -10,7 +10,9 @@ export type {
   ApiRequest,
   ApiResult,
   ApiError,
+  ApiErrorSource,
   Transport,
   ApiClientMode,
   CreateApiClientOptions,
+  CreatePayClientOptions,
 } from "./types";

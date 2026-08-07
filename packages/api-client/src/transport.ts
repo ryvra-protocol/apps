@@ -7,6 +7,18 @@ export interface FetchTransportOptions {
   fetchImpl?: typeof fetch;
 }
 
+function tryParseJson(payload: string): unknown {
+  if (payload.length === 0) {
+    return undefined;
+  }
+
+  try {
+    return JSON.parse(payload) as unknown;
+  } catch {
+    return payload;
+  }
+}
+
 export function createFetchTransport(options: FetchTransportOptions): Transport {
   const fetchImpl = options.fetchImpl ?? fetch;
 
@@ -27,9 +39,8 @@ export function createFetchTransport(options: FetchTransportOptions): Transport 
         }
 
         const response = await fetchImpl(`${options.baseUrl}${request.path}`, init);
-
         const text = await response.text();
-        const payload = text.length > 0 ? (JSON.parse(text) as unknown) : undefined;
+        const payload = tryParseJson(text);
 
         if (!response.ok) {
           return {
@@ -37,10 +48,11 @@ export function createFetchTransport(options: FetchTransportOptions): Transport 
             error: normalizeApiError(
               {
                 status: response.status,
+                code: "http_request_failed",
                 message: response.statusText || "Request failed",
                 details: payload,
               },
-              response.status,
+              { fallbackStatus: response.status, source: "http" },
             ),
           };
         }
@@ -52,7 +64,7 @@ export function createFetchTransport(options: FetchTransportOptions): Transport 
       } catch (error) {
         return {
           ok: false,
-          error: normalizeApiError(error),
+          error: normalizeApiError(error, { source: "http" }),
         };
       }
     },
