@@ -1,40 +1,37 @@
-# Points/Tasks MVP Data Flow (Phase 10)
+# Points/Tasks MVP Data Flow (Phase 10.5)
 
 ## Scope
 
-`apps/points-tasks-web` now consumes typed Points/Tasks contracts from shared domain + API packages with dual-mode transport preserved:
+`apps/points-tasks-web` consumes canonical Points/Tasks contracts through `@ryvra/api-client` with preserved dual-mode transport:
 
-- `mock`: deterministic local fixtures with canonical DTO decoding
-- `http`: strict parity guards for auth/header/scope behavior
+- `mock`: deterministic fixtures mapped to canonical OpenAPI payloads
+- `http`: strict canonical parity guards for auth/header/scope behavior
 
-Canonical source references are currently protocol/policy contracts (no published Points/Tasks OpenAPI in upstream repos):
+Canonical references (`ryvra-protocol/protocol-core`, default branch):
 
-- `ryvra-protocol/protocol-core/contracts/src/events.ts`
-- `ryvra-protocol/protocol-core/contracts/src/ids.ts`
-- `ryvra-protocol/protocol-core/contracts/src/version.ts`
-- `ryvra-protocol/protocol-core/docs/tokenomics-proof-of-transaction.md`
-- `ryvra-protocol/protocol-core/docs/tokenomics-faq.md`
-- `ryvra-protocol/policy-risk/docs/anti-abuse-policy.md`
+- `openapi/points-tasks.openapi.yaml`
+- `docs/api-contract-changelog.md`
+- version marker `2026-08-08.v1`
 
 ## Route to client boundary map
 
 - `/` and `/overview`
-  - `pointsTasksClient.getPointsOverview({ accountId })`
-  - `pointsTasksClient.getTasksOverview({ accountId })`
+  - `pointsTasksClient.getPointsOverview({ accountId, userId?, workspaceId?, window? })`
+  - `pointsTasksClient.getTasksOverview({ accountId, userId?, workspaceId?, window? })`
 - `/points`
-  - `pointsTasksClient.listPointEntries({ accountId, ... })`
-  - `pointsTasksClient.getPointSummary({ accountId, ... })`
+  - `pointsTasksClient.listPointEntries({ accountId, userId?, workspaceId?, filters?, pagination?, sort? })`
+  - `pointsTasksClient.getPointSummary({ accountId, userId?, workspaceId?, window?, dateRange? })`
 - `/tasks`
-  - `pointsTasksClient.listTasks({ accountId, ... })`
-  - `pointsTasksClient.getTaskSummary({ accountId, ... })`
+  - `pointsTasksClient.listTasks({ accountId, userId?, workspaceId?, filters?, pagination?, sort? })`
+  - `pointsTasksClient.getTaskSummary({ accountId, userId?, workspaceId? })`
 - `/status`
   - `pointsTasksClient.getParityDiagnostics()`
 
 ## Hard parity gate behavior
 
-### Account scope
+### Scope
 
-`account_id` is required for:
+Required:
 
 - `/points-tasks/points/entries`
 - `/points-tasks/points/summary`
@@ -43,41 +40,45 @@ Canonical source references are currently protocol/policy contracts (no publishe
 - `/points-tasks/tasks/summary`
 - `/points-tasks/tasks/overview`
 
-Client guards fail fast with `invalid_request` if `account_id` is missing.
+Optional scope fields forwarded when provided:
+
+- `user_id`
+- `workspace_id`
 
 ### Auth + headers
 
 In HTTP mode:
 
-- non-status/non-health Points/Tasks routes require bearer auth in `Authorization`
-- status/health probe routes remain auth-optional
-- `x-request-id` and `x-correlation-id` are always emitted by client runtime
-- idempotency headers are currently not required because Phase 10 surface is read-only
+- bearer auth required for canonical routes by default
+- only `/points-tasks/status/health` remains auth-optional
+- `x-request-id` and `x-correlation-id` are always emitted
+- canonical v1 read-only surface does not require idempotency headers
 
 ### Pagination
 
-Cursor-first policy:
-
 - canonical: `limit`, `cursor`
-- compatibility-only (deprecated): `page`, `pageSize`
-- cursor wins when both cursor + page are supplied
-- compatibility removal window: not earlier than `2027-06-30`
+- compatibility-only (deprecated): `page`
+- cursor wins when both are supplied
+- removal window: not before `2027-02-04`
 
-### Deprecated response field compatibility
+### Error envelope
 
-Decoder fallback normalization:
+Normalized Points/Tasks errors are canonical-only:
 
-- points canonical `running_balance` with fallback `balance_after`
-- tasks canonical `progress_percent` with fallback `progress`
-- fallback removal window: not earlier than `2027-06-30`
+- `code`, `message`, `retryable`, `source`, optional `details`
 
-## UI data wiring outcomes
+## UI wiring outcomes
 
-- dashboard/overview render KPI cards + combined recent activity feed from typed overview DTOs
-- points/tasks routes render typed summary cards, URL-persisted filters/sort, loading/error/empty states, and cursor-aware pagination controls
-- status route renders runtime parity markers, auth/header policy metadata, account-scope policy, and non-destructive connectivity probe result
+- overview/dashboard render canonical overview KPIs and activity summaries
+- points/tasks routes serialize canonical filter/sort/pagination params
+- status route renders canonical contract provenance (OpenAPI path/changelog/SHA/commit/version) plus connectivity probe behavior
 
-## Known limitations and follow-up plan
+## Migration notes
 
-- endpoint-level upstream OpenAPI for Points/Tasks is not yet published; route parity is currently anchored to canonical protocol/policy artifacts plus app-level route map
-- once upstream HTTP OpenAPI/routers are published, update route map + enum provenance markers and tighten method/path parity tests against upstream blobs
+- provisional query aliases and provisional enum sets were removed from parity serialization
+- non-canonical task owner/search request filters were removed from HTTP contract mapping
+- Points/Tasks DTO contracts now align to canonical OpenAPI field sets
+
+## Remaining limitations
+
+- canonical v1 does not expose write/transition routes; future write parity and idempotency enforcement will be added when published upstream

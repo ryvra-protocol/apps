@@ -22,23 +22,30 @@ const statusOptions = ["ALL", ...pointEntryStatuses] as const;
 const typeOptions = ["ALL", ...pointEntryTypes] as const;
 const sourceOptions = ["ALL", ...pointEntrySources] as const;
 const sortFieldOptions = [
-  { value: "timestamp", label: "Timestamp" },
-  { value: "amount", label: "Amount" },
-  { value: "balance", label: "Balance" },
-  { value: "status", label: "Status" },
+  { value: "occurred_at", label: "Occurred time" },
+  { value: "created_at", label: "Created time" },
 ] as const;
+
+function parseSortParam(sortValue: string | null): { field: "occurred_at" | "created_at"; direction: "asc" | "desc" } {
+  const [field, direction] = (sortValue ?? "occurred_at:desc").split(":");
+  const normalizedField = field === "created_at" ? "created_at" : "occurred_at";
+  const normalizedDirection = direction === "asc" ? "asc" : "desc";
+
+  return {
+    field: normalizedField,
+    direction: normalizedDirection,
+  };
+}
 
 export function PointsTableClient({ items, pagination }: PointsTableClientProps) {
   const { searchParams, updateQuery, clearQuery } = useQueryFilters();
 
-  const statusParam = (searchParams.get("status") ?? "ALL").toLowerCase();
-  const typeParam = (searchParams.get("type") ?? searchParams.get("entryType") ?? "ALL").toLowerCase();
-  const sourceParam = (searchParams.get("source") ?? "ALL").toLowerCase();
-  const searchValue = searchParams.get("search") ?? "";
-  const from = searchParams.get("from") ?? "";
-  const to = searchParams.get("to") ?? "";
-  const sortField = searchParams.get("sortBy") ?? "timestamp";
-  const sortDirection = searchParams.get("sortOrder") === "asc" ? "asc" : "desc";
+  const statusParam = (searchParams.get("entry_status") ?? searchParams.get("status") ?? "ALL").toLowerCase();
+  const typeParam = (searchParams.get("entry_type") ?? searchParams.get("type") ?? "ALL").toLowerCase();
+  const sourceParam = (searchParams.get("entry_source") ?? searchParams.get("source") ?? "ALL").toLowerCase();
+  const occurredFrom = searchParams.get("occurred_from") ?? "";
+  const occurredTo = searchParams.get("occurred_to") ?? "";
+  const sort = parseSortParam(searchParams.get("sort"));
 
   const status = statusOptions.includes(statusParam as (typeof statusOptions)[number]) ? statusParam : "ALL";
   const type = typeOptions.includes(typeParam as (typeof typeOptions)[number]) ? typeParam : "ALL";
@@ -48,13 +55,18 @@ export function PointsTableClient({ items, pagination }: PointsTableClientProps)
     status !== "ALL" ||
     type !== "ALL" ||
     source !== "ALL" ||
-    searchValue.length > 0 ||
-    from.length > 0 ||
-    to.length > 0 ||
-    sortField !== "timestamp" ||
-    sortDirection !== "desc";
+    occurredFrom.length > 0 ||
+    occurredTo.length > 0 ||
+    sort.field !== "occurred_at" ||
+    sort.direction !== "desc";
 
   const visibleRows = useMemo(() => [...items], [items]);
+
+  const updateSort = (field: string, direction: string) => {
+    const normalizedField = field === "created_at" ? "created_at" : "occurred_at";
+    const normalizedDirection = direction === "asc" ? "asc" : "desc";
+    updateQuery({ sort: `${normalizedField}:${normalizedDirection}`, sortBy: undefined, sortOrder: undefined, sortField: undefined, sortDirection: undefined });
+  };
 
   return (
     <section aria-labelledby="points-table-title" style={{ display: "grid", gap: themeTokens.spacing.md }}>
@@ -89,7 +101,7 @@ export function PointsTableClient({ items, pagination }: PointsTableClientProps)
             <select
               className="points-filter-control"
               value={status}
-              onChange={(event) => updateQuery({ status: event.currentTarget.value === "ALL" ? undefined : event.currentTarget.value })}
+              onChange={(event) => updateQuery({ entry_status: event.currentTarget.value === "ALL" ? undefined : event.currentTarget.value, status: undefined })}
             >
               {statusOptions.map((option) => (
                 <option key={option} value={option}>
@@ -104,7 +116,7 @@ export function PointsTableClient({ items, pagination }: PointsTableClientProps)
             <select
               className="points-filter-control"
               value={type}
-              onChange={(event) => updateQuery({ type: event.currentTarget.value === "ALL" ? undefined : event.currentTarget.value })}
+              onChange={(event) => updateQuery({ entry_type: event.currentTarget.value === "ALL" ? undefined : event.currentTarget.value, type: undefined })}
             >
               {typeOptions.map((option) => (
                 <option key={option} value={option}>
@@ -119,7 +131,9 @@ export function PointsTableClient({ items, pagination }: PointsTableClientProps)
             <select
               className="points-filter-control"
               value={source}
-              onChange={(event) => updateQuery({ source: event.currentTarget.value === "ALL" ? undefined : event.currentTarget.value })}
+              onChange={(event) =>
+                updateQuery({ entry_source: event.currentTarget.value === "ALL" ? undefined : event.currentTarget.value, source: undefined })
+              }
             >
               {sourceOptions.map((option) => (
                 <option key={option} value={option}>
@@ -130,29 +144,32 @@ export function PointsTableClient({ items, pagination }: PointsTableClientProps)
           </label>
 
           <label style={{ display: "grid", gap: themeTokens.spacing.xs }}>
-            <span>Search</span>
+            <span>Occurred from</span>
             <input
               className="points-filter-control"
-              type="search"
-              value={searchValue}
-              onChange={(event) => updateQuery({ search: event.currentTarget.value || undefined })}
-              placeholder="entry id, reference, task"
+              type="date"
+              value={occurredFrom}
+              onChange={(event) => updateQuery({ occurred_from: event.currentTarget.value || undefined, from: undefined })}
             />
           </label>
 
           <label style={{ display: "grid", gap: themeTokens.spacing.xs }}>
-            <span>From</span>
-            <input className="points-filter-control" type="date" value={from} onChange={(event) => updateQuery({ from: event.currentTarget.value || undefined })} />
-          </label>
-
-          <label style={{ display: "grid", gap: themeTokens.spacing.xs }}>
-            <span>To</span>
-            <input className="points-filter-control" type="date" value={to} onChange={(event) => updateQuery({ to: event.currentTarget.value || undefined })} />
+            <span>Occurred to</span>
+            <input
+              className="points-filter-control"
+              type="date"
+              value={occurredTo}
+              onChange={(event) => updateQuery({ occurred_to: event.currentTarget.value || undefined, to: undefined })}
+            />
           </label>
 
           <label style={{ display: "grid", gap: themeTokens.spacing.xs }}>
             <span>Sort by</span>
-            <select className="points-filter-control" value={sortField} onChange={(event) => updateQuery({ sortBy: event.currentTarget.value })}>
+            <select
+              className="points-filter-control"
+              value={sort.field}
+              onChange={(event) => updateSort(event.currentTarget.value, sort.direction)}
+            >
               {sortFieldOptions.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
@@ -163,7 +180,7 @@ export function PointsTableClient({ items, pagination }: PointsTableClientProps)
 
           <label style={{ display: "grid", gap: themeTokens.spacing.xs }}>
             <span>Direction</span>
-            <select className="points-filter-control" value={sortDirection} onChange={(event) => updateQuery({ sortOrder: event.currentTarget.value })}>
+            <select className="points-filter-control" value={sort.direction} onChange={(event) => updateSort(sort.field, event.currentTarget.value)}>
               <option value="desc">Descending</option>
               <option value="asc">Ascending</option>
             </select>
@@ -175,15 +192,21 @@ export function PointsTableClient({ items, pagination }: PointsTableClientProps)
               variant="secondary"
               onClick={() =>
                 clearQuery([
+                  "entry_status",
                   "status",
+                  "entry_type",
                   "type",
-                  "entryType",
+                  "entry_source",
                   "source",
-                  "search",
+                  "occurred_from",
+                  "occurred_to",
                   "from",
                   "to",
+                  "sort",
                   "sortBy",
                   "sortOrder",
+                  "sortField",
+                  "sortDirection",
                   "cursor",
                   "page",
                 ])
@@ -205,20 +228,29 @@ export function PointsTableClient({ items, pagination }: PointsTableClientProps)
       <DataTable<PointEntryDto>
         caption="Point entries"
         columns={[
-          { key: "id", header: "Entry id" },
-          { key: "type", header: "Type", render: (value) => <StatusBadge status={String(value)} /> },
-          { key: "source", header: "Source" },
-          { key: "amount", header: "Amount", render: (value) => formatSignedPoints(Number(value)) },
-          { key: "balance", header: "Balance", render: (value) => formatNumber(Number(value)) },
+          { key: "entryId", header: "Entry id" },
+          { key: "entryType", header: "Type", render: (value) => <StatusBadge status={String(value)} /> },
+          { key: "entrySource", header: "Source", render: (value) => <StatusBadge status={String(value)} /> },
+          { key: "pointsDelta", header: "Points delta", render: (value) => formatSignedPoints(Number(value)) },
           {
-            key: "timestamp",
-            header: "Timestamp",
+            key: "pointsBalanceAfter",
+            header: "Balance after",
+            render: (value) => (typeof value === "number" ? formatNumber(Number(value)) : "n/a"),
+          },
+          {
+            key: "occurredAt",
+            header: "Occurred",
             render: (value) => formatDateTime(String(value)),
           },
-          { key: "status", header: "Status", render: (value) => <StatusBadge status={String(value)} /> },
+          {
+            key: "createdAt",
+            header: "Created",
+            render: (value) => formatDateTime(String(value)),
+          },
+          { key: "entryStatus", header: "Status", render: (value) => <StatusBadge status={String(value)} /> },
         ]}
         rows={visibleRows}
-        getRowKey={(row) => row.id}
+        getRowKey={(row) => row.entryId}
         emptyMessage="No points entries match the selected filters."
       />
 
@@ -228,7 +260,7 @@ export function PointsTableClient({ items, pagination }: PointsTableClientProps)
           <Button
             type="button"
             variant="secondary"
-            onClick={() => clearQuery(["status", "type", "entryType", "source", "search", "from", "to", "cursor", "page"])}
+            onClick={() => clearQuery(["entry_status", "entry_type", "entry_source", "occurred_from", "occurred_to", "cursor", "page"])}
           >
             Clear filters
           </Button>

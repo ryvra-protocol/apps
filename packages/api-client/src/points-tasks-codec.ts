@@ -2,19 +2,28 @@ import {
   pointEntrySources,
   pointEntryStatuses,
   pointEntryTypes,
+  pointsApiVersions,
   type PointEntryDto,
   type PointSummaryDto,
   type PointsListResponse,
   type PointsOverviewDto,
+  type PointsPaginationMeta,
+  type PointsResponseMeta,
 } from "@ryvra/domain-points";
 import {
+  taskProgressStates,
   taskStatuses,
   taskTypes,
+  tasksApiVersions,
   type TaskDto,
   type TaskSummaryDto,
   type TasksListResponse,
   type TasksOverviewDto,
+  type TasksPaginationMeta,
+  type TasksResponseMeta,
 } from "@ryvra/domain-tasks";
+
+const supportedPointsTasksApiVersions = new Set<string>([...pointsApiVersions, ...tasksApiVersions]);
 
 function ensureObject(value: unknown, label: string): Record<string, unknown> {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
@@ -56,33 +65,7 @@ function ensureArray(value: unknown, label: string): unknown[] {
   return value;
 }
 
-function optionalString(value: unknown, label: string): string | undefined {
-  if (typeof value === "undefined") {
-    return undefined;
-  }
-
-  return ensureString(value, label);
-}
-
-function optionalNumber(value: unknown, label: string): number | undefined {
-  if (typeof value === "undefined") {
-    return undefined;
-  }
-
-  return ensureNumber(value, label);
-}
-
-function firstPresent(payload: Record<string, unknown>, keys: readonly string[]): unknown {
-  for (const key of keys) {
-    if (typeof payload[key] !== "undefined") {
-      return payload[key];
-    }
-  }
-
-  return undefined;
-}
-
-function assertEnum<T extends string>(value: string, values: readonly string[], label: string): T {
+function ensureEnum<T extends string>(value: string, values: readonly string[], label: string): T {
   if (!values.includes(value)) {
     throw new Error(`${label} has unsupported enum value: ${value}`);
   }
@@ -90,143 +73,231 @@ function assertEnum<T extends string>(value: string, values: readonly string[], 
   return value as T;
 }
 
-function decodeCursorPagination(value: unknown): {
-  limit: number;
-  hasMore: boolean;
-  nextCursor?: string;
-  page?: number;
-} {
-  const payload = ensureObject(value, "pagination");
-
-  if (typeof payload.limit !== "undefined" || typeof payload.has_more !== "undefined" || typeof payload.hasMore !== "undefined") {
-    const nextCursor = optionalString(payload.next_cursor ?? payload.nextCursor, "pagination.next_cursor");
-    const page = optionalNumber(payload.page, "pagination.page");
-    return {
-      limit: ensureNumber(payload.limit, "pagination.limit"),
-      hasMore: ensureBoolean(payload.has_more ?? payload.hasMore, "pagination.has_more"),
-      ...(nextCursor ? { nextCursor } : {}),
-      ...(typeof page === "number" ? { page } : {}),
-    };
+function optionalNullableString(value: unknown, label: string): string | null | undefined {
+  if (typeof value === "undefined") {
+    return undefined;
   }
 
-  const currentPage = ensureNumber(payload.page, "pagination.page");
-  const pageSize = ensureNumber(payload.pageSize, "pagination.pageSize");
-  const totalPages = ensureNumber(payload.totalPages, "pagination.totalPages");
-  const hasMore = currentPage < totalPages;
+  if (value === null) {
+    return null;
+  }
+
+  return ensureString(value, label);
+}
+
+function optionalNullableNumber(value: unknown, label: string): number | null | undefined {
+  if (typeof value === "undefined") {
+    return undefined;
+  }
+
+  if (value === null) {
+    return null;
+  }
+
+  return ensureNumber(value, label);
+}
+
+function optionalMetadata(value: unknown, label: string): Record<string, unknown> | null | undefined {
+  if (typeof value === "undefined") {
+    return undefined;
+  }
+
+  if (value === null) {
+    return null;
+  }
+
+  if (typeof value === "object" && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+
+  throw new Error(`${label} must be an object or null`);
+}
+
+function decodeDeprecatedPage(value: unknown, label: string): PointsResponseMeta["deprecatedPage"] {
+  if (typeof value === "undefined") {
+    return undefined;
+  }
+
+  if (value === null) {
+    return null;
+  }
+
+  const payload = ensureObject(value, label);
 
   return {
-    limit: pageSize,
-    hasMore,
-    ...(hasMore ? { nextCursor: `legacy-page-${currentPage + 1}` } : {}),
-    page: currentPage,
+    page: ensureNumber(payload.page, `${label}.page`),
+    translatedToCursor: ensureString(payload.translated_to_cursor, `${label}.translated_to_cursor`),
+    removalNotBefore: ensureString(payload.removal_not_before, `${label}.removal_not_before`),
   };
 }
 
-function decodePointsListResponse<TItem>(value: unknown, decodeItem: (entry: unknown) => TItem): PointsListResponse<TItem> {
-  const payload = ensureObject(value, "points list response");
-  const asOf = optionalString(firstPresent(payload, ["as_of", "asOf", "timestamp"]), "points.as_of") ?? new Date(0).toISOString();
-  const rawItems = firstPresent(payload, ["items", "data"]);
+function decodeResponseMeta(value: unknown, label: string): PointsResponseMeta {
+  const payload = ensureObject(value, label);
+  const scopePayload = ensureObject(payload.scope, `${label}.scope`);
+  const apiVersion = ensureString(payload.api_version, `${label}.api_version`);
+
+  if (!supportedPointsTasksApiVersions.has(apiVersion)) {
+    throw new Error(`${label}.api_version has unsupported value: ${apiVersion}`);
+  }
+
+  const userId = optionalNullableString(scopePayload.user_id, `${label}.scope.user_id`);
+  const workspaceId = optionalNullableString(scopePayload.workspace_id, `${label}.scope.workspace_id`);
+  const deprecatedPage = decodeDeprecatedPage(payload.deprecated_page, `${label}.deprecated_page`);
 
   return {
-    asOf,
-    items: ensureArray(rawItems, "points.items").map((entry) => decodeItem(entry)),
-    pagination: decodeCursorPagination(firstPresent(payload, ["pagination", "page"])),
+    apiVersion: apiVersion as PointsResponseMeta["apiVersion"],
+    generatedAt: ensureString(payload.generated_at, `${label}.generated_at`),
+    scope: {
+      accountId: ensureString(scopePayload.account_id, `${label}.scope.account_id`),
+      ...(typeof userId !== "undefined" ? { userId } : {}),
+      ...(typeof workspaceId !== "undefined" ? { workspaceId } : {}),
+    },
+    ...(typeof deprecatedPage === "undefined" ? {} : { deprecatedPage }),
   };
 }
 
-function decodeTasksListResponse<TItem>(value: unknown, decodeItem: (entry: unknown) => TItem): TasksListResponse<TItem> {
-  const payload = ensureObject(value, "tasks list response");
-  const asOf = optionalString(firstPresent(payload, ["as_of", "asOf", "timestamp"]), "tasks.as_of") ?? new Date(0).toISOString();
-  const rawItems = firstPresent(payload, ["items", "data"]);
+function decodeCursorPagination(value: unknown, label: string): PointsPaginationMeta {
+  const payload = ensureObject(value, label);
+  const nextCursor = optionalNullableString(payload.next_cursor, `${label}.next_cursor`);
 
   return {
-    asOf,
-    items: ensureArray(rawItems, "tasks.items").map((entry) => decodeItem(entry)),
-    pagination: decodeCursorPagination(firstPresent(payload, ["pagination", "page"])),
+    limit: ensureNumber(payload.limit, `${label}.limit`),
+    hasMore: ensureBoolean(payload.has_more, `${label}.has_more`),
+    ...(typeof nextCursor === "string" ? { nextCursor } : {}),
   };
 }
 
 function decodePointEntry(value: unknown): PointEntryDto {
   const payload = ensureObject(value, "point entry");
-  const fallbackBalance = optionalNumber(payload.balance_after, "pointEntry.balance_after");
-  const balance = optionalNumber(firstPresent(payload, ["running_balance", "balance"]), "pointEntry.running_balance") ?? fallbackBalance;
 
-  if (typeof balance !== "number") {
-    throw new Error("pointEntry.running_balance is required");
-  }
+  const userId = optionalNullableString(payload.user_id, "pointEntry.user_id");
+  const workspaceId = optionalNullableString(payload.workspace_id, "pointEntry.workspace_id");
+  const taskId = optionalNullableString(payload.task_id, "pointEntry.task_id");
+  const ledgerEventId = optionalNullableString(payload.ledger_event_id, "pointEntry.ledger_event_id");
+  const referenceId = optionalNullableString(payload.reference_id, "pointEntry.reference_id");
+  const pointsBalanceAfter = optionalNullableNumber(payload.points_balance_after, "pointEntry.points_balance_after");
+  const metadata = optionalMetadata(payload.metadata, "pointEntry.metadata");
 
   return {
-    id: ensureString(firstPresent(payload, ["entry_id", "id"]), "pointEntry.entry_id"),
-    accountId: ensureString(firstPresent(payload, ["account_id", "accountId"]), "pointEntry.account_id"),
-    type: assertEnum(
-      ensureString(firstPresent(payload, ["entry_type", "type"]), "pointEntry.entry_type"),
-      pointEntryTypes,
-      "pointEntry.entry_type",
-    ),
-    source: assertEnum(
-      ensureString(firstPresent(payload, ["source"]), "pointEntry.source"),
-      pointEntrySources,
-      "pointEntry.source",
-    ),
-    amount: ensureNumber(firstPresent(payload, ["amount_points", "amount"]), "pointEntry.amount_points"),
-    balance,
-    status: assertEnum(
-      ensureString(firstPresent(payload, ["status"]), "pointEntry.status"),
+    entryId: ensureString(payload.entry_id, "pointEntry.entry_id"),
+    accountId: ensureString(payload.account_id, "pointEntry.account_id"),
+    entryType: ensureEnum(ensureString(payload.entry_type, "pointEntry.entry_type"), pointEntryTypes, "pointEntry.entry_type"),
+    entryStatus: ensureEnum(
+      ensureString(payload.entry_status, "pointEntry.entry_status"),
       pointEntryStatuses,
-      "pointEntry.status",
+      "pointEntry.entry_status",
     ),
-    timestamp: ensureString(firstPresent(payload, ["occurred_at", "timestamp", "created_at"]), "pointEntry.occurred_at"),
-    ...(optionalString(firstPresent(payload, ["reference_id", "referenceId"]), "pointEntry.reference_id")
-      ? { referenceId: ensureString(firstPresent(payload, ["reference_id", "referenceId"]), "pointEntry.reference_id") }
-      : {}),
-    ...(optionalString(firstPresent(payload, ["task_id", "taskId"]), "pointEntry.task_id")
-      ? { taskId: ensureString(firstPresent(payload, ["task_id", "taskId"]), "pointEntry.task_id") }
-      : {}),
-    ...(optionalString(firstPresent(payload, ["description"]), "pointEntry.description")
-      ? { description: ensureString(firstPresent(payload, ["description"]), "pointEntry.description") }
-      : {}),
-    ...(typeof fallbackBalance === "number" ? { balanceAfter: fallbackBalance } : {}),
+    entrySource: ensureEnum(
+      ensureString(payload.entry_source, "pointEntry.entry_source"),
+      pointEntrySources,
+      "pointEntry.entry_source",
+    ),
+    pointsDelta: ensureNumber(payload.points_delta, "pointEntry.points_delta"),
+    occurredAt: ensureString(payload.occurred_at, "pointEntry.occurred_at"),
+    createdAt: ensureString(payload.created_at, "pointEntry.created_at"),
+    ...(typeof userId !== "undefined" ? { userId } : {}),
+    ...(typeof workspaceId !== "undefined" ? { workspaceId } : {}),
+    ...(typeof taskId !== "undefined" ? { taskId } : {}),
+    ...(typeof ledgerEventId !== "undefined" ? { ledgerEventId } : {}),
+    ...(typeof referenceId !== "undefined" ? { referenceId } : {}),
+    ...(typeof pointsBalanceAfter !== "undefined" ? { pointsBalanceAfter } : {}),
+    ...(typeof metadata !== "undefined" ? { metadata } : {}),
   };
 }
 
 function decodeTask(value: unknown): TaskDto {
   const payload = ensureObject(value, "task");
-  const deprecatedProgress = optionalNumber(payload.progress, "task.progress");
-  const progressPercent =
-    optionalNumber(firstPresent(payload, ["progress_percent", "progressPercent"]), "task.progress_percent") ?? deprecatedProgress;
 
-  if (typeof progressPercent !== "number") {
-    throw new Error("task.progress_percent is required");
-  }
+  const userId = optionalNullableString(payload.user_id, "task.user_id");
+  const workspaceId = optionalNullableString(payload.workspace_id, "task.workspace_id");
+  const description = optionalNullableString(payload.description, "task.description");
+  const dueAt = optionalNullableString(payload.due_at, "task.due_at");
+  const startedAt = optionalNullableString(payload.started_at, "task.started_at");
+  const completedAt = optionalNullableString(payload.completed_at, "task.completed_at");
 
   return {
-    id: ensureString(firstPresent(payload, ["task_id", "id"]), "task.task_id"),
-    accountId: ensureString(firstPresent(payload, ["account_id", "accountId"]), "task.account_id"),
-    title: ensureString(firstPresent(payload, ["title"]), "task.title"),
-    type: assertEnum(
-      ensureString(firstPresent(payload, ["type"]), "task.type"),
-      taskTypes,
-      "task.type",
+    taskId: ensureString(payload.task_id, "task.task_id"),
+    accountId: ensureString(payload.account_id, "task.account_id"),
+    taskType: ensureEnum(ensureString(payload.task_type, "task.task_type"), taskTypes, "task.task_type"),
+    taskStatus: ensureEnum(ensureString(payload.task_status, "task.task_status"), taskStatuses, "task.task_status"),
+    progressState: ensureEnum(
+      ensureString(payload.progress_state, "task.progress_state"),
+      taskProgressStates,
+      "task.progress_state",
     ),
-    ownerId: ensureString(firstPresent(payload, ["owner_id", "ownerId", "owner"]), "task.owner_id"),
-    status: assertEnum(
-      ensureString(firstPresent(payload, ["status"]), "task.status"),
-      taskStatuses,
-      "task.status",
+    title: ensureString(payload.title, "task.title"),
+    progressPercent: ensureNumber(payload.progress_percent, "task.progress_percent"),
+    pointsReward: ensureNumber(payload.points_reward, "task.points_reward"),
+    createdAt: ensureString(payload.created_at, "task.created_at"),
+    updatedAt: ensureString(payload.updated_at, "task.updated_at"),
+    ...(typeof userId !== "undefined" ? { userId } : {}),
+    ...(typeof workspaceId !== "undefined" ? { workspaceId } : {}),
+    ...(typeof description !== "undefined" ? { description } : {}),
+    ...(typeof dueAt !== "undefined" ? { dueAt } : {}),
+    ...(typeof startedAt !== "undefined" ? { startedAt } : {}),
+    ...(typeof completedAt !== "undefined" ? { completedAt } : {}),
+  };
+}
+
+function decodePointsListResponse<TItem>(value: unknown, decodeItem: (entry: unknown) => TItem): PointsListResponse<TItem> {
+  const payload = ensureObject(value, "points list response");
+
+  return {
+    items: ensureArray(payload.data, "points.data").map((entry) => decodeItem(entry)),
+    pagination: decodeCursorPagination(payload.page, "points.page"),
+    meta: decodeResponseMeta(payload.meta, "points.meta"),
+  };
+}
+
+function decodeTasksListResponse<TItem>(value: unknown, decodeItem: (entry: unknown) => TItem): TasksListResponse<TItem> {
+  const payload = ensureObject(value, "tasks list response");
+
+  return {
+    items: ensureArray(payload.data, "tasks.data").map((entry) => decodeItem(entry)),
+    pagination: decodeCursorPagination(payload.page, "tasks.page") as TasksPaginationMeta,
+    meta: decodeResponseMeta(payload.meta, "tasks.meta") as TasksResponseMeta,
+  };
+}
+
+function decodePointSummaryAggregateByType(value: unknown): PointSummaryDto["byType"][number] {
+  const payload = ensureObject(value, "pointSummary.by_type[]");
+
+  return {
+    entryType: ensureEnum(
+      ensureString(payload.entry_type, "pointSummary.by_type[].entry_type"),
+      pointEntryTypes,
+      "pointSummary.by_type[].entry_type",
     ),
-    progressPercent,
-    createdAt: ensureString(firstPresent(payload, ["created_at", "createdAt"]), "task.created_at"),
-    updatedAt: ensureString(firstPresent(payload, ["updated_at", "updatedAt"]), "task.updated_at"),
-    ...(optionalString(firstPresent(payload, ["due_at", "dueAt"]), "task.due_at")
-      ? { dueAt: ensureString(firstPresent(payload, ["due_at", "dueAt"]), "task.due_at") }
-      : {}),
-    ...(optionalString(firstPresent(payload, ["completed_at", "completedAt"]), "task.completed_at")
-      ? { completedAt: ensureString(firstPresent(payload, ["completed_at", "completedAt"]), "task.completed_at") }
-      : {}),
-    ...(optionalString(firstPresent(payload, ["description"]), "task.description")
-      ? { description: ensureString(firstPresent(payload, ["description"]), "task.description") }
-      : {}),
-    ...(typeof deprecatedProgress === "number" ? { progress: deprecatedProgress } : {}),
+    entries: ensureNumber(payload.entries, "pointSummary.by_type[].entries"),
+    pointsTotal: ensureNumber(payload.points_total, "pointSummary.by_type[].points_total"),
+  };
+}
+
+function decodePointSummaryAggregateByStatus(value: unknown): PointSummaryDto["byStatus"][number] {
+  const payload = ensureObject(value, "pointSummary.by_status[]");
+
+  return {
+    entryStatus: ensureEnum(
+      ensureString(payload.entry_status, "pointSummary.by_status[].entry_status"),
+      pointEntryStatuses,
+      "pointSummary.by_status[].entry_status",
+    ),
+    entries: ensureNumber(payload.entries, "pointSummary.by_status[].entries"),
+    pointsTotal: ensureNumber(payload.points_total, "pointSummary.by_status[].points_total"),
+  };
+}
+
+function decodePointSummaryAggregateBySource(value: unknown): PointSummaryDto["bySource"][number] {
+  const payload = ensureObject(value, "pointSummary.by_source[]");
+
+  return {
+    entrySource: ensureEnum(
+      ensureString(payload.entry_source, "pointSummary.by_source[].entry_source"),
+      pointEntrySources,
+      "pointSummary.by_source[].entry_source",
+    ),
+    entries: ensureNumber(payload.entries, "pointSummary.by_source[].entries"),
+    pointsTotal: ensureNumber(payload.points_total, "pointSummary.by_source[].points_total"),
   };
 }
 
@@ -239,63 +310,128 @@ export function decodeTasksList(value: unknown): TasksListResponse<TaskDto> {
 }
 
 export function decodePointSummary(value: unknown): PointSummaryDto {
-  const payload = ensureObject(value, "point summary");
+  const payload = ensureObject(value, "point summary response");
+  const summaryPayload = payload.summary ? ensureObject(payload.summary, "point summary") : payload;
+
   return {
-    asOf: ensureString(firstPresent(payload, ["as_of", "asOf"]), "pointSummary.as_of"),
-    accountId: ensureString(firstPresent(payload, ["account_id", "accountId"]), "pointSummary.account_id"),
-    totalPoints: ensureNumber(firstPresent(payload, ["total_points", "totalPoints"]), "pointSummary.total_points"),
-    earnedPoints: ensureNumber(firstPresent(payload, ["earned_points", "earnedPoints"]), "pointSummary.earned_points"),
-    spentPoints: ensureNumber(firstPresent(payload, ["spent_points", "spentPoints"]), "pointSummary.spent_points"),
-    adjustedPoints: ensureNumber(firstPresent(payload, ["adjusted_points", "adjustedPoints"]), "pointSummary.adjusted_points"),
-    pendingPoints: ensureNumber(firstPresent(payload, ["pending_points", "pendingPoints"]), "pointSummary.pending_points"),
-    byStatus: Object.fromEntries(
-      Object.entries(ensureObject(firstPresent(payload, ["by_status", "byStatus"]) ?? {}, "pointSummary.by_status")).map(
-        ([key, entry]) => [key, ensureNumber(entry, `pointSummary.by_status.${key}`)],
-      ),
-    ),
+    accountId: ensureString(summaryPayload.account_id, "pointSummary.account_id"),
+    windowStart: ensureString(summaryPayload.window_start, "pointSummary.window_start"),
+    windowEnd: ensureString(summaryPayload.window_end, "pointSummary.window_end"),
+    totalPoints: ensureNumber(summaryPayload.total_points, "pointSummary.total_points"),
+    availablePoints: ensureNumber(summaryPayload.available_points, "pointSummary.available_points"),
+    pendingPoints: ensureNumber(summaryPayload.pending_points, "pointSummary.pending_points"),
+    reversedPoints: ensureNumber(summaryPayload.reversed_points, "pointSummary.reversed_points"),
+    entryCount: ensureNumber(summaryPayload.entry_count, "pointSummary.entry_count"),
+    byType: ensureArray(summaryPayload.by_type, "pointSummary.by_type").map((entry) => decodePointSummaryAggregateByType(entry)),
+    byStatus: ensureArray(summaryPayload.by_status, "pointSummary.by_status").map((entry) => decodePointSummaryAggregateByStatus(entry)),
+    bySource: ensureArray(summaryPayload.by_source, "pointSummary.by_source").map((entry) => decodePointSummaryAggregateBySource(entry)),
   };
 }
 
-export function decodeTaskSummary(value: unknown): TaskSummaryDto {
-  const payload = ensureObject(value, "task summary");
+function decodePointTrendBucket(value: unknown): PointsOverviewDto["trend"][number] {
+  const payload = ensureObject(value, "pointsOverview.trend[]");
+
   return {
-    asOf: ensureString(firstPresent(payload, ["as_of", "asOf"]), "taskSummary.as_of"),
-    accountId: ensureString(firstPresent(payload, ["account_id", "accountId"]), "taskSummary.account_id"),
-    total: ensureNumber(firstPresent(payload, ["total"]), "taskSummary.total"),
-    open: ensureNumber(firstPresent(payload, ["open"]), "taskSummary.open"),
-    inProgress: ensureNumber(firstPresent(payload, ["in_progress", "inProgress"]), "taskSummary.in_progress"),
-    done: ensureNumber(firstPresent(payload, ["done"]), "taskSummary.done"),
-    failed: ensureNumber(firstPresent(payload, ["failed"]), "taskSummary.failed"),
-    byStatus: Object.fromEntries(
-      Object.entries(ensureObject(firstPresent(payload, ["by_status", "byStatus"]) ?? {}, "taskSummary.by_status")).map(
-        ([key, entry]) => [key, ensureNumber(entry, `taskSummary.by_status.${key}`)],
-      ),
-    ),
+    bucketStart: ensureString(payload.bucket_start, "pointsOverview.trend[].bucket_start"),
+    bucketEnd: ensureString(payload.bucket_end, "pointsOverview.trend[].bucket_end"),
+    pointsEarned: ensureNumber(payload.points_earned, "pointsOverview.trend[].points_earned"),
+    entries: ensureNumber(payload.entries, "pointsOverview.trend[].entries"),
   };
 }
 
 export function decodePointsOverview(value: unknown): PointsOverviewDto {
-  const payload = ensureObject(value, "points overview");
-  const summaryPayload = firstPresent(payload, ["summary"]) ?? payload;
-  const recentEntries = firstPresent(payload, ["recent_entries", "recentEntries", "items"]) ?? [];
+  const payload = ensureObject(value, "points overview response");
+  const overviewPayload = payload.overview ? ensureObject(payload.overview, "points overview") : payload;
 
   return {
-    asOf: ensureString(firstPresent(payload, ["as_of", "asOf"]), "pointsOverview.as_of"),
-    accountId: ensureString(firstPresent(payload, ["account_id", "accountId"]), "pointsOverview.account_id"),
-    summary: decodePointSummary(summaryPayload),
-    recentEntries: ensureArray(recentEntries, "pointsOverview.recent_entries").map((entry) => decodePointEntry(entry)),
+    accountId: ensureString(overviewPayload.account_id, "pointsOverview.account_id"),
+    windowStart: ensureString(overviewPayload.window_start, "pointsOverview.window_start"),
+    windowEnd: ensureString(overviewPayload.window_end, "pointsOverview.window_end"),
+    currentBalance: ensureNumber(overviewPayload.current_balance, "pointsOverview.current_balance"),
+    lifetimePoints: ensureNumber(overviewPayload.lifetime_points, "pointsOverview.lifetime_points"),
+    entriesLast24h: ensureNumber(overviewPayload.entries_last_24h, "pointsOverview.entries_last_24h"),
+    pointsLast24h: ensureNumber(overviewPayload.points_last_24h, "pointsOverview.points_last_24h"),
+    trend: ensureArray(overviewPayload.trend, "pointsOverview.trend").map((entry) => decodePointTrendBucket(entry)),
+  };
+}
+
+function decodeTaskStatusAggregate(value: unknown): TaskSummaryDto["byStatus"][number] {
+  const payload = ensureObject(value, "taskSummary.by_status[]");
+
+  return {
+    taskStatus: ensureEnum(
+      ensureString(payload.task_status, "taskSummary.by_status[].task_status"),
+      taskStatuses,
+      "taskSummary.by_status[].task_status",
+    ),
+    count: ensureNumber(payload.count, "taskSummary.by_status[].count"),
+  };
+}
+
+function decodeTaskProgressAggregate(value: unknown): TaskSummaryDto["byProgressState"][number] {
+  const payload = ensureObject(value, "taskSummary.by_progress_state[]");
+
+  return {
+    progressState: ensureEnum(
+      ensureString(payload.progress_state, "taskSummary.by_progress_state[].progress_state"),
+      taskProgressStates,
+      "taskSummary.by_progress_state[].progress_state",
+    ),
+    count: ensureNumber(payload.count, "taskSummary.by_progress_state[].count"),
+  };
+}
+
+export function decodeTaskSummary(value: unknown): TaskSummaryDto {
+  const payload = ensureObject(value, "task summary response");
+  const summaryPayload = payload.summary ? ensureObject(payload.summary, "task summary") : payload;
+
+  return {
+    accountId: ensureString(summaryPayload.account_id, "taskSummary.account_id"),
+    totalTasks: ensureNumber(summaryPayload.total_tasks, "taskSummary.total_tasks"),
+    completedTasks: ensureNumber(summaryPayload.completed_tasks, "taskSummary.completed_tasks"),
+    inProgressTasks: ensureNumber(summaryPayload.in_progress_tasks, "taskSummary.in_progress_tasks"),
+    overdueTasks: ensureNumber(summaryPayload.overdue_tasks, "taskSummary.overdue_tasks"),
+    byStatus: ensureArray(summaryPayload.by_status, "taskSummary.by_status").map((entry) => decodeTaskStatusAggregate(entry)),
+    byProgressState: ensureArray(summaryPayload.by_progress_state, "taskSummary.by_progress_state").map((entry) =>
+      decodeTaskProgressAggregate(entry),
+    ),
+  };
+}
+
+function decodeTaskOverviewItem(value: unknown): TasksOverviewDto["recentlyCompleted"][number] {
+  const payload = ensureObject(value, "tasksOverview.item[]");
+
+  return {
+    taskId: ensureString(payload.task_id, "tasksOverview.item[].task_id"),
+    taskType: ensureEnum(ensureString(payload.task_type, "tasksOverview.item[].task_type"), taskTypes, "tasksOverview.item[].task_type"),
+    taskStatus: ensureEnum(
+      ensureString(payload.task_status, "tasksOverview.item[].task_status"),
+      taskStatuses,
+      "tasksOverview.item[].task_status",
+    ),
+    progressState: ensureEnum(
+      ensureString(payload.progress_state, "tasksOverview.item[].progress_state"),
+      taskProgressStates,
+      "tasksOverview.item[].progress_state",
+    ),
+    progressPercent: ensureNumber(payload.progress_percent, "tasksOverview.item[].progress_percent"),
   };
 }
 
 export function decodeTasksOverview(value: unknown): TasksOverviewDto {
-  const payload = ensureObject(value, "tasks overview");
-  const summaryPayload = firstPresent(payload, ["summary"]) ?? payload;
-  const recentTasks = firstPresent(payload, ["recent_tasks", "recentTasks", "items"]) ?? [];
+  const payload = ensureObject(value, "tasks overview response");
+  const overviewPayload = payload.overview ? ensureObject(payload.overview, "tasks overview") : payload;
 
   return {
-    asOf: ensureString(firstPresent(payload, ["as_of", "asOf"]), "tasksOverview.as_of"),
-    accountId: ensureString(firstPresent(payload, ["account_id", "accountId"]), "tasksOverview.account_id"),
-    summary: decodeTaskSummary(summaryPayload),
-    recentTasks: ensureArray(recentTasks, "tasksOverview.recent_tasks").map((entry) => decodeTask(entry)),
+    accountId: ensureString(overviewPayload.account_id, "tasksOverview.account_id"),
+    windowStart: ensureString(overviewPayload.window_start, "tasksOverview.window_start"),
+    windowEnd: ensureString(overviewPayload.window_end, "tasksOverview.window_end"),
+    completionRate: ensureNumber(overviewPayload.completion_rate, "tasksOverview.completion_rate"),
+    tasksCreated: ensureNumber(overviewPayload.tasks_created, "tasksOverview.tasks_created"),
+    tasksCompleted: ensureNumber(overviewPayload.tasks_completed, "tasksOverview.tasks_completed"),
+    recentlyCompleted: ensureArray(overviewPayload.recently_completed, "tasksOverview.recently_completed").map((entry) =>
+      decodeTaskOverviewItem(entry),
+    ),
+    atRisk: ensureArray(overviewPayload.at_risk, "tasksOverview.at_risk").map((entry) => decodeTaskOverviewItem(entry)),
   };
 }

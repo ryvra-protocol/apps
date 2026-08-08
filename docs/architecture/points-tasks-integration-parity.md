@@ -1,65 +1,45 @@
-# Points/Tasks Integration Parity (Phase 10)
+# Points/Tasks Integration Parity (Phase 10.5)
 
 ## Canonical source of truth
 
-Current Apps parity is pinned to protocol/policy contracts because a dedicated Points/Tasks HTTP OpenAPI is not published upstream.
+Apps Points/Tasks parity is now pinned to the published canonical OpenAPI in `ryvra-protocol/protocol-core` (default branch):
 
-Canonical references:
+- OpenAPI: `openapi/points-tasks.openapi.yaml`
+- Changelog: `docs/api-contract-changelog.md`
+- OpenAPI commit: `b3abbc4fce3ee4024ba39049623a870747a521f7`
+- OpenAPI blob SHA: `89e790e859984892fcfbbe7e0b3e7dd2f159b2e7`
+- Canonical API version marker: `2026-08-08.v1`
 
-- protocol source: `ryvra-protocol/protocol-core`
-  - `contracts/src/events.ts`
-  - `contracts/src/ids.ts`
-  - `contracts/src/version.ts`
-  - `docs/tokenomics-proof-of-transaction.md`
-  - `docs/tokenomics-faq.md`
-- policy source: `ryvra-protocol/policy-risk`
-  - `docs/anti-abuse-policy.md`
+## Endpoint parity map
 
-Published OpenAPI for Points/Tasks: **No**
+| Client method | HTTP | Canonical path | Scope | Auth | Status |
+| --- | --- | --- | --- | --- | --- |
+| `listPointEntries` | GET | `/points-tasks/points/entries` | required `account_id`; optional `user_id`, `workspace_id` | bearer required | matched |
+| `getPointSummary` | GET | `/points-tasks/points/summary` | required `account_id`; optional `user_id`, `workspace_id` | bearer required | matched |
+| `getPointsOverview` | GET | `/points-tasks/points/overview` | required `account_id`; optional `user_id`, `workspace_id` | bearer required | matched |
+| `listTasks` | GET | `/points-tasks/tasks` | required `account_id`; optional `user_id`, `workspace_id` | bearer required | matched |
+| `getTaskSummary` | GET | `/points-tasks/tasks/summary` | required `account_id`; optional `user_id`, `workspace_id` | bearer required | matched |
+| `getTasksOverview` | GET | `/points-tasks/tasks/overview` | required `account_id`; optional `user_id`, `workspace_id` | bearer required | matched |
+| `getParityDiagnostics` | GET probe | `/points-tasks/status` (primary), `/points-tasks/status/health` (fallback) | status: optional scoped diagnostics; health: none | status bearer required, health auth-optional | matched |
 
-Compatibility markers used by Apps runtime:
+## Scope, auth, and headers
 
-- contract schema version: `1.0.0`
-- version marker: `POT_CONTRACT_SCHEMA_VERSION=1.0.0`
-- apps parity marker: `phase-10-2026-08-08T07:54:18.436Z`
+- Account-scoped endpoints fail fast with typed `invalid_request` errors when `account_id` is missing.
+- `user_id` and `workspace_id` are preserved in request contracts and query serialization where provided.
+- In HTTP mode, bearer auth is required on all canonical routes except `/points-tasks/status/health`.
+- `x-request-id` and `x-correlation-id` are always emitted; generated when not supplied.
+- Canonical v1 is read-only, so idempotency headers are not required.
 
-## Enforced parity gates
+## Pagination and deprecation policy
 
-### Account scope (`account_id`)
+- Canonical pagination is cursor-first: `limit` + `cursor`.
+- Legacy `page` is retained only as canonical deprecated compatibility.
+- When both `cursor` and `page` are provided, `cursor` takes precedence.
+- Deprecated page compatibility removal window: not before `2027-02-04`.
 
-Required on account-scoped endpoints:
+## Canonical error envelope
 
-- `/points-tasks/points/entries`
-- `/points-tasks/points/summary`
-- `/points-tasks/points/overview`
-- `/points-tasks/tasks`
-- `/points-tasks/tasks/summary`
-- `/points-tasks/tasks/overview`
-
-### Auth/header policy
-
-In HTTP mode:
-
-- bearer auth is required on non-status/non-health Points/Tasks routes
-- status route (`/points-tasks/status`) and health probe route (`/points-tasks/status/health`) remain auth-optional
-- `x-request-id` and `x-correlation-id` are emitted on all Points/Tasks client requests
-- idempotency headers are not applicable in Phase 10 because exposed Points/Tasks methods are read-only
-
-### Pagination/deprecation policy
-
-- canonical pagination: cursor-first (`limit`, `cursor`)
-- deprecated compatibility: `page` and `pageSize` (supported until at least `2027-06-30`)
-- cursor is authoritative when both cursor and page are present
-
-### Deprecated response field compatibility
-
-- points canonical `running_balance`, fallback `balance_after`
-- tasks canonical `progress_percent`, fallback `progress`
-- fallback compatibility removal window not before `2027-06-30`
-
-### Error envelope
-
-Normalized canonical error contract:
+Points/Tasks HTTP normalization is now constrained to canonical shape:
 
 - `code`
 - `message`
@@ -67,19 +47,18 @@ Normalized canonical error contract:
 - `source`
 - optional `details`
 
-## Endpoint parity map
+## Migration notes (Phase 10 -> 10.5)
 
-| Client method | HTTP | Path | Scope required | Pagination |
-| --- | --- | --- | --- | --- |
-| `listPointEntries` | GET | `/points-tasks/points/entries` | `account_id` | cursor (`page` deprecated) |
-| `getPointSummary` | GET | `/points-tasks/points/summary` | `account_id` | none |
-| `getPointsOverview` | GET | `/points-tasks/points/overview` | `account_id` | none |
-| `listTasks` | GET | `/points-tasks/tasks` | `account_id` | cursor (`page` deprecated) |
-| `getTaskSummary` | GET | `/points-tasks/tasks/summary` | `account_id` | none |
-| `getTasksOverview` | GET | `/points-tasks/tasks/overview` | `account_id` | none |
-| `getParityDiagnostics` | GET probe | `/points-tasks/status/health` (configurable) | none | none |
+- Query params renamed to canonical keys:
+  - `type` -> `entry_type` / `task_type`
+  - `status` -> `entry_status` / `task_status`
+  - `source` -> `entry_source`
+  - `from`/`to` -> `occurred_from`/`occurred_to` and `due_after`/`due_before`
+  - `sort_by` + `sort_order` -> canonical `sort` literal values
+- Removed non-canonical Points/Tasks request filters from client serialization (`search`, task owner filters).
+- Domain enums/DTOs now mirror canonical OpenAPI sets and fields.
+- Diagnostics now expose canonical OpenAPI path/changelog/SHA/commit/version metadata.
 
-## Known limitations + follow-up
+## Remaining limitations
 
-- no upstream Points/Tasks HTTP OpenAPI blob to lock method/path parity against commit SHA yet
-- once upstream endpoint contract is published, replace provisional route-map assumptions with upstream path references and add SHA/commit markers in this document
+- No write/transition Points/Tasks routes are in canonical v1; idempotency enforcement remains deferred until write endpoints are published.

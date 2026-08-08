@@ -4,9 +4,9 @@ interface StatusBadgeProps {
   status: string;
 }
 
-const goodStatuses = new Set(["posted", "done", "active", "ok", "pass"]);
-const warningStatuses = new Set(["pending", "in_progress", "open", "blocked"]);
-const badStatuses = new Set(["failed", "reversed", "canceled", "error", "deny"]);
+const goodStatuses = new Set(["confirmed", "completed", "active", "ok", "pass", "eligible"]);
+const warningStatuses = new Set(["pending", "in_progress", "queued", "under_review", "maintenance", "degraded"]);
+const badStatuses = new Set(["failed", "rejected", "reversed", "canceled", "expired", "blocked", "down", "error", "deny"]);
 
 function resolveStyles(status: string): { color: string; background: string; border: string } {
   const normalized = status.toLowerCase();

@@ -1,6 +1,12 @@
 "use client";
 
-import { taskStatuses, taskTypes, type TaskDto, type TasksPaginationMeta } from "@ryvra/domain-tasks";
+import {
+  taskProgressStates,
+  taskStatuses,
+  taskTypes,
+  type TaskDto,
+  type TasksPaginationMeta,
+} from "@ryvra/domain-tasks";
 import { Button, Card, DataTable, themeTokens } from "@ryvra/ui";
 import { useMemo } from "react";
 import { formatDateTime, formatNumber } from "../lib/format";
@@ -14,39 +20,56 @@ interface TasksTableClientProps {
 
 const statusOptions = ["ALL", ...taskStatuses] as const;
 const typeOptions = ["ALL", ...taskTypes] as const;
+const progressStateOptions = ["ALL", ...taskProgressStates] as const;
 const sortFieldOptions = [
   { value: "updated_at", label: "Updated time" },
+  { value: "created_at", label: "Created time" },
   { value: "due_at", label: "Due time" },
-  { value: "progress_percent", label: "Progress" },
-  { value: "status", label: "Status" },
 ] as const;
+
+function parseSortParam(sortValue: string | null): { field: "updated_at" | "created_at" | "due_at"; direction: "asc" | "desc" } {
+  const [field, direction] = (sortValue ?? "updated_at:desc").split(":");
+  const normalizedField = field === "created_at" || field === "due_at" ? field : "updated_at";
+  const normalizedDirection = direction === "asc" ? "asc" : "desc";
+
+  return {
+    field: normalizedField,
+    direction: normalizedDirection,
+  };
+}
 
 export function TasksTableClient({ items, pagination }: TasksTableClientProps) {
   const { searchParams, updateQuery, clearQuery } = useQueryFilters();
 
-  const statusParam = (searchParams.get("status") ?? "ALL").toLowerCase();
-  const typeParam = (searchParams.get("type") ?? "ALL").toLowerCase();
-  const ownerId = searchParams.get("ownerId") ?? searchParams.get("owner") ?? "";
-  const searchValue = searchParams.get("search") ?? "";
-  const from = searchParams.get("from") ?? "";
-  const to = searchParams.get("to") ?? "";
-  const sortField = searchParams.get("sortBy") ?? "updated_at";
-  const sortDirection = searchParams.get("sortOrder") === "asc" ? "asc" : "desc";
+  const statusParam = (searchParams.get("task_status") ?? searchParams.get("status") ?? "ALL").toLowerCase();
+  const typeParam = (searchParams.get("task_type") ?? searchParams.get("type") ?? "ALL").toLowerCase();
+  const progressStateParam = (searchParams.get("progress_state") ?? "ALL").toLowerCase();
+  const dueAfter = searchParams.get("due_after") ?? "";
+  const dueBefore = searchParams.get("due_before") ?? "";
+  const sort = parseSortParam(searchParams.get("sort"));
 
   const status = statusOptions.includes(statusParam as (typeof statusOptions)[number]) ? statusParam : "ALL";
   const type = typeOptions.includes(typeParam as (typeof typeOptions)[number]) ? typeParam : "ALL";
+  const progressState = progressStateOptions.includes(progressStateParam as (typeof progressStateOptions)[number])
+    ? progressStateParam
+    : "ALL";
 
   const hasFilters =
     status !== "ALL" ||
     type !== "ALL" ||
-    ownerId.length > 0 ||
-    searchValue.length > 0 ||
-    from.length > 0 ||
-    to.length > 0 ||
-    sortField !== "updated_at" ||
-    sortDirection !== "desc";
+    progressState !== "ALL" ||
+    dueAfter.length > 0 ||
+    dueBefore.length > 0 ||
+    sort.field !== "updated_at" ||
+    sort.direction !== "desc";
 
   const visibleRows = useMemo(() => [...items], [items]);
+
+  const updateSort = (field: string, direction: string) => {
+    const normalizedField = field === "created_at" || field === "due_at" ? field : "updated_at";
+    const normalizedDirection = direction === "asc" ? "asc" : "desc";
+    updateQuery({ sort: `${normalizedField}:${normalizedDirection}`, sortBy: undefined, sortOrder: undefined, sortField: undefined, sortDirection: undefined });
+  };
 
   return (
     <section aria-labelledby="tasks-table-title" style={{ display: "grid", gap: themeTokens.spacing.md }}>
@@ -81,7 +104,7 @@ export function TasksTableClient({ items, pagination }: TasksTableClientProps) {
             <select
               className="tasks-filter-control"
               value={status}
-              onChange={(event) => updateQuery({ status: event.currentTarget.value === "ALL" ? undefined : event.currentTarget.value })}
+              onChange={(event) => updateQuery({ task_status: event.currentTarget.value === "ALL" ? undefined : event.currentTarget.value, status: undefined })}
             >
               {statusOptions.map((option) => (
                 <option key={option} value={option}>
@@ -96,7 +119,7 @@ export function TasksTableClient({ items, pagination }: TasksTableClientProps) {
             <select
               className="tasks-filter-control"
               value={type}
-              onChange={(event) => updateQuery({ type: event.currentTarget.value === "ALL" ? undefined : event.currentTarget.value })}
+              onChange={(event) => updateQuery({ task_type: event.currentTarget.value === "ALL" ? undefined : event.currentTarget.value, type: undefined })}
             >
               {typeOptions.map((option) => (
                 <option key={option} value={option}>
@@ -107,40 +130,49 @@ export function TasksTableClient({ items, pagination }: TasksTableClientProps) {
           </label>
 
           <label style={{ display: "grid", gap: themeTokens.spacing.xs }}>
-            <span>Owner</span>
+            <span>Progress state</span>
+            <select
+              className="tasks-filter-control"
+              value={progressState}
+              onChange={(event) =>
+                updateQuery({ progress_state: event.currentTarget.value === "ALL" ? undefined : event.currentTarget.value })
+              }
+            >
+              {progressStateOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label style={{ display: "grid", gap: themeTokens.spacing.xs }}>
+            <span>Due after</span>
             <input
               className="tasks-filter-control"
-              type="search"
-              value={ownerId}
-              onChange={(event) => updateQuery({ ownerId: event.currentTarget.value || undefined, owner: undefined })}
-              placeholder="owner id"
+              type="date"
+              value={dueAfter}
+              onChange={(event) => updateQuery({ due_after: event.currentTarget.value || undefined, from: undefined })}
             />
           </label>
 
           <label style={{ display: "grid", gap: themeTokens.spacing.xs }}>
-            <span>Search</span>
+            <span>Due before</span>
             <input
               className="tasks-filter-control"
-              type="search"
-              value={searchValue}
-              onChange={(event) => updateQuery({ search: event.currentTarget.value || undefined })}
-              placeholder="task id or title"
+              type="date"
+              value={dueBefore}
+              onChange={(event) => updateQuery({ due_before: event.currentTarget.value || undefined, to: undefined })}
             />
-          </label>
-
-          <label style={{ display: "grid", gap: themeTokens.spacing.xs }}>
-            <span>From</span>
-            <input className="tasks-filter-control" type="date" value={from} onChange={(event) => updateQuery({ from: event.currentTarget.value || undefined })} />
-          </label>
-
-          <label style={{ display: "grid", gap: themeTokens.spacing.xs }}>
-            <span>To</span>
-            <input className="tasks-filter-control" type="date" value={to} onChange={(event) => updateQuery({ to: event.currentTarget.value || undefined })} />
           </label>
 
           <label style={{ display: "grid", gap: themeTokens.spacing.xs }}>
             <span>Sort by</span>
-            <select className="tasks-filter-control" value={sortField} onChange={(event) => updateQuery({ sortBy: event.currentTarget.value })}>
+            <select
+              className="tasks-filter-control"
+              value={sort.field}
+              onChange={(event) => updateSort(event.currentTarget.value, sort.direction)}
+            >
               {sortFieldOptions.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
@@ -151,7 +183,7 @@ export function TasksTableClient({ items, pagination }: TasksTableClientProps) {
 
           <label style={{ display: "grid", gap: themeTokens.spacing.xs }}>
             <span>Direction</span>
-            <select className="tasks-filter-control" value={sortDirection} onChange={(event) => updateQuery({ sortOrder: event.currentTarget.value })}>
+            <select className="tasks-filter-control" value={sort.direction} onChange={(event) => updateSort(sort.field, event.currentTarget.value)}>
               <option value="desc">Descending</option>
               <option value="asc">Ascending</option>
             </select>
@@ -163,15 +195,20 @@ export function TasksTableClient({ items, pagination }: TasksTableClientProps) {
               variant="secondary"
               onClick={() =>
                 clearQuery([
+                  "task_status",
                   "status",
+                  "task_type",
                   "type",
-                  "owner",
-                  "ownerId",
-                  "search",
+                  "progress_state",
+                  "due_after",
+                  "due_before",
                   "from",
                   "to",
+                  "sort",
                   "sortBy",
                   "sortOrder",
+                  "sortField",
+                  "sortDirection",
                   "cursor",
                   "page",
                 ])
@@ -193,24 +230,29 @@ export function TasksTableClient({ items, pagination }: TasksTableClientProps) {
       <DataTable<TaskDto>
         caption="Tasks"
         columns={[
-          { key: "id", header: "Task id" },
+          { key: "taskId", header: "Task id" },
           { key: "title", header: "Title" },
-          { key: "type", header: "Type", render: (value) => <StatusBadge status={String(value)} /> },
-          { key: "ownerId", header: "Owner" },
-          { key: "status", header: "Status", render: (value) => <StatusBadge status={String(value)} /> },
+          { key: "taskType", header: "Type", render: (value) => <StatusBadge status={String(value)} /> },
+          { key: "taskStatus", header: "Status", render: (value) => <StatusBadge status={String(value)} /> },
+          { key: "progressState", header: "Progress state", render: (value) => <StatusBadge status={String(value)} /> },
           { key: "progressPercent", header: "Progress", render: (value) => `${formatNumber(Number(value), 0)}%` },
+          { key: "pointsReward", header: "Points reward", render: (value) => formatNumber(Number(value)) },
           { key: "dueAt", header: "Due", render: (value) => (value ? formatDateTime(String(value)) : "n/a") },
           { key: "completedAt", header: "Completed", render: (value) => (value ? formatDateTime(String(value)) : "n/a") },
         ]}
         rows={visibleRows}
-        getRowKey={(row) => row.id}
+        getRowKey={(row) => row.taskId}
         emptyMessage="No tasks match the selected filters."
       />
 
       {visibleRows.length === 0 ? (
         <Card title="No tasks found">
           <p style={{ marginTop: 0 }}>Try broadening filters or clearing cursor/page context.</p>
-          <Button type="button" variant="secondary" onClick={() => clearQuery(["status", "type", "owner", "ownerId", "search", "from", "to", "cursor", "page"])}>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => clearQuery(["task_status", "task_type", "progress_state", "due_after", "due_before", "cursor", "page"])}
+          >
             Clear filters
           </Button>
         </Card>

@@ -39,10 +39,10 @@ import type {
   PointEntryFilters,
   PointSummaryDto,
   PointsAccountScopedListRequest,
-  PointsAccountScopedRequest,
-  PointsAccountScopedSummaryRequest,
   PointsListResponse,
   PointsOverviewDto,
+  PointsOverviewRequest,
+  PointsSummaryRequest,
 } from "@ryvra/domain-points";
 import type {
   TaskDto,
@@ -50,9 +50,9 @@ import type {
   TaskSummaryDto,
   TasksAccountScopedListRequest,
   TasksAccountScopedRequest,
-  TasksAccountScopedSummaryRequest,
   TasksListResponse,
   TasksOverviewDto,
+  TasksOverviewRequest,
 } from "@ryvra/domain-tasks";
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -62,6 +62,12 @@ export type ApiErrorSource =
   | "http"
   | "runtime"
   | "unknown"
+  | "points_tasks_api"
+  | "tasks_engine"
+  | "policy_risk"
+  | "ledger_settlement"
+  | "pay"
+  | "governance"
   | "points-tasks-api"
   | "markets-api"
   | "policy-risk"
@@ -223,38 +229,30 @@ export interface PointsTasksParityDiagnostics {
   baseUrl: string;
   compatibilityVersion: string;
   sourceOfTruth: string;
-  sourcePolicy: string;
-  sourceProtocolDocPath: string;
-  sourceProtocolFaqPath: string;
-  sourceContractsEventsPath: string;
-  sourceContractsIdsPath: string;
-  sourcePolicyDocPath: string;
-  sourceContractSchemaVersion: string;
-  sourceOpenApiPublished: false;
+  sourceOpenApiPath: string;
+  sourceChangelogPath: string;
+  sourceOpenApiSha: string;
+  sourceOpenApiCommit: string;
+  canonicalApiVersion: "2026-08-08.v1";
+  sourceOpenApiPublished: true;
   parityCheckMarker: string;
   auth: {
-    requiredForPointsTasksRoutes: boolean;
-    statusRouteAuthOptional: boolean;
+    bearerRequiredByDefault: boolean;
+    authOptionalRoutes: readonly string[];
     hasAuthorization: boolean;
     requestIdHeader: string;
     correlationIdHeader: string;
   };
-  accountScope: {
+  scope: {
     defaultAccountId?: string;
     requiredField: "account_id";
+    optionalFields: readonly ["user_id", "workspace_id"];
     requiredEndpoints: readonly string[];
   };
   paginationPolicy: {
     preferredMode: "cursor";
     deprecatedParam: "page";
-    deprecatedRemovalNotBefore: "2027-06-30";
-  };
-  deprecatedFieldFallback: {
-    pointsCanonicalField: "running_balance";
-    pointsFallbackField: "balance_after";
-    tasksCanonicalField: "progress_percent";
-    tasksFallbackField: "progress";
-    fallbackRemovalNotBefore: "2027-06-30";
+    deprecatedRemovalNotBefore: "2027-02-04";
   };
   connectivity: PointsTasksConnectivityCheckResult;
 }
@@ -293,11 +291,11 @@ export interface PayClient {
 
 export interface PointsTasksClient {
   listPointEntries(request: PointsAccountScopedListRequest<PointEntryFilters>): Promise<PointsListResponse<PointEntryDto>>;
-  getPointSummary(request: PointsAccountScopedSummaryRequest<PointEntryFilters>): Promise<PointSummaryDto>;
-  getPointsOverview(request: PointsAccountScopedRequest): Promise<PointsOverviewDto>;
+  getPointSummary(request: PointsSummaryRequest): Promise<PointSummaryDto>;
+  getPointsOverview(request: PointsOverviewRequest): Promise<PointsOverviewDto>;
   listTasks(request: TasksAccountScopedListRequest<TaskFilters>): Promise<TasksListResponse<TaskDto>>;
-  getTaskSummary(request: TasksAccountScopedSummaryRequest<TaskFilters>): Promise<TaskSummaryDto>;
-  getTasksOverview(request: TasksAccountScopedRequest): Promise<TasksOverviewDto>;
+  getTaskSummary(request: TasksAccountScopedRequest): Promise<TaskSummaryDto>;
+  getTasksOverview(request: TasksOverviewRequest): Promise<TasksOverviewDto>;
   getParityDiagnostics(): Promise<PointsTasksParityDiagnostics>;
 }
 

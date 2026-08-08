@@ -1,20 +1,26 @@
-import type { PointEntryFilters, PointsAccountScopedListRequest } from "@ryvra/domain-points";
+import type {
+  PointEntryFilters,
+  PointsAccountScopedListRequest,
+  PointsSummaryRequest,
+} from "@ryvra/domain-points";
 import { Card, Section, themeTokens } from "@ryvra/ui";
 import { EmptyState, ErrorState, UnauthorizedState } from "../components/page-states";
 import { PointsTableClient } from "../components/points-table-client";
 import { ModeBadge } from "../components/mode-badge";
 import { formatNumber } from "../lib/format";
 import {
-  getFirstParam,
   parseAccountId,
   parseCursor,
-  parseDateRange,
   parseLimit,
   parsePage,
+  parsePointDateRange,
   parsePointEntrySource,
   parsePointEntryStatus,
   parsePointEntryType,
-  parseSortDirection,
+  parsePointSort,
+  parsePointsWindow,
+  parseUserId,
+  parseWorkspaceId,
   type RouteSearchParams,
 } from "../lib/search-params";
 import { capturePointsTasksPageError, createPointsTasksRuntimeContext } from "../lib/runtime";
@@ -29,26 +35,27 @@ function buildPointRequest(
   searchParams: RouteSearchParams,
   defaultAccountId: string | undefined,
 ): PointsAccountScopedListRequest<PointEntryFilters> {
-  const status = parsePointEntryStatus(searchParams);
-  const type = parsePointEntryType(searchParams);
-  const source = parsePointEntrySource(searchParams);
-  const search = getFirstParam(searchParams, "search")?.trim();
-  const dateRange = parseDateRange(searchParams);
-  const sortField = getFirstParam(searchParams, "sortBy") ?? getFirstParam(searchParams, "sortField") ?? "timestamp";
+  const entryStatus = parsePointEntryStatus(searchParams);
+  const entryType = parsePointEntryType(searchParams);
+  const entrySource = parsePointEntrySource(searchParams);
+  const dateRange = parsePointDateRange(searchParams);
   const cursor = parseCursor(searchParams);
   const deprecatedPage = parsePage(searchParams);
   const accountId = parseAccountId(searchParams) ?? defaultAccountId ?? "";
+  const userId = parseUserId(searchParams);
+  const workspaceId = parseWorkspaceId(searchParams);
 
   const filters: PointEntryFilters = {
-    ...(status ? { status } : {}),
-    ...(type ? { type } : {}),
-    ...(source ? { source } : {}),
-    ...(search ? { search } : {}),
+    ...(entryStatus ? { entryStatus } : {}),
+    ...(entryType ? { entryType } : {}),
+    ...(entrySource ? { entrySource } : {}),
     ...(dateRange ? { dateRange } : {}),
   };
 
   return {
     accountId,
+    ...(userId ? { userId } : {}),
+    ...(workspaceId ? { workspaceId } : {}),
     ...(Object.keys(filters).length > 0 ? { filters } : {}),
     pagination: {
       limit: parseLimit(searchParams, 50),
@@ -56,8 +63,7 @@ function buildPointRequest(
       ...(typeof deprecatedPage === "number" ? { page: deprecatedPage } : {}),
     },
     sort: {
-      field: sortField,
-      direction: parseSortDirection(searchParams),
+      value: parsePointSort(searchParams),
     },
   };
 }
@@ -68,7 +74,7 @@ export default async function PointsPage({ searchParams }: PointsPageProps) {
   if (!runtime.authDecision.allowed) {
     return (
       <section style={{ display: "grid", gap: themeTokens.spacing.lg }}>
-        <Section title="Points" description="Typed points ledger with parity filters and cursor pagination.">
+        <Section title="Points" description="Canonical points entries view with scope and cursor pagination.">
           <UnauthorizedState />
         </Section>
       </section>
@@ -81,7 +87,7 @@ export default async function PointsPage({ searchParams }: PointsPageProps) {
     if (!request.accountId) {
       return (
         <section style={{ display: "grid", gap: themeTokens.spacing.lg }}>
-          <Section title="Points" description="Typed points ledger with parity filters and cursor pagination.">
+          <Section title="Points" description="Canonical points entries view with scope and cursor pagination.">
             <ErrorState
               title="Account scope is required"
               message="Set account_id in the URL or configure RYVRA_POINTS_TASKS_ACCOUNT_ID before requesting points data."
@@ -94,12 +100,18 @@ export default async function PointsPage({ searchParams }: PointsPageProps) {
       );
     }
 
+    const window = parsePointsWindow(searchParams);
+    const summaryRequest: PointsSummaryRequest = {
+      accountId: request.accountId,
+      ...(request.userId ? { userId: request.userId } : {}),
+      ...(request.workspaceId ? { workspaceId: request.workspaceId } : {}),
+      ...(request.filters?.dateRange ? { dateRange: request.filters.dateRange } : {}),
+      ...(window ? { window } : {}),
+    };
+
     const [pointsList, summary] = await Promise.all([
       runtime.pointsTasksClient.listPointEntries(request),
-      runtime.pointsTasksClient.getPointSummary({
-        accountId: request.accountId,
-        ...(request.filters ? { filters: request.filters } : {}),
-      }),
+      runtime.pointsTasksClient.getPointSummary(summaryRequest),
     ]);
 
     runtime.logger.info("Loaded points ledger data", {
@@ -107,11 +119,12 @@ export default async function PointsPage({ searchParams }: PointsPageProps) {
       accountId: request.accountId,
       pointEntryCount: pointsList.items.length,
       totalPoints: summary.totalPoints,
+      availablePoints: summary.availablePoints,
     });
 
     return (
       <section style={{ display: "grid", gap: themeTokens.spacing.lg }}>
-        <Section title="Points" description="Typed points ledger with parity filters and cursor pagination.">
+        <Section title="Points" description="Canonical points entries view with scope and cursor pagination.">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: themeTokens.spacing.sm }}>
             <ModeBadge mode={runtime.config.mode} />
             <span style={{ color: themeTokens.color.textMuted, fontSize: themeTokens.typography.size.sm }}>
@@ -123,17 +136,17 @@ export default async function PointsPage({ searchParams }: PointsPageProps) {
             <Card title="Total points">
               <p style={{ margin: 0 }}>{formatNumber(summary.totalPoints)}</p>
             </Card>
-            <Card title="Earned">
-              <p style={{ margin: 0 }}>{formatNumber(summary.earnedPoints)}</p>
-            </Card>
-            <Card title="Spent">
-              <p style={{ margin: 0 }}>{formatNumber(summary.spentPoints)}</p>
-            </Card>
-            <Card title="Adjusted">
-              <p style={{ margin: 0 }}>{formatNumber(summary.adjustedPoints)}</p>
+            <Card title="Available">
+              <p style={{ margin: 0 }}>{formatNumber(summary.availablePoints)}</p>
             </Card>
             <Card title="Pending">
               <p style={{ margin: 0 }}>{formatNumber(summary.pendingPoints)}</p>
+            </Card>
+            <Card title="Reversed">
+              <p style={{ margin: 0 }}>{formatNumber(summary.reversedPoints)}</p>
+            </Card>
+            <Card title="Entries">
+              <p style={{ margin: 0 }}>{formatNumber(summary.entryCount, 0)}</p>
             </Card>
           </div>
 
@@ -154,7 +167,7 @@ export default async function PointsPage({ searchParams }: PointsPageProps) {
 
     return (
       <section style={{ display: "grid", gap: themeTokens.spacing.lg }}>
-        <Section title="Points" description="Typed points ledger with parity filters and cursor pagination.">
+        <Section title="Points" description="Canonical points entries view with scope and cursor pagination.">
           <ErrorState
             title="Unable to load points"
             message={uiError.message}
