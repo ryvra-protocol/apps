@@ -34,7 +34,26 @@ import type {
   SettlementSnapshot,
   SubscriptionDto,
 } from "@ryvra/domain-payments";
-import type { ConversionPreviewDto, EligibilityResult } from "@ryvra/domain-tokenomics";
+import type {
+  PointEntryDto,
+  PointEntryFilters,
+  PointSummaryDto,
+  PointsAccountScopedListRequest,
+  PointsAccountScopedRequest,
+  PointsAccountScopedSummaryRequest,
+  PointsListResponse,
+  PointsOverviewDto,
+} from "@ryvra/domain-points";
+import type {
+  TaskDto,
+  TaskFilters,
+  TaskSummaryDto,
+  TasksAccountScopedListRequest,
+  TasksAccountScopedRequest,
+  TasksAccountScopedSummaryRequest,
+  TasksListResponse,
+  TasksOverviewDto,
+} from "@ryvra/domain-tasks";
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
@@ -43,6 +62,7 @@ export type ApiErrorSource =
   | "http"
   | "runtime"
   | "unknown"
+  | "points-tasks-api"
   | "markets-api"
   | "policy-risk"
   | "asset-registry"
@@ -116,6 +136,19 @@ export interface MarketsRuntimeHeaderOptions {
   defaultAccountId?: string;
 }
 
+export interface PointsTasksRuntimeHeaderOptions {
+  authToken?: string;
+  authTokenProvider?: () => string | undefined;
+  authScheme?: string;
+  requestIdHeader?: string;
+  requestIdProvider?: () => string;
+  correlationIdHeader?: string;
+  correlationIdProvider?: () => string;
+  staticHeaders?: Record<string, string>;
+  connectivityPath?: string;
+  defaultAccountId?: string;
+}
+
 export interface PayConnectivityCheckResult {
   checkedAt: string;
   path: string;
@@ -176,6 +209,56 @@ export interface MarketsParityDiagnostics {
   connectivity: MarketsConnectivityCheckResult;
 }
 
+export interface PointsTasksConnectivityCheckResult {
+  checkedAt: string;
+  path: string;
+  ok: boolean;
+  source: ApiErrorSource;
+  status?: number;
+  message: string;
+}
+
+export interface PointsTasksParityDiagnostics {
+  mode: ApiClientMode;
+  baseUrl: string;
+  compatibilityVersion: string;
+  sourceOfTruth: string;
+  sourcePolicy: string;
+  sourceProtocolDocPath: string;
+  sourceProtocolFaqPath: string;
+  sourceContractsEventsPath: string;
+  sourceContractsIdsPath: string;
+  sourcePolicyDocPath: string;
+  sourceContractSchemaVersion: string;
+  sourceOpenApiPublished: false;
+  parityCheckMarker: string;
+  auth: {
+    requiredForPointsTasksRoutes: boolean;
+    statusRouteAuthOptional: boolean;
+    hasAuthorization: boolean;
+    requestIdHeader: string;
+    correlationIdHeader: string;
+  };
+  accountScope: {
+    defaultAccountId?: string;
+    requiredField: "account_id";
+    requiredEndpoints: readonly string[];
+  };
+  paginationPolicy: {
+    preferredMode: "cursor";
+    deprecatedParam: "page";
+    deprecatedRemovalNotBefore: "2027-06-30";
+  };
+  deprecatedFieldFallback: {
+    pointsCanonicalField: "running_balance";
+    pointsFallbackField: "balance_after";
+    tasksCanonicalField: "progress_percent";
+    tasksFallbackField: "progress";
+    fallbackRemovalNotBefore: "2027-06-30";
+  };
+  connectivity: PointsTasksConnectivityCheckResult;
+}
+
 export interface MarketsClient {
   listInstruments(request?: MarketsListRequest<InstrumentFilters>): Promise<MarketsListResponse<InstrumentDto>>;
   getInstrumentSummary(filters?: InstrumentFilters): Promise<InstrumentSummaryDto>;
@@ -209,8 +292,13 @@ export interface PayClient {
 }
 
 export interface PointsTasksClient {
-  getEligibility(accountId: string): Promise<EligibilityResult>;
-  previewConversion(payload: ConversionPreviewDto): Promise<ConversionPreviewDto>;
+  listPointEntries(request: PointsAccountScopedListRequest<PointEntryFilters>): Promise<PointsListResponse<PointEntryDto>>;
+  getPointSummary(request: PointsAccountScopedSummaryRequest<PointEntryFilters>): Promise<PointSummaryDto>;
+  getPointsOverview(request: PointsAccountScopedRequest): Promise<PointsOverviewDto>;
+  listTasks(request: TasksAccountScopedListRequest<TaskFilters>): Promise<TasksListResponse<TaskDto>>;
+  getTaskSummary(request: TasksAccountScopedSummaryRequest<TaskFilters>): Promise<TaskSummaryDto>;
+  getTasksOverview(request: TasksAccountScopedRequest): Promise<TasksOverviewDto>;
+  getParityDiagnostics(): Promise<PointsTasksParityDiagnostics>;
 }
 
 export interface ApiClient {
@@ -231,6 +319,9 @@ export interface CreateApiClientOptions {
   pay?: PayRuntimeHeaderOptions;
   payCompatibilityVersion?: string;
   payParityCheckMarker?: string;
+  pointsTasks?: PointsTasksRuntimeHeaderOptions;
+  pointsTasksCompatibilityVersion?: string;
+  pointsTasksParityCheckMarker?: string;
 }
 
 export type CreatePayClientOptions = CreateApiClientOptions;

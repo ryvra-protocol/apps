@@ -1,8 +1,9 @@
-import type { TaskFilters, TasksAccountScopedListRequest } from "@ryvra/domain-tasks";
+import type { PointEntryFilters, PointsAccountScopedListRequest } from "@ryvra/domain-points";
 import { Card, Section, themeTokens } from "@ryvra/ui";
 import { EmptyState, ErrorState, UnauthorizedState } from "../components/page-states";
-import { TasksTableClient } from "../components/tasks-table-client";
+import { PointsTableClient } from "../components/points-table-client";
 import { ModeBadge } from "../components/mode-badge";
+import { formatNumber } from "../lib/format";
 import {
   getFirstParam,
   parseAccountId,
@@ -10,38 +11,38 @@ import {
   parseDateRange,
   parseLimit,
   parsePage,
+  parsePointEntrySource,
+  parsePointEntryStatus,
+  parsePointEntryType,
   parseSortDirection,
-  parseTaskOwner,
-  parseTaskStatus,
-  parseTaskType,
   type RouteSearchParams,
 } from "../lib/search-params";
 import { capturePointsTasksPageError, createPointsTasksRuntimeContext } from "../lib/runtime";
 
-interface TasksPageProps {
+interface PointsPageProps {
   searchParams?: Record<string, string | string[] | undefined>;
 }
 
 export const dynamic = "force-dynamic";
 
-function buildTaskRequest(
+function buildPointRequest(
   searchParams: RouteSearchParams,
   defaultAccountId: string | undefined,
-): TasksAccountScopedListRequest<TaskFilters> {
-  const status = parseTaskStatus(searchParams);
-  const type = parseTaskType(searchParams);
-  const ownerId = parseTaskOwner(searchParams);
+): PointsAccountScopedListRequest<PointEntryFilters> {
+  const status = parsePointEntryStatus(searchParams);
+  const type = parsePointEntryType(searchParams);
+  const source = parsePointEntrySource(searchParams);
   const search = getFirstParam(searchParams, "search")?.trim();
   const dateRange = parseDateRange(searchParams);
-  const sortField = getFirstParam(searchParams, "sortBy") ?? getFirstParam(searchParams, "sortField") ?? "updated_at";
+  const sortField = getFirstParam(searchParams, "sortBy") ?? getFirstParam(searchParams, "sortField") ?? "timestamp";
   const cursor = parseCursor(searchParams);
   const deprecatedPage = parsePage(searchParams);
   const accountId = parseAccountId(searchParams) ?? defaultAccountId ?? "";
 
-  const filters: TaskFilters = {
+  const filters: PointEntryFilters = {
     ...(status ? { status } : {}),
     ...(type ? { type } : {}),
-    ...(ownerId ? { ownerId } : {}),
+    ...(source ? { source } : {}),
     ...(search ? { search } : {}),
     ...(dateRange ? { dateRange } : {}),
   };
@@ -61,13 +62,13 @@ function buildTaskRequest(
   };
 }
 
-export default async function TasksPage({ searchParams }: TasksPageProps) {
-  const runtime = createPointsTasksRuntimeContext("points-tasks-web:tasks");
+export default async function PointsPage({ searchParams }: PointsPageProps) {
+  const runtime = createPointsTasksRuntimeContext("points-tasks-web:points");
 
   if (!runtime.authDecision.allowed) {
     return (
       <section style={{ display: "grid", gap: themeTokens.spacing.lg }}>
-        <Section title="Tasks" description="Typed tasks queue with parity filters and cursor pagination.">
+        <Section title="Points" description="Typed points ledger with parity filters and cursor pagination.">
           <UnauthorizedState />
         </Section>
       </section>
@@ -75,43 +76,42 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
   }
 
   try {
-    const request = buildTaskRequest(searchParams, runtime.defaultAccountId);
+    const request = buildPointRequest(searchParams, runtime.defaultAccountId);
 
     if (!request.accountId) {
       return (
         <section style={{ display: "grid", gap: themeTokens.spacing.lg }}>
-          <Section title="Tasks" description="Typed tasks queue with parity filters and cursor pagination.">
+          <Section title="Points" description="Typed points ledger with parity filters and cursor pagination.">
             <ErrorState
               title="Account scope is required"
-              message="Set account_id in the URL or configure RYVRA_POINTS_TASKS_ACCOUNT_ID before requesting task data."
+              message="Set account_id in the URL or configure RYVRA_POINTS_TASKS_ACCOUNT_ID before requesting points data."
               source="runtime"
               retryable={false}
-              retryLink={{ href: "/tasks", label: "Retry tasks" }}
+              retryLink={{ href: "/points", label: "Retry points" }}
             />
           </Section>
         </section>
       );
     }
 
-    const [taskList, summary] = await Promise.all([
-      runtime.pointsTasksClient.listTasks(request),
-      runtime.pointsTasksClient.getTaskSummary({
+    const [pointsList, summary] = await Promise.all([
+      runtime.pointsTasksClient.listPointEntries(request),
+      runtime.pointsTasksClient.getPointSummary({
         accountId: request.accountId,
         ...(request.filters ? { filters: request.filters } : {}),
       }),
     ]);
 
-    runtime.logger.info("Loaded tasks queue data", {
+    runtime.logger.info("Loaded points ledger data", {
       mode: runtime.config.mode,
       accountId: request.accountId,
-      taskCount: taskList.items.length,
-      open: summary.open,
-      inProgress: summary.inProgress,
+      pointEntryCount: pointsList.items.length,
+      totalPoints: summary.totalPoints,
     });
 
     return (
       <section style={{ display: "grid", gap: themeTokens.spacing.lg }}>
-        <Section title="Tasks" description="Typed tasks queue with parity filters and cursor pagination.">
+        <Section title="Points" description="Typed points ledger with parity filters and cursor pagination.">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: themeTokens.spacing.sm }}>
             <ModeBadge mode={runtime.config.mode} />
             <span style={{ color: themeTokens.color.textMuted, fontSize: themeTokens.typography.size.sm }}>
@@ -120,47 +120,47 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
           </div>
 
           <div style={{ display: "grid", gap: themeTokens.spacing.md, gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))" }}>
-            <Card title="Total">
-              <p style={{ margin: 0 }}>{summary.total}</p>
+            <Card title="Total points">
+              <p style={{ margin: 0 }}>{formatNumber(summary.totalPoints)}</p>
             </Card>
-            <Card title="Open">
-              <p style={{ margin: 0 }}>{summary.open}</p>
+            <Card title="Earned">
+              <p style={{ margin: 0 }}>{formatNumber(summary.earnedPoints)}</p>
             </Card>
-            <Card title="In progress">
-              <p style={{ margin: 0 }}>{summary.inProgress}</p>
+            <Card title="Spent">
+              <p style={{ margin: 0 }}>{formatNumber(summary.spentPoints)}</p>
             </Card>
-            <Card title="Done">
-              <p style={{ margin: 0 }}>{summary.done}</p>
+            <Card title="Adjusted">
+              <p style={{ margin: 0 }}>{formatNumber(summary.adjustedPoints)}</p>
             </Card>
-            <Card title="Failed">
-              <p style={{ margin: 0 }}>{summary.failed}</p>
+            <Card title="Pending">
+              <p style={{ margin: 0 }}>{formatNumber(summary.pendingPoints)}</p>
             </Card>
           </div>
 
-          <TasksTableClient items={taskList.items} pagination={taskList.pagination} />
+          <PointsTableClient items={pointsList.items} pagination={pointsList.pagination} />
 
-          {taskList.items.length === 0 ? (
+          {pointsList.items.length === 0 ? (
             <EmptyState
-              title="No tasks"
-              description="No tasks were returned for the current scope and filter selection."
-              actionLink={{ href: `/tasks?account_id=${encodeURIComponent(request.accountId)}`, label: "Clear to default view" }}
+              title="No points entries"
+              description="No point entries were returned for the current scope and filter selection."
+              actionLink={{ href: `/points?account_id=${encodeURIComponent(request.accountId)}`, label: "Clear to default view" }}
             />
           ) : null}
         </Section>
       </section>
     );
   } catch (error) {
-    const uiError = capturePointsTasksPageError(runtime.logger, "/tasks", error);
+    const uiError = capturePointsTasksPageError(runtime.logger, "/points", error);
 
     return (
       <section style={{ display: "grid", gap: themeTokens.spacing.lg }}>
-        <Section title="Tasks" description="Typed tasks queue with parity filters and cursor pagination.">
+        <Section title="Points" description="Typed points ledger with parity filters and cursor pagination.">
           <ErrorState
-            title="Unable to load tasks"
+            title="Unable to load points"
             message={uiError.message}
             source={uiError.source}
             retryable={uiError.retryable}
-            retryLink={{ href: "/tasks", label: "Retry tasks" }}
+            retryLink={{ href: "/points", label: "Retry points" }}
           />
         </Section>
       </section>

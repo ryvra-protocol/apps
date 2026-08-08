@@ -14,9 +14,9 @@ import type { ReactNode } from "react";
 const productId: ProductId = "points";
 
 const breadcrumbLabelMap: Record<string, string> = {
-  "/": "Points Overview",
+  "/": "Dashboard",
   "/overview": "Overview",
-  "/activity": "Activity",
+  "/points": "Points",
   "/tasks": "Tasks",
   "/status": "Status",
 };
@@ -65,7 +65,7 @@ function buildBreadcrumbs(pathname: string): BreadcrumbItem[] {
   }
 
   return [
-    { label: "Points Overview", href: "/" },
+    { label: "Dashboard", href: "/" },
     { label: currentLabel, current: true },
   ];
 }

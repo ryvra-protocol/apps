@@ -4,7 +4,7 @@
 
 - `apps/markets-web` -> `@ryvra/ui`, `@ryvra/auth`, `@ryvra/config`, `@ryvra/api-client`, `@ryvra/observability`, `@ryvra/domain-markets`
 - `apps/pay-web` -> `@ryvra/ui`, `@ryvra/auth`, `@ryvra/config`, `@ryvra/api-client`, `@ryvra/observability`, `@ryvra/domain-payments`
-- `apps/points-tasks-web` -> `@ryvra/ui`, `@ryvra/auth`, `@ryvra/config`, `@ryvra/api-client`, `@ryvra/observability`, `@ryvra/domain-tokenomics`
+- `apps/points-tasks-web` -> `@ryvra/ui`, `@ryvra/auth`, `@ryvra/config`, `@ryvra/api-client`, `@ryvra/observability`, `@ryvra/domain-points`, `@ryvra/domain-tasks`
 
 ## Cross-app routing foundation
 
@@ -65,12 +65,42 @@
   - `src/service/state-machine.ts`
   - `docs/rfc-0006-pay-rails-and-payment-intents.md`
 
+## Points/Tasks integration map (Phase 10 strict parity MVP wiring)
+
+- `apps/points-tasks-web` runtime (`app/lib/runtime.ts`) loads mode/API config and constructs `createApiClient(...).pointsTasks`.
+- `@ryvra/domain-points` and `@ryvra/domain-tasks` now export:
+  - canonical Points/Tasks enum surfaces and DTO/request contracts
+  - account-scoped request contracts for points/tasks list/summary/overview
+  - cursor-first pagination contracts with deprecated page compatibility
+- `@ryvra/api-client` pointsTasks surface now includes:
+  - `listPointEntries`, `getPointSummary`, `getPointsOverview`
+  - `listTasks`, `getTaskSummary`, `getTasksOverview`
+  - `getParityDiagnostics`
+  - hard HTTP guards:
+    - required bearer auth on non-status/non-health routes
+    - required `account_id` on scoped endpoints
+    - required request/correlation ids
+  - canonical error-envelope normalization (`code`, `message`, `retryable`, `source`, optional `details`)
+  - deprecated response-field normalization (`balance_after` -> `running_balance`, `progress` -> `progress_percent`)
+- query/filter parity in HTTP mode uses canonical snake_case keys.
+- `/status` displays mode, base URL, protocol/policy source refs, compatibility marker, parity marker, and connectivity probe result.
+
+## Points/Tasks source-of-truth linkage (`ryvra-protocol/protocol-core`, `ryvra-protocol/policy-risk`)
+
+- Canonical source files currently define protocol/policy contracts (no published Points/Tasks HTTP OpenAPI yet):
+  - `contracts/src/events.ts`
+  - `contracts/src/ids.ts`
+  - `contracts/src/version.ts`
+  - `docs/tokenomics-proof-of-transaction.md`
+  - `docs/tokenomics-faq.md`
+  - `ryvra-protocol/policy-risk/docs/anti-abuse-policy.md`
+
 ## External Ryvra touchpoints (future integration targets)
 
 - **Ryvra Identity/Auth services:** concrete session validation and role claims.
 - **Ryvra Markets services:** canonical `/markets/*` contract now published and enforced in apps parity wiring.
 - **Ryvra Pay services:** canonical HTTP/API publication still pending.
-- **Ryvra Points/Tasks services:** eligibility, conversion, and task event APIs.
+- **Ryvra Points/Tasks services:** published endpoint-level OpenAPI/router contracts (pending upstream publication).
 - **Ryvra observability stack:** structured logs, tracing, and alerting pipeline.
 
 ## Placement guidance for future business logic

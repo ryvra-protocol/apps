@@ -15,6 +15,18 @@ import type {
   PayoutFilters,
   ReconciliationFilters,
 } from "@ryvra/domain-payments";
+import type {
+  PointEntryFilters,
+  PointsAccountScopedListRequest,
+  PointsAccountScopedRequest,
+  PointsAccountScopedSummaryRequest,
+} from "@ryvra/domain-points";
+import type {
+  TaskFilters,
+  TasksAccountScopedListRequest,
+  TasksAccountScopedRequest,
+  TasksAccountScopedSummaryRequest,
+} from "@ryvra/domain-tasks";
 import { ApiClientError } from "./errors";
 import { createMockTransport } from "./mock-transport";
 import {
@@ -39,6 +51,14 @@ import {
   decodePositionSummary,
 } from "./markets-codec";
 import {
+  decodePointEntriesList,
+  decodePointSummary,
+  decodePointsOverview,
+  decodeTaskSummary,
+  decodeTasksList,
+  decodeTasksOverview,
+} from "./points-tasks-codec";
+import {
   MARKETS_PROTOCOL_CHANGELOG_PATH,
   MARKETS_PARITY_CHECK_MARKER,
   MARKETS_PROTOCOL_COMPATIBILITY_VERSION,
@@ -55,6 +75,23 @@ import {
   PAY_PROTOCOL_SOURCE,
   payRouteMap,
 } from "./pay-parity";
+import {
+  POINTS_TASKS_API_OPENAPI_AVAILABLE,
+  POINTS_TASKS_CONTRACT_SCHEMA_VERSION,
+  POINTS_TASKS_CONTRACTS_EVENTS_PATH,
+  POINTS_TASKS_CONTRACTS_IDS_PATH,
+  POINTS_TASKS_DEPRECATED_FIELD_REMOVAL_NOT_BEFORE,
+  POINTS_TASKS_DEPRECATED_PAGE_REMOVAL_NOT_BEFORE,
+  POINTS_TASKS_PARITY_CHECK_MARKER,
+  POINTS_TASKS_POLICY_DOC_PATH,
+  POINTS_TASKS_POLICY_SOURCE,
+  POINTS_TASKS_PROTOCOL_COMPATIBILITY_VERSION,
+  POINTS_TASKS_PROTOCOL_DOC_PATH,
+  POINTS_TASKS_PROTOCOL_FAQ_PATH,
+  POINTS_TASKS_PROTOCOL_SOURCE,
+  pointsTasksAccountScopedRoutes,
+  pointsTasksRouteMap,
+} from "./points-tasks-parity";
 import { createFetchTransport } from "./transport";
 import type {
   ApiClient,
@@ -65,6 +102,8 @@ import type {
   CreatePayClientOptions,
   MarketsClient,
   MarketsRuntimeHeaderOptions,
+  PointsTasksClient,
+  PointsTasksRuntimeHeaderOptions,
   PayClient,
   PayRequestOptions,
   PayRuntimeHeaderOptions,
@@ -368,6 +407,66 @@ function buildMarketsOverviewQuery(request: MarketsAccountScopedRequest): string
   return toQueryString(params);
 }
 
+function buildPointEntriesQuery(request: PointsAccountScopedListRequest<PointEntryFilters>): string {
+  const params = new URLSearchParams();
+  setMarketsPaginationAndSort(params, request);
+  setIfPresent(params, "account_id", request.accountId);
+  setIfPresent(params, "type", request.filters?.type ?? request.filters?.entryType);
+  setIfPresent(params, "status", request.filters?.status);
+  setIfPresent(params, "source", request.filters?.source);
+  setIfPresent(params, "search", request.filters?.search);
+  setDateRange(params, request.filters?.dateRange);
+  return toQueryString(params);
+}
+
+function buildPointSummaryQuery(request: PointsAccountScopedSummaryRequest<PointEntryFilters>): string {
+  const params = new URLSearchParams();
+  setIfPresent(params, "account_id", request.accountId);
+  setIfPresent(params, "type", request.filters?.type ?? request.filters?.entryType);
+  setIfPresent(params, "status", request.filters?.status);
+  setIfPresent(params, "source", request.filters?.source);
+  setIfPresent(params, "search", request.filters?.search);
+  setDateRange(params, request.filters?.dateRange);
+  return toQueryString(params);
+}
+
+function buildPointsOverviewQuery(request: PointsAccountScopedRequest): string {
+  const params = new URLSearchParams();
+  setIfPresent(params, "account_id", request.accountId);
+  return toQueryString(params);
+}
+
+function buildTasksListQuery(request: TasksAccountScopedListRequest<TaskFilters>): string {
+  const params = new URLSearchParams();
+  setMarketsPaginationAndSort(params, request);
+  setIfPresent(params, "account_id", request.accountId);
+  setIfPresent(params, "status", request.filters?.status);
+  setIfPresent(params, "type", request.filters?.type);
+  setIfPresent(params, "owner_id", request.filters?.ownerId ?? request.filters?.owner);
+  setIfPresent(params, "search", request.filters?.search);
+  setIfPresent(params, "due_from", request.filters?.dateRange?.from);
+  setIfPresent(params, "due_to", request.filters?.dateRange?.to);
+  return toQueryString(params);
+}
+
+function buildTaskSummaryQuery(request: TasksAccountScopedSummaryRequest<TaskFilters>): string {
+  const params = new URLSearchParams();
+  setIfPresent(params, "account_id", request.accountId);
+  setIfPresent(params, "status", request.filters?.status);
+  setIfPresent(params, "type", request.filters?.type);
+  setIfPresent(params, "owner_id", request.filters?.ownerId ?? request.filters?.owner);
+  setIfPresent(params, "search", request.filters?.search);
+  setIfPresent(params, "due_from", request.filters?.dateRange?.from);
+  setIfPresent(params, "due_to", request.filters?.dateRange?.to);
+  return toQueryString(params);
+}
+
+function buildTasksOverviewQuery(request: TasksAccountScopedRequest): string {
+  const params = new URLSearchParams();
+  setIfPresent(params, "account_id", request.accountId);
+  return toQueryString(params);
+}
+
 function createRequestId(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
     return crypto.randomUUID();
@@ -484,6 +583,36 @@ function buildMarketsHeaders(
   return headers;
 }
 
+function buildPointsTasksHeaders(
+  mode: CreateApiClientOptions["mode"],
+  pointsTasksOptions: PointsTasksRuntimeHeaderOptions | undefined,
+): Record<string, string> {
+  const headers: Record<string, string> = {
+    ...(pointsTasksOptions?.staticHeaders ?? {}),
+  };
+
+  const requestIdHeader = normalizeHeaderValue(pointsTasksOptions?.requestIdHeader) ?? "x-request-id";
+  const requestId = normalizeHeaderValue(pointsTasksOptions?.requestIdProvider?.()) ?? createRequestId();
+  headers[requestIdHeader] = requestId;
+  headers["x-request-id"] = requestId;
+
+  const correlationIdHeader = normalizeHeaderValue(pointsTasksOptions?.correlationIdHeader) ?? "x-correlation-id";
+  const correlationId = normalizeHeaderValue(pointsTasksOptions?.correlationIdProvider?.()) ?? requestId;
+  headers[correlationIdHeader] = correlationId;
+  headers["x-correlation-id"] = correlationId;
+
+  if (mode === "mock") {
+    return headers;
+  }
+
+  const authorization = resolveAuthorizationValue(pointsTasksOptions, undefined);
+  if (authorization) {
+    headers.authorization = authorization;
+  }
+
+  return headers;
+}
+
 function extractPathname(path: string): string {
   try {
     return new URL(path, "http://localhost").pathname;
@@ -504,6 +633,16 @@ function getSearchParam(path: string, key: string): string | undefined {
 }
 
 function createMarketsValidationError(code: string, message: string, details: Record<string, unknown>): ApiClientError {
+  return new ApiClientError({
+    code,
+    message,
+    retryable: false,
+    source: "runtime",
+    details,
+  });
+}
+
+function createPointsTasksValidationError(code: string, message: string, details: Record<string, unknown>): ApiClientError {
   return new ApiClientError({
     code,
     message,
@@ -552,6 +691,62 @@ function enforceMarketsHttpGuards(
         method: request.method,
         requiredParam: "account_id",
       });
+    }
+  }
+}
+
+function enforcePointsTasksHttpGuards(
+  mode: CreateApiClientOptions["mode"],
+  request: ApiRequest,
+  headers: Record<string, string>,
+): void {
+  if (mode !== "http") {
+    return;
+  }
+
+  const pathname = extractPathname(request.path);
+  const isHealthOrStatusRoute =
+    pathname === "/health" || pathname === pointsTasksRouteMap.status || pathname === pointsTasksRouteMap.getParityDiagnostics;
+
+  if (!isHealthOrStatusRoute) {
+    const authorization = headers.authorization?.trim();
+    if (!authorization || !authorization.startsWith("Bearer ")) {
+      throw createPointsTasksValidationError(
+        "unauthorized",
+        "bearer token is required for non-health Points/Tasks routes",
+        {
+          path: request.path,
+          method: request.method,
+        },
+      );
+    }
+  }
+
+  const requestId = headers["x-request-id"]?.trim();
+  const correlationId = headers["x-correlation-id"]?.trim();
+  if (!requestId || !correlationId) {
+    throw createPointsTasksValidationError(
+      "invalid_request",
+      "x-request-id and x-correlation-id are required for Points/Tasks requests",
+      {
+        path: request.path,
+        method: request.method,
+      },
+    );
+  }
+
+  if (pointsTasksAccountScopedRoutes.includes(pathname as (typeof pointsTasksAccountScopedRoutes)[number])) {
+    const accountId = getSearchParam(request.path, "account_id");
+    if (!accountId) {
+      throw createPointsTasksValidationError(
+        "invalid_request",
+        "account_id is required for this Points/Tasks endpoint",
+        {
+          path: request.path,
+          method: request.method,
+          requiredParam: "account_id",
+        },
+      );
     }
   }
 }
@@ -1074,6 +1269,269 @@ function buildMarketsClient(transport: Transport, options: CreateApiClientOption
   };
 }
 
+function buildPointsTasksClient(transport: Transport, options: CreateApiClientOptions): PointsTasksClient {
+  const mode = options.mode ?? "mock";
+  const baseUrl = options.baseUrl ?? "http://localhost:4000";
+  const pointsTasksOptions = options.pointsTasks;
+  const compatibilityVersion = options.pointsTasksCompatibilityVersion ?? POINTS_TASKS_PROTOCOL_COMPATIBILITY_VERSION;
+  const parityCheckMarker = options.pointsTasksParityCheckMarker ?? POINTS_TASKS_PARITY_CHECK_MARKER;
+  const defaultAccountId = normalizeHeaderValue(pointsTasksOptions?.defaultAccountId);
+
+  const resolveAccountId = (provided: string | undefined): string =>
+    normalizeHeaderValue(provided) ?? defaultAccountId ?? "";
+  const resolveRequiredAccountId = (provided: string | undefined, route: string): string => {
+    const accountId = resolveAccountId(provided);
+    if (!accountId) {
+      throw createPointsTasksValidationError("invalid_request", "account_id is required for this Points/Tasks endpoint", {
+        route,
+        requiredParam: "account_id",
+      });
+    }
+
+    return accountId;
+  };
+
+  const executePointsTasks = <T>(request: ApiRequest, decode: Decoder<T>): Promise<T> => {
+    const pointsTasksHeaders = buildPointsTasksHeaders(mode, pointsTasksOptions);
+    const headers = {
+      ...(request.headers ?? {}),
+      ...pointsTasksHeaders,
+    };
+    const requestWithHeaders: ApiRequest = {
+      ...request,
+      headers,
+    };
+
+    enforcePointsTasksHttpGuards(mode, requestWithHeaders, headers);
+
+    return executeWithDecoder(
+      transport,
+      requestWithHeaders,
+      decode,
+      {
+        validationCode: "points_tasks_payload_validation_failed",
+        validationMessage: "Points/Tasks payload validation failed",
+      },
+    );
+  };
+
+  const probePointsTasksConnectivity = async (path: string): Promise<ConnectivityCheckResult> => {
+    const checkedAt = new Date().toISOString();
+    const headers = buildPointsTasksHeaders(mode, pointsTasksOptions);
+    const request: ApiRequest = { method: "GET", path, headers };
+
+    try {
+      enforcePointsTasksHttpGuards(mode, request, headers);
+    } catch (error) {
+      if (error instanceof ApiClientError) {
+        return {
+          checkedAt,
+          path,
+          ok: false,
+          source: error.source,
+          ...(typeof error.status === "number" ? { status: error.status } : {}),
+          message: error.message,
+        };
+      }
+
+      return {
+        checkedAt,
+        path,
+        ok: false,
+        source: "runtime",
+        message: error instanceof Error ? error.message : "Unknown points/tasks connectivity guard failure",
+      };
+    }
+
+    const probe = await transport.request<unknown>(request);
+    if (probe.ok) {
+      return {
+        checkedAt,
+        path,
+        ok: true,
+        source: "http",
+        message: "Connectivity probe succeeded",
+      };
+    }
+
+    return {
+      checkedAt,
+      path,
+      ok: false,
+      source: probe.error.source,
+      ...(typeof probe.error.status === "number" ? { status: probe.error.status } : {}),
+      message: probe.error.message,
+    };
+  };
+
+  const buildParityDiagnostics = (
+    connectivity: ConnectivityCheckResult,
+    authRequiredForDataRoutes: boolean,
+    hasAuthorization: boolean,
+  ) => ({
+    mode,
+    baseUrl,
+    compatibilityVersion,
+    sourceOfTruth: POINTS_TASKS_PROTOCOL_SOURCE,
+    sourcePolicy: POINTS_TASKS_POLICY_SOURCE,
+    sourceProtocolDocPath: POINTS_TASKS_PROTOCOL_DOC_PATH,
+    sourceProtocolFaqPath: POINTS_TASKS_PROTOCOL_FAQ_PATH,
+    sourceContractsEventsPath: POINTS_TASKS_CONTRACTS_EVENTS_PATH,
+    sourceContractsIdsPath: POINTS_TASKS_CONTRACTS_IDS_PATH,
+    sourcePolicyDocPath: POINTS_TASKS_POLICY_DOC_PATH,
+    sourceContractSchemaVersion: POINTS_TASKS_CONTRACT_SCHEMA_VERSION,
+    sourceOpenApiPublished: POINTS_TASKS_API_OPENAPI_AVAILABLE,
+    parityCheckMarker,
+    auth: {
+      requiredForPointsTasksRoutes: authRequiredForDataRoutes,
+      statusRouteAuthOptional: true,
+      hasAuthorization,
+      requestIdHeader: "x-request-id",
+      correlationIdHeader: "x-correlation-id",
+    },
+    accountScope: {
+      ...(defaultAccountId ? { defaultAccountId } : {}),
+      requiredField: "account_id" as const,
+      requiredEndpoints: pointsTasksAccountScopedRoutes,
+    },
+    paginationPolicy: {
+      preferredMode: "cursor" as const,
+      deprecatedParam: "page" as const,
+      deprecatedRemovalNotBefore: POINTS_TASKS_DEPRECATED_PAGE_REMOVAL_NOT_BEFORE,
+    },
+    deprecatedFieldFallback: {
+      pointsCanonicalField: "running_balance" as const,
+      pointsFallbackField: "balance_after" as const,
+      tasksCanonicalField: "progress_percent" as const,
+      tasksFallbackField: "progress" as const,
+      fallbackRemovalNotBefore: POINTS_TASKS_DEPRECATED_FIELD_REMOVAL_NOT_BEFORE,
+    },
+    connectivity,
+  });
+
+  return {
+    listPointEntries(request) {
+      const scopedRequest: PointsAccountScopedListRequest<PointEntryFilters> = {
+        ...request,
+        accountId: resolveRequiredAccountId(request.accountId, pointsTasksRouteMap.listPointEntries),
+      };
+      return executePointsTasks(
+        {
+          method: "GET",
+          path: `${pointsTasksRouteMap.listPointEntries}${buildPointEntriesQuery(scopedRequest)}`,
+        },
+        decodePointEntriesList,
+      );
+    },
+    getPointSummary(request) {
+      const scopedRequest: PointsAccountScopedSummaryRequest<PointEntryFilters> = {
+        ...request,
+        accountId: resolveRequiredAccountId(request.accountId, pointsTasksRouteMap.getPointSummary),
+      };
+      return executePointsTasks(
+        {
+          method: "GET",
+          path: `${pointsTasksRouteMap.getPointSummary}${buildPointSummaryQuery(scopedRequest)}`,
+        },
+        decodePointSummary,
+      );
+    },
+    getPointsOverview(request) {
+      const scopedRequest: PointsAccountScopedRequest = {
+        accountId: resolveRequiredAccountId(request.accountId, pointsTasksRouteMap.getPointsOverview),
+      };
+      return executePointsTasks(
+        {
+          method: "GET",
+          path: `${pointsTasksRouteMap.getPointsOverview}${buildPointsOverviewQuery(scopedRequest)}`,
+        },
+        decodePointsOverview,
+      );
+    },
+    listTasks(request) {
+      const scopedRequest: TasksAccountScopedListRequest<TaskFilters> = {
+        ...request,
+        accountId: resolveRequiredAccountId(request.accountId, pointsTasksRouteMap.listTasks),
+      };
+      return executePointsTasks(
+        {
+          method: "GET",
+          path: `${pointsTasksRouteMap.listTasks}${buildTasksListQuery(scopedRequest)}`,
+        },
+        decodeTasksList,
+      );
+    },
+    getTaskSummary(request) {
+      const scopedRequest: TasksAccountScopedSummaryRequest<TaskFilters> = {
+        ...request,
+        accountId: resolveRequiredAccountId(request.accountId, pointsTasksRouteMap.getTaskSummary),
+      };
+      return executePointsTasks(
+        {
+          method: "GET",
+          path: `${pointsTasksRouteMap.getTaskSummary}${buildTaskSummaryQuery(scopedRequest)}`,
+        },
+        decodeTaskSummary,
+      );
+    },
+    getTasksOverview(request) {
+      const scopedRequest: TasksAccountScopedRequest = {
+        accountId: resolveRequiredAccountId(request.accountId, pointsTasksRouteMap.getTasksOverview),
+      };
+      return executePointsTasks(
+        {
+          method: "GET",
+          path: `${pointsTasksRouteMap.getTasksOverview}${buildTasksOverviewQuery(scopedRequest)}`,
+        },
+        decodeTasksOverview,
+      );
+    },
+    async getParityDiagnostics() {
+      const authHeader = resolveAuthorizationValue(pointsTasksOptions, undefined);
+
+      if (mode === "mock") {
+        return buildParityDiagnostics(
+          {
+            checkedAt: new Date().toISOString(),
+            path: "mock://offline",
+            ok: true,
+            source: "mock",
+            message: "Mock mode active; live connectivity probe skipped",
+          },
+          false,
+          Boolean(authHeader?.startsWith("Bearer ")),
+        );
+      }
+
+      const primaryPath = pointsTasksOptions?.connectivityPath ?? pointsTasksRouteMap.status;
+      const primaryProbe = await probePointsTasksConnectivity(primaryPath);
+      if (primaryProbe.ok || primaryPath === pointsTasksRouteMap.getParityDiagnostics) {
+        return buildParityDiagnostics(primaryProbe, true, Boolean(authHeader?.startsWith("Bearer ")));
+      }
+
+      const fallbackAccountId = resolveAccountId(undefined);
+      if (!fallbackAccountId) {
+        return buildParityDiagnostics(primaryProbe, true, Boolean(authHeader?.startsWith("Bearer ")));
+      }
+
+      const fallbackProbe = await probePointsTasksConnectivity(
+        `${pointsTasksRouteMap.getPointsOverview}?account_id=${encodeURIComponent(fallbackAccountId)}`,
+      );
+
+      return buildParityDiagnostics(
+        fallbackProbe.ok
+          ? {
+              ...fallbackProbe,
+              message: `Primary probe failed (${primaryProbe.message}); fallback probe succeeded`,
+            }
+          : primaryProbe,
+        true,
+        Boolean(authHeader?.startsWith("Bearer ")),
+      );
+    },
+  };
+}
+
 export function createPayClient(options: CreatePayClientOptions = {}): PayClient {
   return buildPayClient(createTransport(options), options);
 }
@@ -1084,20 +1542,6 @@ export function createApiClient(options: CreateApiClientOptions = {}): ApiClient
   return {
     markets: buildMarketsClient(transport, options),
     pay: buildPayClient(transport, options),
-    pointsTasks: {
-      getEligibility(accountId) {
-        return executeRaw(transport, {
-          method: "GET",
-          path: `/points-tasks/eligibility?accountId=${encodeURIComponent(accountId)}`,
-        });
-      },
-      previewConversion(payload) {
-        return executeRaw(transport, {
-          method: "POST",
-          path: "/points-tasks/conversion/preview",
-          body: payload,
-        });
-      },
-    },
+    pointsTasks: buildPointsTasksClient(transport, options),
   };
 }

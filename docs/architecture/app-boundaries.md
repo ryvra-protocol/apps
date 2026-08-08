@@ -18,8 +18,11 @@
 ## apps/points-tasks-web
 
 - Owns Points/Tasks user experience and route surface.
-- Uses `@ryvra/domain-tokenomics` and `@ryvra/api-client` for reward boundary calls.
+- Uses `@ryvra/domain-points`, `@ryvra/domain-tasks`, and `@ryvra/api-client` for typed points/tasks boundary calls.
 - Uses shared auth/config/observability primitives plus unified shell + routing helpers.
+- Owns query-param-driven filters/sort UX for `/points` and `/tasks`.
+- Consumes typed summary/overview/list boundaries plus parity diagnostics.
+- Does not own canonical protocol/policy logic (source-of-truth remains in `ryvra-protocol/protocol-core` and `ryvra-protocol/policy-risk`).
 
 ## Boundary rules
 
