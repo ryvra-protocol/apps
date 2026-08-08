@@ -17,8 +17,14 @@ This repository hosts the Phase 8 unified-shell + Pay MVP data wiring foundation
 
 ## Runtime requirements
 
-- **Node.js:** `24.19.0` (or any `24.x` compatible with `>=24.19.0 <25`)
+- **Node.js:** `24.x` (workspace engines: `>=24 <25`)
 - **pnpm:** `10.16.0` (via Corepack)
+
+## Post-upgrade notes (Node 24 / pnpm 10.16.0 / Next.js 16.3.0)
+
+- Root engines now align on Node `24.x` and pin pnpm `10.16.0`.
+- ESLint now applies `eslint-config-next` (`next/core-web-vitals`) across all Next.js apps in the monorepo.
+- Verified that app-router status routes compile in `markets-web`, `pay-web`, and `points-tasks-web`, and Pay parity transport checks remain green (`mock` and `http` compatibility paths).
 
 ## Setup
 
