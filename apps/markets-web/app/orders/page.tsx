@@ -1,16 +1,19 @@
-import type { MarketsListRequest, OrderFilters } from "@ryvra/domain-markets";
+import type { MarketsAccountScopedListRequest, OrderFilters } from "@ryvra/domain-markets";
 import { Card, Section, themeTokens } from "@ryvra/ui";
 import { ModeBadge } from "../components/mode-badge";
 import { OrdersTableClient } from "../components/orders-table-client";
 import { ErrorState, UnauthorizedState } from "../components/page-states";
 import {
+  parseAccountId,
+  parseCursor,
   getFirstParam,
   parseDateRange,
+  parseLimit,
   parseOrderSide,
+  parseOrderPolicyDecision,
   parseOrderStatus,
   parseOrderType,
   parsePage,
-  parsePageSize,
   parseSortDirection,
   type RouteSearchParams,
 } from "../lib/search-params";
@@ -22,27 +25,45 @@ interface MarketsOrdersPageProps {
 
 export const dynamic = "force-dynamic";
 
-function buildOrderRequest(searchParams: RouteSearchParams): MarketsListRequest<OrderFilters> {
+function buildOrderRequest(
+  searchParams: RouteSearchParams,
+  defaultAccountId: string | undefined,
+): MarketsAccountScopedListRequest<OrderFilters> {
   const status = parseOrderStatus(searchParams);
   const side = parseOrderSide(searchParams);
   const type = parseOrderType(searchParams);
-  const search = getFirstParam(searchParams, "search")?.trim();
+  const policyDecision = parseOrderPolicyDecision(searchParams);
+  const referenceId = getFirstParam(searchParams, "referenceId")?.trim() ?? getFirstParam(searchParams, "search")?.trim();
+  const correlationId = getFirstParam(searchParams, "correlationId")?.trim();
+  const routeId = getFirstParam(searchParams, "routeId")?.trim();
+  const createdAfter = getFirstParam(searchParams, "createdAfter")?.trim();
+  const createdBefore = getFirstParam(searchParams, "createdBefore")?.trim();
   const dateRange = parseDateRange(searchParams);
-  const sortField = getFirstParam(searchParams, "sortField") ?? "createdAt";
+  const sortField = getFirstParam(searchParams, "sortBy") ?? getFirstParam(searchParams, "sortField") ?? "updated_at";
+  const cursor = parseCursor(searchParams);
+  const deprecatedPage = parsePage(searchParams);
+  const accountId = parseAccountId(searchParams) ?? defaultAccountId ?? "";
 
   const filters: OrderFilters = {
     ...(status ? { status } : {}),
     ...(side ? { side } : {}),
     ...(type ? { type } : {}),
-    ...(search ? { search } : {}),
+    ...(policyDecision ? { policyDecision } : {}),
+    ...(referenceId ? { referenceId } : {}),
+    ...(correlationId ? { correlationId } : {}),
+    ...(routeId ? { routeId } : {}),
+    ...(createdAfter ? { createdAfter } : {}),
+    ...(createdBefore ? { createdBefore } : {}),
     ...(dateRange ? { dateRange } : {}),
   };
 
   return {
+    accountId,
     ...(Object.keys(filters).length > 0 ? { filters } : {}),
     pagination: {
-      page: parsePage(searchParams),
-      pageSize: parsePageSize(searchParams, 20),
+      limit: parseLimit(searchParams, 50),
+      ...(cursor ? { cursor } : {}),
+      ...(typeof deprecatedPage === "number" ? { page: deprecatedPage } : {}),
     },
     sort: {
       field: sortField,
@@ -65,16 +86,19 @@ export default async function MarketsOrdersPage({ searchParams }: MarketsOrdersP
   }
 
   try {
-    const request = buildOrderRequest(searchParams);
+    const request = buildOrderRequest(searchParams, runtime.defaultAccountId);
     const [orderList, summary] = await Promise.all([
       runtime.marketsClient.listOrders(request),
-      runtime.marketsClient.getOrderSummary(request.filters),
+      runtime.marketsClient.getOrderSummary({
+        accountId: request.accountId,
+        ...(request.filters ? { filters: request.filters } : {}),
+      }),
     ]);
 
     runtime.logger.info("Loaded orders data", {
       mode: runtime.config.mode,
       orderCount: orderList.items.length,
-      openOrders: summary.openCount,
+      openOrders: summary.openOrders,
     });
 
     return (
@@ -86,16 +110,16 @@ export default async function MarketsOrdersPage({ searchParams }: MarketsOrdersP
 
           <div style={{ display: "grid", gap: themeTokens.spacing.md, gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))" }}>
             <Card title="Open">
-              <p style={{ margin: 0 }}>{summary.openCount}</p>
+              <p style={{ margin: 0 }}>{summary.openOrders}</p>
             </Card>
-            <Card title="Filled/Settled">
-              <p style={{ margin: 0 }}>{summary.filledCount}</p>
+            <Card title="Terminal">
+              <p style={{ margin: 0 }}>{summary.terminalOrders}</p>
             </Card>
-            <Card title="Canceled/Expired">
-              <p style={{ margin: 0 }}>{summary.canceledCount}</p>
+            <Card title="Review required">
+              <p style={{ margin: 0 }}>{summary.reviewRequiredOrders}</p>
             </Card>
-            <Card title="Failed">
-              <p style={{ margin: 0 }}>{summary.failedCount}</p>
+            <Card title="Blocked">
+              <p style={{ margin: 0 }}>{summary.blockedOrders}</p>
             </Card>
           </div>
 

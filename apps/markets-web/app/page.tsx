@@ -17,11 +17,14 @@ export default async function MarketsHomePage() {
   }
 
   try {
-    const overview = await runtime.marketsClient.getMarketsOverview();
+    const overview = await runtime.marketsClient.getMarketsOverview({
+      accountId: runtime.defaultAccountId ?? "",
+    });
 
     runtime.logger.info("Loaded markets dashboard overview", {
       mode: runtime.config.mode,
-      activityCount: overview.recentActivity.length,
+      accountId: overview.accountId,
+      totalOrders: overview.orders.totalOrders,
     });
 
     return (

@@ -1,9 +1,17 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import {
+  marketInstrumentClasses,
+  marketOrderTypes,
+  marketPolicyDecisions,
+  marketPositionStates,
+  type MarketsListResponse,
+} from "@ryvra/domain-markets";
 import { createApiClient } from "../client";
-import { normalizeApiError } from "../errors";
+import { ApiClientError, normalizeApiError } from "../errors";
 import {
   marketsCanonicalAssetClasses,
+  marketsCanonicalErrorCodes,
   marketsCanonicalOrderStatuses,
   marketsCanonicalPolicyDecisions,
   marketsCanonicalSides,
@@ -12,43 +20,160 @@ import {
 import { createFetchTransport } from "../transport";
 import type { ApiRequest, ApiResult, Transport } from "../types";
 
-const instrumentFixture = {
-  id: "asset-btc-usd",
-  symbol: "BTC-USD",
-  name: "Bitcoin / US Dollar",
-  assetClass: "crypto",
-  availability: "tradable",
-  status: "active",
-  tradable: true,
-  updatedAt: "2026-08-06T10:00:00.000Z",
+const instrumentListPayload = {
+  as_of: "2026-08-08T06:00:00Z",
+  data: [
+    {
+      instrument_id: "inst_eth_usd",
+      symbol: "ETH/USD",
+      base_asset: "eth",
+      quote_asset: "usd",
+      asset_class: "crypto",
+      status: "active",
+      availability: "tradable",
+      chain_id: 1,
+      tick_size: "0.01",
+      lot_size: "0.0001",
+      min_notional: "10",
+      max_notional: "500000",
+      price_precision: 2,
+      size_precision: 6,
+      updated_at: "2026-08-08T05:59:00Z",
+    },
+  ],
+  page: {
+    limit: 50,
+    has_more: false,
+  },
 } as const;
 
-const orderFixture = {
-  id: "ord-7001",
-  referenceId: "ref-7001",
-  symbol: "BTC-USD",
-  side: "buy",
-  type: "market",
-  quantity: "0.25",
-  notionalValue: "15750.00",
-  status: "filled",
-  createdAt: "2026-08-05T10:00:00.000Z",
-  updatedAt: "2026-08-05T10:00:07.000Z",
+const orderListPayload = {
+  as_of: "2026-08-08T06:00:00Z",
+  data: [
+    {
+      order_id: "ord_1001",
+      reference_id: "ref_1001",
+      idempotency_key: "idem_1001",
+      correlation_id: "cor_1001",
+      account_id: "acct_123",
+      route_id: "route_a",
+      side: "buy",
+      type: "market",
+      status: "settled",
+      policy_decision: "ALLOW",
+      reason_codes: [],
+      base_asset: "eth",
+      quote_asset: "usdc",
+      size: "1.25",
+      filled_size: "1.25",
+      avg_execution_price: "2810.55",
+      created_at: "2026-08-08T05:41:22Z",
+      updated_at: "2026-08-08T05:44:21Z",
+    },
+  ],
+  page: {
+    limit: 50,
+    has_more: false,
+  },
 } as const;
 
-const positionFixture = {
-  id: "pos-8001",
-  accountId: "acct-core-1",
-  assetId: "asset-btc-usd",
-  symbol: "BTC-USD",
-  side: "long",
-  quantity: "0.80",
-  entryPrice: "59820.00",
-  markPrice: "63210.00",
-  unrealizedPnl: "2712.00",
-  riskState: "normal",
-  riskFlags: [],
-  updatedAt: "2026-08-06T10:05:00.000Z",
+const positionListPayload = {
+  as_of: "2026-08-08T06:00:00Z",
+  data: [
+    {
+      position_id: "pos_1001",
+      account_id: "acct_123",
+      asset: {
+        canonical_id: "eth",
+        symbol: "ETH",
+        decimals: 18,
+        chain_id: 1,
+        address: "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        asset_class: "crypto",
+      },
+      state: "open",
+      side: "long",
+      quantity: "4.5000",
+      notional_quote_asset: "usdc",
+      notional_value: "12647.50",
+      net_exposure_band: "medium",
+      risk_flags: ["concentration_limit_near"],
+      updated_at: "2026-08-08T05:54:33Z",
+    },
+  ],
+  page: {
+    limit: 50,
+    has_more: false,
+  },
+} as const;
+
+const orderSummaryPayload = {
+  as_of: "2026-08-08T06:00:00Z",
+  account_id: "acct_123",
+  total_orders: 84,
+  open_orders: 12,
+  terminal_orders: 72,
+  review_required_orders: 3,
+  blocked_orders: 5,
+  by_status: {
+    created: 2,
+    routed: 10,
+    settled: 63,
+    failed: 9,
+  },
+  by_side: {
+    buy: 55,
+    sell: 29,
+  },
+} as const;
+
+const positionSummaryPayload = {
+  as_of: "2026-08-08T06:00:00Z",
+  account_id: "acct_123",
+  total_positions: 4,
+  open_positions: 3,
+  by_state: {
+    open: 3,
+    reducing: 1,
+  },
+  by_side: {
+    long: 3,
+    short: 1,
+  },
+  net_exposure_quote_asset: "usdc",
+  net_exposure_value: "8200.00",
+  net_exposure_band: "medium",
+  risk_flags: ["concentration_limit_near"],
+} as const;
+
+const overviewPayload = {
+  as_of: "2026-08-08T06:00:00Z",
+  api_version: "MARKETS_API_VERSION=2026-08-08",
+  account_id: "acct_123",
+  health_status: "pass",
+  instruments: {
+    as_of: "2026-08-08T06:00:00Z",
+    total_instruments: 142,
+    tradable_instruments: 130,
+    halted_instruments: 4,
+    by_asset_class: {
+      crypto: 120,
+      rwa: 12,
+      metal: 10,
+    },
+    by_status: {
+      active: 130,
+      suspended: 4,
+      inactive: 8,
+    },
+    by_availability: {
+      tradable: 130,
+      close_only: 8,
+      halted: 4,
+    },
+  },
+  orders: orderSummaryPayload,
+  positions: positionSummaryPayload,
 } as const;
 
 function createCaptureTransport(handler: (request: ApiRequest) => ApiResult<unknown> | Promise<ApiResult<unknown>>): {
@@ -69,196 +194,49 @@ function createCaptureTransport(handler: (request: ApiRequest) => ApiResult<unkn
   };
 }
 
-test("contract decoding validates canonical markets payloads", async () => {
-  const { transport } = createCaptureTransport((request) => {
-    if (request.path.startsWith(marketsRouteMap.getInstrumentSummary)) {
-      return {
-        ok: true,
-        data: {
-          totalCount: 1,
-          activeCount: 1,
-          haltedCount: 0,
-          tradableCount: 1,
-        },
-      };
-    }
-
-    if (request.path.startsWith(marketsRouteMap.listInstruments)) {
-      return {
-        ok: true,
-        data: {
-          items: [instrumentFixture],
-          pagination: { page: 1, pageSize: 20, total: 1, totalPages: 1 },
-        },
-      };
-    }
-
-    if (request.path.startsWith(marketsRouteMap.getOrderSummary)) {
-      return {
-        ok: true,
-        data: {
-          totalCount: 1,
-          openCount: 0,
-          filledCount: 1,
-          canceledCount: 0,
-          failedCount: 0,
-        },
-      };
-    }
-
-    if (request.path.startsWith(marketsRouteMap.listOrders)) {
-      return {
-        ok: true,
-        data: {
-          items: [orderFixture],
-          pagination: { page: 1, pageSize: 20, total: 1, totalPages: 1 },
-        },
-      };
-    }
-
-    if (request.path.startsWith(marketsRouteMap.getPositionSummary)) {
-      return {
-        ok: true,
-        data: {
-          totalCount: 1,
-          longCount: 1,
-          shortCount: 0,
-          flatCount: 0,
-          atRiskCount: 0,
-          netExposureBand: "net_long",
-        },
-      };
-    }
-
-    if (request.path.startsWith(marketsRouteMap.listPositions)) {
-      return {
-        ok: true,
-        data: {
-          items: [positionFixture],
-          pagination: { page: 1, pageSize: 20, total: 1, totalPages: 1 },
-        },
-      };
-    }
-
-    if (request.path === marketsRouteMap.getMarketsOverview) {
-      return {
-        ok: true,
-        data: {
-          metrics: {
-            totalInstruments: 1,
-            activeInstruments: 1,
-            openOrders: 0,
-            totalPositions: 1,
-            atRiskPositions: 0,
-            netExposureBand: "net_long",
-          },
-          recentActivity: [
-            {
-              id: "activity-order-1",
-              type: "order",
-              title: "BTC-USD buy 0.25",
-              status: "filled",
-              createdAt: "2026-08-05T10:00:07.000Z",
-              symbol: "BTC-USD",
-              detail: "market • 15750.00",
-            },
-          ],
-        },
-      };
-    }
-
-    return { ok: false, error: { code: "unhandled", message: "Unhandled route", retryable: false, source: "mock" } };
-  });
-
-  const client = createApiClient({ mode: "http", baseUrl: "https://markets.example", transport });
-
-  const instruments = await client.markets.listInstruments();
-  const instrumentSummary = await client.markets.getInstrumentSummary();
-  const orders = await client.markets.listOrders();
-  const orderSummary = await client.markets.getOrderSummary();
-  const positions = await client.markets.listPositions();
-  const positionSummary = await client.markets.getPositionSummary();
-  const overview = await client.markets.getMarketsOverview();
-
-  assert.equal(instruments.items[0]?.symbol, "BTC-USD");
-  assert.equal(instrumentSummary.activeCount, 1);
-  assert.equal(orders.items[0]?.status, "filled");
-  assert.equal(orderSummary.filledCount, 1);
-  assert.equal(positions.items[0]?.riskState, "normal");
-  assert.equal(positionSummary.netExposureBand, "net_long");
-  assert.equal(overview.metrics.totalInstruments, 1);
-});
-
-test("contract decoding rejects invalid markets payloads", async () => {
-  const { transport } = createCaptureTransport((request) => {
-    if (request.path.startsWith(marketsRouteMap.listOrders)) {
-      return {
-        ok: true,
-        data: {
-          items: [{ ...orderFixture, status: "not-a-status" }],
-          pagination: { page: 1, pageSize: 20, total: 1, totalPages: 1 },
-        },
-      };
-    }
-
+function canonicalRouteHandler(request: ApiRequest): ApiResult<unknown> {
+  if (request.path.startsWith(marketsRouteMap.getInstrumentSummary)) {
+    return {
+      ok: true,
+      data: overviewPayload.instruments,
+    };
+  }
+  if (request.path.startsWith(marketsRouteMap.getOrderSummary)) {
+    return { ok: true, data: orderSummaryPayload };
+  }
+  if (request.path.startsWith(marketsRouteMap.getPositionSummary)) {
+    return { ok: true, data: positionSummaryPayload };
+  }
+  if (request.path.startsWith(marketsRouteMap.getMarketsOverview)) {
+    return { ok: true, data: overviewPayload };
+  }
+  if (request.path.startsWith(marketsRouteMap.listInstruments)) {
+    return { ok: true, data: instrumentListPayload };
+  }
+  if (request.path.startsWith(marketsRouteMap.listOrders)) {
+    return { ok: true, data: orderListPayload };
+  }
+  if (request.path.startsWith(marketsRouteMap.listPositions)) {
+    return { ok: true, data: positionListPayload };
+  }
+  if (request.path.startsWith("/health")) {
     return {
       ok: true,
       data: {
-        items: [],
-        pagination: { page: 1, pageSize: 20, total: 0, totalPages: 1 },
+        status: "pass",
+        service: "markets",
+        api_version: "MARKETS_API_VERSION=2026-08-08",
+        timestamp: "2026-08-08T06:00:00Z",
+        checks: [],
       },
     };
-  });
+  }
 
-  const client = createApiClient({ mode: "http", baseUrl: "https://markets.example", transport });
+  return { ok: false, error: { code: "unhandled", message: "Unhandled route", retryable: false, source: "mock" } };
+}
 
-  await assert.rejects(() => client.markets.listOrders(), (error: unknown) => {
-    assert.equal(error instanceof Error, true);
-    return error instanceof Error && error.message.includes("order.status");
-  });
-});
-
-test("route mapping uses parity-aligned methods, paths, filters, and headers", async () => {
-  const { transport, calls } = createCaptureTransport((request) => {
-    if (request.path.startsWith(marketsRouteMap.listInstruments)) {
-      return {
-        ok: true,
-        data: {
-          items: [instrumentFixture],
-          pagination: { page: 1, pageSize: 20, total: 1, totalPages: 1 },
-        },
-      };
-    }
-
-    if (request.path.startsWith(marketsRouteMap.listOrders)) {
-      return {
-        ok: true,
-        data: {
-          items: [orderFixture],
-          pagination: { page: 1, pageSize: 20, total: 1, totalPages: 1 },
-        },
-      };
-    }
-
-    if (request.path.startsWith(marketsRouteMap.listPositions)) {
-      return {
-        ok: true,
-        data: {
-          items: [positionFixture],
-          pagination: { page: 1, pageSize: 20, total: 1, totalPages: 1 },
-        },
-      };
-    }
-
-    return {
-      ok: true,
-      data: {
-        items: [],
-        pagination: { page: 1, pageSize: 20, total: 0, totalPages: 1 },
-      },
-    };
-  });
-
+test("endpoint mapping uses canonical method/path/account/auth/header behavior", async () => {
+  const { transport, calls } = createCaptureTransport((request) => canonicalRouteHandler(request));
   const client = createApiClient({
     mode: "http",
     baseUrl: "https://markets.example",
@@ -271,35 +249,291 @@ test("route mapping uses parity-aligned methods, paths, filters, and headers", a
   });
 
   await client.markets.listInstruments({
-    pagination: { page: 2, pageSize: 25 },
-    sort: { field: "symbol", direction: "asc" },
-    filters: { assetClass: "crypto", status: "active", search: "btc" },
+    pagination: { limit: 25, cursor: "cursor-token", page: 7 },
+    sort: { field: "updated_at", direction: "desc" },
+    filters: { q: "ETH", assetClass: "crypto" },
   });
+  await client.markets.getInstrumentSummary({ assetClass: "crypto" });
   await client.markets.listOrders({
-    filters: { status: "filled", side: "buy", type: "market", search: "ord-7001" },
+    accountId: "acct_123",
+    pagination: { limit: 10, page: 2 },
+    sort: { field: "created_at", direction: "asc" },
+    filters: { status: "settled", side: "buy", type: "market", policyDecision: "ALLOW" },
+  });
+  await client.markets.getOrderSummary({
+    accountId: "acct_123",
+    filters: { createdAfter: "2026-08-01T00:00:00Z", createdBefore: "2026-08-09T00:00:00Z" },
   });
   await client.markets.listPositions({
-    filters: { symbol: "BTC-USD", riskState: "normal", search: "acct-core-1" },
+    accountId: "acct_123",
+    pagination: { limit: 10, page: 1 },
+    sort: { field: "updated_at", direction: "desc" },
+    filters: { side: "long", state: "open" },
+  });
+  await client.markets.getPositionSummary({
+    accountId: "acct_123",
+    filters: { state: "open" },
+  });
+  await client.markets.getMarketsOverview({
+    accountId: "acct_123",
   });
 
   assert.equal(calls[0]?.method, "GET");
-  assert.equal(calls[0]?.path.includes("page_size=25"), true);
-  assert.equal(calls[0]?.path.includes("sort_field=symbol"), true);
-  assert.equal(calls[0]?.path.includes("sort_direction=asc"), true);
-  assert.equal(calls[0]?.path.includes("asset_class=crypto"), true);
-  assert.equal((calls[0]?.headers?.authorization ?? "").startsWith("Bearer "), true);
-  assert.equal(calls[0]?.headers?.["x-request-id"], "request-fixed");
-  assert.equal(calls[0]?.headers?.["x-correlation-id"], "correlation-fixed");
+  assert.equal(calls[0]?.path.startsWith(marketsRouteMap.listInstruments), true);
+  assert.equal(calls[0]?.path.includes("cursor=cursor-token"), true);
+  assert.equal(calls[0]?.path.includes("page=7"), false);
 
-  assert.equal(calls[1]?.path.includes("status=filled"), true);
-  assert.equal(calls[1]?.path.includes("side=buy"), true);
-  assert.equal(calls[1]?.path.includes("type=market"), true);
+  assert.equal(calls[2]?.method, "GET");
+  assert.equal(calls[2]?.path.startsWith(marketsRouteMap.listOrders), true);
+  assert.equal(calls[2]?.path.includes("account_id=acct_123"), true);
+  assert.equal(calls[2]?.path.includes("page=2"), true);
 
-  assert.equal(calls[2]?.path.includes("symbol=BTC-USD"), true);
-  assert.equal(calls[2]?.path.includes("risk_state=normal"), true);
+  assert.equal(calls[3]?.path.startsWith(marketsRouteMap.getOrderSummary), true);
+  assert.equal(calls[3]?.path.includes("account_id=acct_123"), true);
+
+  assert.equal(calls[4]?.path.startsWith(marketsRouteMap.listPositions), true);
+  assert.equal(calls[4]?.path.includes("account_id=acct_123"), true);
+
+  assert.equal(calls[5]?.path.startsWith(marketsRouteMap.getPositionSummary), true);
+  assert.equal(calls[5]?.path.includes("account_id=acct_123"), true);
+
+  assert.equal(calls[6]?.path.startsWith(marketsRouteMap.getMarketsOverview), true);
+  assert.equal(calls[6]?.path.includes("account_id=acct_123"), true);
+
+  for (const call of calls) {
+    if (!call.path.startsWith("/health")) {
+      assert.equal((call.headers?.authorization ?? "").startsWith("Bearer "), true);
+    }
+
+    assert.equal(call.headers?.["x-request-id"], "request-fixed");
+    assert.equal(call.headers?.["x-correlation-id"], "correlation-fixed");
+  }
 });
 
-test("enum parity keeps canonical markets constants", () => {
+test("required account_id is enforced for account-scoped endpoints in HTTP mode", async () => {
+  const { transport, calls } = createCaptureTransport((request) => canonicalRouteHandler(request));
+  const client = createApiClient({
+    mode: "http",
+    baseUrl: "https://markets.example",
+    transport,
+    markets: {
+      authToken: "markets-token",
+    },
+  });
+
+  await assert.rejects(async () => client.markets.listOrders({ accountId: "", pagination: { limit: 10 } }), (error: unknown) => {
+    assert.equal(error instanceof ApiClientError, true);
+    return error instanceof ApiClientError && error.code === "invalid_request" && error.message.includes("account_id");
+  });
+
+  await assert.rejects(async () => client.markets.getOrderSummary({ accountId: "" }), (error: unknown) => {
+    assert.equal(error instanceof ApiClientError, true);
+    return error instanceof ApiClientError && error.code === "invalid_request" && error.message.includes("account_id");
+  });
+
+  await assert.rejects(async () => client.markets.listPositions({ accountId: "", pagination: { limit: 10 } }), (error: unknown) => {
+    assert.equal(error instanceof ApiClientError, true);
+    return error instanceof ApiClientError && error.code === "invalid_request" && error.message.includes("account_id");
+  });
+
+  await assert.rejects(async () => client.markets.getPositionSummary({ accountId: "" }), (error: unknown) => {
+    assert.equal(error instanceof ApiClientError, true);
+    return error instanceof ApiClientError && error.code === "invalid_request" && error.message.includes("account_id");
+  });
+
+  await assert.rejects(async () => client.markets.getMarketsOverview({ accountId: "" }), (error: unknown) => {
+    assert.equal(error instanceof ApiClientError, true);
+    return error instanceof ApiClientError && error.code === "invalid_request" && error.message.includes("account_id");
+  });
+
+  assert.equal(calls.length, 0);
+});
+
+test("non-health routes require bearer auth and health probe remains auth-optional", async () => {
+  const { transport, calls } = createCaptureTransport((request) => canonicalRouteHandler(request));
+  const client = createApiClient({
+    mode: "http",
+    baseUrl: "https://markets.example",
+    transport,
+    markets: {
+      requestIdProvider: () => "request-health",
+      correlationIdProvider: () => "correlation-health",
+      connectivityPath: "/health",
+    },
+  });
+
+  await assert.rejects(
+    async () =>
+      client.markets.listInstruments({
+        pagination: { limit: 10 },
+      }),
+    (error: unknown) => {
+      assert.equal(error instanceof ApiClientError, true);
+      return error instanceof ApiClientError && error.code === "unauthorized";
+    },
+  );
+
+  assert.equal(calls.length, 0);
+
+  const diagnostics = await client.markets.getParityDiagnostics();
+  assert.equal(diagnostics.connectivity.ok, true);
+  assert.equal(calls[0]?.path, "/health");
+  assert.equal(calls[0]?.headers?.authorization, undefined);
+  assert.equal(calls[0]?.headers?.["x-request-id"], "request-health");
+  assert.equal(calls[0]?.headers?.["x-correlation-id"], "correlation-health");
+});
+
+test("cursor-first pagination keeps cursor canonical and page deprecated compatibility", async () => {
+  const { transport, calls } = createCaptureTransport((request) => canonicalRouteHandler(request));
+  const client = createApiClient({
+    mode: "http",
+    baseUrl: "https://markets.example",
+    transport,
+    markets: {
+      authToken: "markets-token",
+    },
+  });
+
+  await client.markets.listInstruments({
+    pagination: { limit: 25, cursor: "cursor-token", page: 4 },
+  });
+  await client.markets.listOrders({
+    accountId: "acct_123",
+    pagination: { limit: 25, page: 4 },
+  });
+
+  assert.equal(calls[0]?.path.includes("cursor=cursor-token"), true);
+  assert.equal(calls[0]?.path.includes("page=4"), false);
+  assert.equal(calls[1]?.path.includes("page=4"), true);
+});
+
+test("canonical decoder enforces strict enums and schema literals", async () => {
+  const { transport } = createCaptureTransport((request) => {
+    if (request.path.startsWith(marketsRouteMap.listOrders)) {
+      return {
+        ok: true,
+        data: {
+          ...orderListPayload,
+          data: [{ ...orderListPayload.data[0], type: "limit" }],
+        },
+      };
+    }
+
+    return canonicalRouteHandler(request);
+  });
+  const client = createApiClient({
+    mode: "http",
+    baseUrl: "https://markets.example",
+    transport,
+    markets: {
+      authToken: "markets-token",
+    },
+  });
+
+  await assert.rejects(async () => client.markets.listOrders({ accountId: "acct_123", pagination: { limit: 10 } }), (error: unknown) => {
+    assert.equal(error instanceof ApiClientError, true);
+    return error instanceof ApiClientError && error.code === "markets_payload_validation_failed" && error.message.includes("order.type");
+  });
+});
+
+test("deprecated net_exposure_bucket fallback normalizes to canonical netExposureBand", async () => {
+  const { transport } = createCaptureTransport((request) => {
+    if (request.path.startsWith(marketsRouteMap.getPositionSummary)) {
+      return {
+        ok: true,
+        data: {
+          ...positionSummaryPayload,
+          net_exposure_band: undefined,
+          net_exposure_bucket: "medium",
+        },
+      };
+    }
+
+    if (request.path.startsWith(marketsRouteMap.getMarketsOverview)) {
+      return {
+        ok: true,
+        data: {
+          ...overviewPayload,
+          positions: {
+            ...positionSummaryPayload,
+            net_exposure_band: undefined,
+            net_exposure_bucket: "medium",
+          },
+        },
+      };
+    }
+
+    return canonicalRouteHandler(request);
+  });
+  const client = createApiClient({
+    mode: "http",
+    baseUrl: "https://markets.example",
+    transport,
+    markets: {
+      authToken: "markets-token",
+    },
+  });
+
+  const summary = await client.markets.getPositionSummary({ accountId: "acct_123" });
+  const overview = await client.markets.getMarketsOverview({ accountId: "acct_123" });
+
+  assert.equal(summary.netExposureBand, "medium");
+  assert.equal(overview.positions.netExposureBand, "medium");
+});
+
+test("error normalization preserves canonical markets error envelope", async () => {
+  const normalized = normalizeApiError({
+    status: 403,
+    code: "http_request_failed",
+    message: "Forbidden",
+    details: {
+      code: "forbidden",
+      message: "account is blocked by policy-risk",
+      retryable: false,
+      source: "policy-risk",
+      details: {
+        reason_codes: ["policy_blocked_account"],
+      },
+    },
+  });
+
+  assert.equal(normalized.code, "forbidden");
+  assert.equal(normalized.message, "account is blocked by policy-risk");
+  assert.equal(normalized.retryable, false);
+  assert.equal(normalized.source, "policy-risk");
+  assert.equal(normalized.status, 403);
+
+  const transport = createFetchTransport({
+    baseUrl: "https://markets.example",
+    fetchImpl: async () =>
+      new Response(
+        JSON.stringify({
+          code: "unauthorized",
+          message: "bearer token is required",
+          retryable: false,
+          source: "markets-api",
+          details: {
+            parameter: "authorization",
+          },
+        }),
+        {
+          status: 401,
+          statusText: "Unauthorized",
+          headers: { "content-type": "application/json" },
+        },
+      ),
+  });
+
+  const response = await transport.request<unknown>({ method: "GET", path: marketsRouteMap.listOrders });
+  assert.equal(response.ok, false);
+  if (!response.ok) {
+    assert.equal(response.error.code, "unauthorized");
+    assert.equal(response.error.retryable, false);
+    assert.equal(response.error.source, "markets-api");
+  }
+});
+
+test("enum parity keeps canonical market constants", () => {
   assert.deepEqual(marketsCanonicalSides, ["buy", "sell"]);
   assert.deepEqual(marketsCanonicalPolicyDecisions, ["ALLOW", "DENY", "REVIEW"]);
   assert.deepEqual(marketsCanonicalAssetClasses, ["crypto", "fiat", "rwa", "metal"]);
@@ -314,63 +548,19 @@ test("enum parity keeps canonical markets constants", () => {
     "failed",
     "settled",
   ]);
-});
-
-test("markets error normalization maps representative service errors", async () => {
-  const denied = normalizeApiError({
-    status: 403,
-    code: "http_request_failed",
-    message: "Policy denied",
-    details: {
-      decision: "DENY",
-      reason_codes: ["policy_denied_account"],
-      explanation: "Denied by risk policy",
-    },
-  });
-
-  assert.equal(denied.code, "markets_policy_denied");
-  assert.equal(denied.retryable, false);
-  assert.equal(denied.status, 403);
-
-  const timeout = normalizeApiError({
-    status: 504,
-    code: "http_request_failed",
-    message: "Dependency timeout",
-    details: {
-      reason_codes: ["execution_dependency_timeout"],
-    },
-  });
-
-  assert.equal(timeout.code, "markets_dependency_timeout");
-  assert.equal(timeout.retryable, true);
-  assert.equal(timeout.status, 504);
-
-  const transport = createFetchTransport({
-    baseUrl: "https://markets.example",
-    fetchImpl: async () =>
-      new Response(
-        JSON.stringify({
-          error: {
-            code: "route_rejected",
-            message: "route rejected by venue",
-            reason_codes: ["route_rejected"],
-          },
-        }),
-        {
-          status: 422,
-          statusText: "Unprocessable Entity",
-          headers: { "content-type": "application/json" },
-        },
-      ),
-  });
-
-  const response = await transport.request<unknown>({ method: "GET", path: marketsRouteMap.listOrders });
-  assert.equal(response.ok, false);
-  if (!response.ok) {
-    assert.equal(response.error.code, "markets_route_rejected");
-    assert.equal(response.error.retryable, false);
-    assert.equal(response.error.status, 422);
-  }
+  assert.deepEqual(marketsCanonicalErrorCodes, [
+    "invalid_request",
+    "unauthorized",
+    "forbidden",
+    "not_found",
+    "rate_limited",
+    "service_unavailable",
+    "internal_error",
+  ]);
+  assert.deepEqual(marketInstrumentClasses, ["crypto", "fiat", "rwa", "metal"]);
+  assert.deepEqual(marketOrderTypes, ["market"]);
+  assert.deepEqual(marketPolicyDecisions, ["ALLOW", "DENY", "REVIEW"]);
+  assert.deepEqual(marketPositionStates, ["open", "reducing", "closed", "liquidating", "suspended"]);
 });
 
 test(
@@ -381,12 +571,13 @@ test(
   async () => {
     const baseUrl = process.env.RYVRA_MARKETS_CONNECTIVITY_SMOKE_URL as string;
     const path = process.env.RYVRA_MARKETS_CONNECTIVITY_SMOKE_PATH ?? "/health";
-
     const client = createApiClient({
       mode: "http",
       baseUrl,
       markets: {
+        ...(process.env.RYVRA_MARKETS_AUTH_TOKEN ? { authToken: process.env.RYVRA_MARKETS_AUTH_TOKEN } : {}),
         connectivityPath: path,
+        ...(process.env.RYVRA_MARKETS_ACCOUNT_ID ? { defaultAccountId: process.env.RYVRA_MARKETS_ACCOUNT_ID } : {}),
       },
     });
 
@@ -394,3 +585,18 @@ test(
     assert.equal(diagnostics.connectivity.ok, true);
   },
 );
+
+test("decode list response shape keeps canonical item + pagination keys", () => {
+  const decoded = {
+    asOf: instrumentListPayload.as_of,
+    items: [...instrumentListPayload.data],
+    pagination: {
+      limit: instrumentListPayload.page.limit,
+      hasMore: instrumentListPayload.page.has_more,
+    },
+  } satisfies MarketsListResponse<unknown>;
+
+  assert.equal(typeof decoded.asOf, "string");
+  assert.equal(Array.isArray(decoded.items), true);
+  assert.equal(typeof decoded.pagination.limit, "number");
+});

@@ -12,31 +12,35 @@
 - `@ryvra/ui` provides shared shell/navigation primitives consumed by all three apps.
 - Cross-app context handoff uses query params (`ref`, `entity`, `id`, `ctx`) validated by shared schema utilities.
 
-## Markets integration map (Phase 9 MVP data wiring + parity)
+## Markets integration map (Phase 9.5 v2 strict parity)
 
 - `apps/markets-web` runtime (`app/lib/runtime.ts`) loads mode/API config and constructs `createApiClient(...).markets`.
 - `@ryvra/domain-markets` exports:
-  - markets MVP read-model DTOs (instruments/orders/positions/overview + summaries)
-  - canonical enum surfaces (sides/order lifecycle/policy-aware risk flags)
-  - shared list/filter/pagination/sort contracts
+  - canonical Markets enum surfaces and DTO/request contracts
+  - account-scoped request contracts for orders/positions/overview
+  - cursor-first pagination contracts with deprecated page compatibility
 - `@ryvra/api-client` markets surface includes:
   - `listInstruments`, `getInstrumentSummary`
   - `listOrders`, `getOrderSummary`
   - `listPositions`, `getPositionSummary`
   - `getMarketsOverview`, `getParityDiagnostics`
-- query/filter parity in HTTP mode uses snake_case compatibility keys.
-- `/markets/status` displays mode, base URL, compatibility version, parity marker, and connectivity probe result.
+  - hard HTTP guards:
+    - required bearer auth on non-health routes
+    - required `account_id` for account-scoped endpoints
+    - required request/correlation ids
+  - canonical error-envelope normalization (`code`, `message`, `retryable`, `source`, optional `details`)
+- query/filter parity in HTTP mode uses canonical snake_case keys.
+- `/markets/status` displays mode, base URL, source OpenAPI refs, compatibility marker, parity marker, and connectivity probe result.
 
 ## Markets source-of-truth linkage (`ryvra-protocol/markets`)
 
-- Canonical source files currently define domain/service contracts (no published OpenAPI/router yet):
-  - `src/types/market-intent.ts`
-  - `src/types/order.ts`
-  - `src/adapters/execution-adapter.ts`
-  - `src/adapters/policy-client.ts`
-  - `src/domain/unified-asset.ts`
-  - `src/service/markets-service.ts`
-  - `docs/rfc-0007-markets-intents-and-execution.md`
+- Canonical merged contract references:
+  - `openapi/markets.openapi.yaml`
+  - `docs/api-contract-changelog.md`
+- Current Apps marker linkage:
+  - `MARKETS_API_VERSION=2026-08-08`
+  - OpenAPI SHA `cc08c626f2f26e192fe86d744d2aa1798c9c690a`
+  - OpenAPI commit `87b7bf6764be28a6f6b89ff6f6226fe1f40fda46`
 
 ## Pay integration map (Phase 8.5 parity hardening)
 
@@ -64,7 +68,7 @@
 ## External Ryvra touchpoints (future integration targets)
 
 - **Ryvra Identity/Auth services:** concrete session validation and role claims.
-- **Ryvra Markets services:** compatibility `/markets/*` read-model adapters in apps pending markets-owned published HTTP/API contract.
+- **Ryvra Markets services:** canonical `/markets/*` contract now published and enforced in apps parity wiring.
 - **Ryvra Pay services:** canonical HTTP/API publication still pending.
 - **Ryvra Points/Tasks services:** eligibility, conversion, and task event APIs.
 - **Ryvra observability stack:** structured logs, tracing, and alerting pipeline.

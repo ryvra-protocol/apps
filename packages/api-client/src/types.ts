@@ -2,6 +2,9 @@ import type {
   InstrumentDto,
   InstrumentFilters,
   InstrumentSummaryDto,
+  MarketsAccountScopedListRequest,
+  MarketsAccountScopedRequest,
+  MarketsAccountScopedSummaryRequest,
   MarketsListRequest,
   MarketsListResponse,
   MarketsOverviewDto,
@@ -35,7 +38,17 @@ import type { ConversionPreviewDto, EligibilityResult } from "@ryvra/domain-toke
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
-export type ApiErrorSource = "mock" | "http" | "runtime" | "unknown";
+export type ApiErrorSource =
+  | "mock"
+  | "http"
+  | "runtime"
+  | "unknown"
+  | "markets-api"
+  | "policy-risk"
+  | "asset-registry"
+  | "execution-router"
+  | "ledger-settlement"
+  | "accounts-runtime";
 
 export interface ApiRequest {
   method: HttpMethod;
@@ -100,6 +113,7 @@ export interface MarketsRuntimeHeaderOptions {
   correlationIdProvider?: () => string;
   staticHeaders?: Record<string, string>;
   connectivityPath?: string;
+  defaultAccountId?: string;
 }
 
 export interface PayConnectivityCheckResult {
@@ -134,18 +148,42 @@ export interface MarketsParityDiagnostics {
   baseUrl: string;
   compatibilityVersion: string;
   sourceOfTruth: string;
+  sourceOpenApiPath: string;
+  sourceChangelogPath: string;
+  sourceOpenApiSha: string;
+  sourceOpenApiCommit: string;
   parityCheckMarker: string;
+  auth: {
+    requiredForMarketsRoutes: boolean;
+    hasAuthorization: boolean;
+    requestIdHeader: string;
+    correlationIdHeader: string;
+  };
+  accountScope: {
+    defaultAccountId?: string;
+    requiredEndpoints: readonly string[];
+  };
+  paginationPolicy: {
+    preferredMode: "cursor";
+    deprecatedParam: "page";
+    deprecatedRemovalNotBefore: "2027-02-08";
+  };
+  deprecatedFieldFallback: {
+    canonicalField: "net_exposure_band";
+    fallbackField: "net_exposure_bucket";
+    fallbackRemovalNotBefore: "2027-02-08";
+  };
   connectivity: MarketsConnectivityCheckResult;
 }
 
 export interface MarketsClient {
   listInstruments(request?: MarketsListRequest<InstrumentFilters>): Promise<MarketsListResponse<InstrumentDto>>;
   getInstrumentSummary(filters?: InstrumentFilters): Promise<InstrumentSummaryDto>;
-  listOrders(request?: MarketsListRequest<OrderFilters>): Promise<MarketsListResponse<OrderDto>>;
-  getOrderSummary(filters?: OrderFilters): Promise<OrderSummaryDto>;
-  listPositions(request?: MarketsListRequest<PositionFilters>): Promise<MarketsListResponse<PositionDto>>;
-  getPositionSummary(filters?: PositionFilters): Promise<PositionSummaryDto>;
-  getMarketsOverview(): Promise<MarketsOverviewDto>;
+  listOrders(request: MarketsAccountScopedListRequest<OrderFilters>): Promise<MarketsListResponse<OrderDto>>;
+  getOrderSummary(request: MarketsAccountScopedSummaryRequest<OrderFilters>): Promise<OrderSummaryDto>;
+  listPositions(request: MarketsAccountScopedListRequest<PositionFilters>): Promise<MarketsListResponse<PositionDto>>;
+  getPositionSummary(request: MarketsAccountScopedSummaryRequest<PositionFilters>): Promise<PositionSummaryDto>;
+  getMarketsOverview(request: MarketsAccountScopedRequest): Promise<MarketsOverviewDto>;
   getParityDiagnostics(): Promise<MarketsParityDiagnostics>;
 }
 

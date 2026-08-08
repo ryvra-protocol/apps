@@ -14,39 +14,43 @@ export const marketOrderStatuses = [
 ] as const;
 export type MarketOrderStatus = (typeof marketOrderStatuses)[number];
 
-export const marketOrderTypes = ["market", "limit", "rfq"] as const;
+export const marketOrderTypes = ["market"] as const;
 export type MarketOrderType = (typeof marketOrderTypes)[number];
 
-export const marketInstrumentClasses = ["crypto", "fiat", "rwa", "metal", "other"] as const;
+export const marketPolicyDecisions = ["ALLOW", "DENY", "REVIEW"] as const;
+export type MarketPolicyDecision = (typeof marketPolicyDecisions)[number];
+
+export const marketInstrumentClasses = ["crypto", "fiat", "rwa", "metal"] as const;
 export type MarketInstrumentClass = (typeof marketInstrumentClasses)[number];
 
-export const marketInstrumentStatuses = ["active", "halted", "delisted"] as const;
+export const marketInstrumentStatuses = ["active", "inactive", "suspended", "delisted"] as const;
 export type MarketInstrumentStatus = (typeof marketInstrumentStatuses)[number];
 
-export const marketInstrumentAvailabilities = ["tradable", "close_only", "suspended"] as const;
+export const marketInstrumentAvailabilities = ["tradable", "close_only", "halted", "view_only"] as const;
 export type MarketInstrumentAvailability = (typeof marketInstrumentAvailabilities)[number];
+
+export const marketPositionStates = ["open", "reducing", "closed", "liquidating", "suspended"] as const;
+export type MarketPositionState = (typeof marketPositionStates)[number];
 
 export const marketPositionSides = ["long", "short", "flat"] as const;
 export type MarketPositionSide = (typeof marketPositionSides)[number];
 
-export const marketPositionRiskStates = ["normal", "watch", "at_risk"] as const;
-export type MarketPositionRiskState = (typeof marketPositionRiskStates)[number];
-
 export const marketRiskFlags = [
-  "policy_review_required",
-  "policy_denied",
-  "route_rejected",
-  "execution_guardrail_violation",
-  "exposure_limit",
+  "size_limit_near",
+  "size_limit_breached",
+  "concentration_limit_near",
+  "concentration_limit_breached",
   "volatility_halt",
-  "liquidity_stress",
+  "eligibility_restricted",
+  "manual_review_required",
 ] as const;
 export type MarketRiskFlag = (typeof marketRiskFlags)[number];
 
-export const marketNetExposureBands = ["net_long", "neutral", "net_short"] as const;
+export const marketNetExposureBands = ["flat", "low", "medium", "high", "critical"] as const;
 export type MarketNetExposureBand = (typeof marketNetExposureBands)[number];
 
 export type MarketSortDirection = "asc" | "desc";
+export type MarketsOverviewHealthStatus = "pass" | "degraded" | "fail";
 
 export interface MarketsDateRangeFilter {
   from?: string;
@@ -54,8 +58,16 @@ export interface MarketsDateRangeFilter {
 }
 
 export interface MarketsPaginationRequest {
-  page: number;
-  pageSize: number;
+  limit?: number;
+  cursor?: string;
+  /**
+   * @deprecated Canonical pagination is cursor-first; retained for compatibility through at least 2027-02-08.
+   */
+  page?: number;
+  /**
+   * @deprecated Use `limit`.
+   */
+  pageSize?: number;
 }
 
 export interface MarketsSortRequest {
@@ -64,10 +76,13 @@ export interface MarketsSortRequest {
 }
 
 export interface MarketsPaginationMeta {
-  page: number;
-  pageSize: number;
-  total: number;
-  totalPages: number;
+  limit: number;
+  hasMore: boolean;
+  nextCursor?: string;
+  /**
+   * @deprecated Canonical pagination is cursor-first.
+   */
+  page?: number;
 }
 
 export interface MarketsListRequest<TFilters extends object> {
@@ -76,140 +91,204 @@ export interface MarketsListRequest<TFilters extends object> {
   sort?: MarketsSortRequest;
 }
 
-export interface MarketsListResponse<TItem> {
-  items: TItem[];
-  pagination: MarketsPaginationMeta;
+export interface MarketsAccountScopedRequest {
+  accountId: string;
+}
+
+export interface MarketsAccountScopedListRequest<TFilters extends object>
+  extends MarketsListRequest<TFilters>,
+    MarketsAccountScopedRequest {}
+
+export interface MarketsAccountScopedSummaryRequest<TFilters extends object> extends MarketsAccountScopedRequest {
+  filters?: TFilters;
 }
 
 export interface InstrumentFilters {
-  search?: string;
+  q?: string;
   assetClass?: MarketInstrumentClass;
   status?: MarketInstrumentStatus;
+  availability?: MarketInstrumentAvailability;
+  chainId?: number;
+  /**
+   * @deprecated Use `q`.
+   */
+  search?: string;
 }
 
 export interface OrderFilters {
-  search?: string;
+  referenceId?: string;
+  correlationId?: string;
+  routeId?: string;
   status?: MarketOrderStatus;
   side?: MarketSide;
   type?: MarketOrderType;
+  policyDecision?: MarketPolicyDecision;
+  createdAfter?: string;
+  createdBefore?: string;
+  /**
+   * @deprecated Use `referenceId`.
+   */
+  search?: string;
+  /**
+   * @deprecated Use `createdAfter`/`createdBefore`.
+   */
   dateRange?: MarketsDateRangeFilter;
 }
 
 export interface PositionFilters {
-  search?: string;
-  symbol?: string;
+  assetClass?: MarketInstrumentClass;
+  state?: MarketPositionState;
   side?: MarketPositionSide;
-  riskState?: MarketPositionRiskState;
+  riskFlags?: MarketRiskFlag[];
+  /**
+   * @deprecated Use `state`.
+   */
+  riskState?: MarketPositionState;
+  /**
+   * @deprecated Not in canonical contract.
+   */
+  symbol?: string;
+  /**
+   * @deprecated Not in canonical contract.
+   */
+  search?: string;
+  /**
+   * @deprecated Not in canonical contract.
+   */
   dateRange?: MarketsDateRangeFilter;
 }
 
 export interface InstrumentDto {
   id: string;
   symbol: string;
-  name: string;
+  baseAsset: string;
+  quoteAsset: string;
   assetClass: MarketInstrumentClass;
   availability: MarketInstrumentAvailability;
   status: MarketInstrumentStatus;
-  tradable: boolean;
+  chainId: number;
+  tickSize: string;
+  lotSize: string;
+  minNotional: string;
+  maxNotional: string;
+  pricePrecision: number;
+  sizePrecision: number;
   updatedAt: string;
 }
 
 export interface InstrumentSummaryDto {
-  totalCount: number;
-  activeCount: number;
-  haltedCount: number;
-  tradableCount: number;
+  asOf: string;
+  totalInstruments: number;
+  tradableInstruments: number;
+  haltedInstruments: number;
+  byAssetClass: Record<string, number>;
+  byStatus: Record<string, number>;
+  byAvailability: Record<string, number>;
 }
 
 export interface OrderDto {
   id: string;
   referenceId: string;
-  symbol: string;
+  idempotencyKey: string;
+  correlationId: string;
+  accountId: string;
+  routeId?: string;
   side: MarketSide;
   type: MarketOrderType;
-  quantity: string;
-  notionalValue: string;
   status: MarketOrderStatus;
+  policyDecision: MarketPolicyDecision;
+  reasonCodes: string[];
+  baseAsset: string;
+  quoteAsset: string;
+  size: string;
+  filledSize?: string;
+  avgExecutionPrice?: string;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface OrderSummaryDto {
-  totalCount: number;
-  openCount: number;
-  filledCount: number;
-  canceledCount: number;
-  failedCount: number;
+  asOf: string;
+  accountId: string;
+  totalOrders: number;
+  openOrders: number;
+  terminalOrders: number;
+  reviewRequiredOrders: number;
+  blockedOrders: number;
+  byStatus: Record<string, number>;
+  bySide: Record<string, number>;
+}
+
+export interface UnifiedAssetSnapshotDto {
+  canonicalId: string;
+  symbol: string;
+  decimals: number;
+  chainId: number;
+  address?: string;
+  assetClass?: MarketInstrumentClass;
 }
 
 export interface PositionDto {
   id: string;
   accountId: string;
-  assetId: string;
-  symbol: string;
+  asset: UnifiedAssetSnapshotDto;
+  state: MarketPositionState;
   side: MarketPositionSide;
   quantity: string;
-  entryPrice?: string;
-  markPrice?: string;
-  unrealizedPnl?: string;
-  riskState: MarketPositionRiskState;
+  notionalQuoteAsset: string;
+  notionalValue: string;
+  netExposureBand: MarketNetExposureBand;
   riskFlags: MarketRiskFlag[];
   updatedAt: string;
 }
 
 export interface PositionSummaryDto {
-  totalCount: number;
-  longCount: number;
-  shortCount: number;
-  flatCount: number;
-  atRiskCount: number;
-  netExposureBand: MarketNetExposureBand;
-}
-
-export interface MarketsOverviewMetricsDto {
-  totalInstruments: number;
-  activeInstruments: number;
-  openOrders: number;
+  asOf: string;
+  accountId: string;
   totalPositions: number;
-  atRiskPositions: number;
+  openPositions: number;
+  byState: Record<string, number>;
+  bySide: Record<string, number>;
+  netExposureQuoteAsset: string;
+  netExposureValue: string;
   netExposureBand: MarketNetExposureBand;
+  riskFlags: MarketRiskFlag[];
 }
 
-export interface MarketsActivityItemDto {
-  id: string;
-  type: "order" | "position" | "instrument" | "settlement";
-  title: string;
-  status: string;
-  createdAt: string;
-  symbol?: string;
-  detail?: string;
+export interface MarketsListResponse<TItem> {
+  asOf: string;
+  items: TItem[];
+  pagination: MarketsPaginationMeta;
 }
 
 export interface MarketsOverviewDto {
-  metrics: MarketsOverviewMetricsDto;
-  recentActivity: MarketsActivityItemDto[];
+  asOf: string;
+  apiVersion: string;
+  accountId: string;
+  healthStatus: MarketsOverviewHealthStatus;
+  instruments: InstrumentSummaryDto;
+  orders: OrderSummaryDto;
+  positions: PositionSummaryDto;
 }
 
 export const marketsCanonicalErrorCodes = [
-  "policy_denied",
-  "policy_review_required",
-  "quote_invalid",
-  "route_rejected",
-  "execution_guardrail_violation",
-  "execution_dependency_timeout",
-  "execution_dependency_failed",
-  "unified_asset_invalid_chain",
-  "unified_asset_invalid_decimals",
-  "unified_asset_duplicate_pair",
-  "unified_asset_invalid_address",
+  "invalid_request",
+  "unauthorized",
+  "forbidden",
+  "not_found",
+  "rate_limited",
+  "service_unavailable",
+  "internal_error",
 ] as const;
 export type MarketsCanonicalErrorCode = (typeof marketsCanonicalErrorCodes)[number];
 
 export interface MarketsServiceErrorDto {
   code: MarketsCanonicalErrorCode | string;
   message: string;
+  retryable: boolean;
+  source: string;
   reasonCodes?: string[];
-  policyVersion?: string;
-  explanation?: string;
-  retryable?: boolean;
+  details?: Record<string, unknown>;
+  requestId?: string;
+  correlationId?: string;
 }

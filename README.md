@@ -51,9 +51,9 @@ pnpm dev:pay
 pnpm dev:points
 ```
 
-## Markets MVP parity development (Phase 9)
+## Markets parity development (Phase 9.5 v2)
 
-`apps/markets-web` now supports typed Markets MVP wiring with preserved dual-mode transport:
+`apps/markets-web` now supports strict canonical Markets parity wiring with preserved dual-mode transport:
 
 - `mock` for deterministic local development
 - `http` for live integration parity checks
@@ -67,13 +67,20 @@ Core mode/base URL:
 
 Markets parity/auth/header controls:
 
-- `RYVRA_MARKETS_AUTH_TOKEN` (optional bearer token)
+- `RYVRA_MARKETS_AUTH_TOKEN` (required in `http` mode for non-health routes)
 - `RYVRA_MARKETS_AUTH_SCHEME` (default: `Bearer`)
 - `RYVRA_MARKETS_REQUEST_ID_HEADER` (default: `x-request-id`)
 - `RYVRA_MARKETS_CORRELATION_ID_HEADER` (default: `x-correlation-id`)
-- `RYVRA_MARKETS_CONNECTIVITY_PATH` (default probe: `/health`, fallback `/markets/overview`)
+- `RYVRA_MARKETS_ACCOUNT_ID` (required in `http` mode for account-scoped endpoints)
+- `RYVRA_MARKETS_CONNECTIVITY_PATH` (default probe: `/health`, fallback `/markets/instruments?limit=1`)
 - `RYVRA_MARKETS_COMPATIBILITY_VERSION` (optional override)
 - `RYVRA_MARKETS_PARITY_CHECK_MARKER` (optional override)
+
+Contract behavior notes:
+
+- account-scoped routes require `account_id` (`orders`, `orders/summary`, `positions`, `positions/summary`, `overview`)
+- pagination is cursor-first (`limit`, `cursor`); `page` is deprecated compatibility only
+- decoder normalizes deprecated `net_exposure_bucket` into canonical `net_exposure_band`
 
 Optional smoke-test guard:
 
@@ -178,6 +185,7 @@ See `docs/architecture/` for boundaries, responsibilities, and integration mappi
 
 - `docs/architecture/unified-shell.md`
 - `docs/architecture/cross-app-routing.md`
+- `docs/architecture/markets-integration-parity.md`
 - `docs/architecture/markets-mvp-data-flow.md`
 - `docs/architecture/pay-mvp-data-flow.md`
 - `docs/architecture/pay-integration-parity.md`

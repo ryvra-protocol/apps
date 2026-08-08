@@ -1,7 +1,6 @@
 import type {
   InstrumentDto,
   InstrumentSummaryDto,
-  MarketsActivityItemDto,
   MarketsListResponse,
   MarketsOverviewDto,
   OrderDto,
@@ -31,62 +30,104 @@ import type { ApiRequest, ApiResult, Transport } from "./types";
 const mockInstruments: InstrumentDto[] = [
   {
     id: "asset-btc-usd",
-    symbol: "BTC-USD",
-    name: "Bitcoin / US Dollar",
+    symbol: "BTC/USD",
+    baseAsset: "btc",
+    quoteAsset: "usd",
     assetClass: "crypto",
     availability: "tradable",
     status: "active",
-    tradable: true,
+    chainId: 1,
+    tickSize: "0.01",
+    lotSize: "0.0001",
+    minNotional: "10",
+    maxNotional: "500000",
+    pricePrecision: 2,
+    sizePrecision: 6,
     updatedAt: "2026-08-06T10:00:00.000Z",
   },
   {
     id: "asset-eth-usd",
-    symbol: "ETH-USD",
-    name: "Ether / US Dollar",
+    symbol: "ETH/USD",
+    baseAsset: "eth",
+    quoteAsset: "usd",
     assetClass: "crypto",
     availability: "tradable",
     status: "active",
-    tradable: true,
+    chainId: 1,
+    tickSize: "0.01",
+    lotSize: "0.0001",
+    minNotional: "10",
+    maxNotional: "500000",
+    pricePrecision: 2,
+    sizePrecision: 6,
     updatedAt: "2026-08-06T09:00:00.000Z",
   },
   {
     id: "asset-sol-usd",
-    symbol: "SOL-USD",
-    name: "Solana / US Dollar",
+    symbol: "SOL/USD",
+    baseAsset: "sol",
+    quoteAsset: "usd",
     assetClass: "crypto",
     availability: "close_only",
     status: "active",
-    tradable: false,
+    chainId: 1,
+    tickSize: "0.01",
+    lotSize: "0.1",
+    minNotional: "10",
+    maxNotional: "500000",
+    pricePrecision: 2,
+    sizePrecision: 4,
     updatedAt: "2026-08-05T21:30:00.000Z",
   },
   {
     id: "asset-xau-usd",
-    symbol: "XAU-USD",
-    name: "Gold / US Dollar",
+    symbol: "XAU/USD",
+    baseAsset: "xau",
+    quoteAsset: "usd",
     assetClass: "metal",
     availability: "tradable",
     status: "active",
-    tradable: true,
+    chainId: 1,
+    tickSize: "0.01",
+    lotSize: "0.001",
+    minNotional: "10",
+    maxNotional: "500000",
+    pricePrecision: 2,
+    sizePrecision: 4,
     updatedAt: "2026-08-06T07:15:00.000Z",
   },
   {
     id: "asset-eur-usd",
-    symbol: "EUR-USD",
-    name: "Euro / US Dollar",
+    symbol: "EUR/USD",
+    baseAsset: "eur",
+    quoteAsset: "usd",
     assetClass: "fiat",
-    availability: "suspended",
-    status: "halted",
-    tradable: false,
+    availability: "halted",
+    status: "suspended",
+    chainId: 1,
+    tickSize: "0.0001",
+    lotSize: "1",
+    minNotional: "10",
+    maxNotional: "500000",
+    pricePrecision: 4,
+    sizePrecision: 2,
     updatedAt: "2026-08-04T18:45:00.000Z",
   },
   {
     id: "asset-rwa-carbon",
-    symbol: "RWA-CARBON",
-    name: "Carbon Credit Index",
+    symbol: "CARBON/USD",
+    baseAsset: "carbon",
+    quoteAsset: "usd",
     assetClass: "rwa",
-    availability: "suspended",
+    availability: "view_only",
     status: "delisted",
-    tradable: false,
+    chainId: 1,
+    tickSize: "0.01",
+    lotSize: "1",
+    minNotional: "10",
+    maxNotional: "500000",
+    pricePrecision: 2,
+    sizePrecision: 2,
     updatedAt: "2026-07-28T06:00:00.000Z",
   },
 ];
@@ -95,11 +136,19 @@ const mockOrders: OrderDto[] = [
   {
     id: "ord-7001",
     referenceId: "ref-7001",
-    symbol: "BTC-USD",
+    idempotencyKey: "idem-7001",
+    correlationId: "cor-7001",
+    accountId: "acct-core-1",
+    routeId: "route-1",
     side: "buy",
     type: "market",
-    quantity: "0.25",
-    notionalValue: "15750.00",
+    policyDecision: "ALLOW",
+    reasonCodes: [],
+    baseAsset: "btc",
+    quoteAsset: "usd",
+    size: "0.25",
+    filledSize: "0.25",
+    avgExecutionPrice: "63000.00",
     status: "filled",
     createdAt: "2026-08-05T10:00:00.000Z",
     updatedAt: "2026-08-05T10:00:07.000Z",
@@ -107,11 +156,19 @@ const mockOrders: OrderDto[] = [
   {
     id: "ord-7002",
     referenceId: "ref-7002",
-    symbol: "ETH-USD",
+    idempotencyKey: "idem-7002",
+    correlationId: "cor-7002",
+    accountId: "acct-core-1",
+    routeId: "route-1",
     side: "sell",
-    type: "limit",
-    quantity: "1.40",
-    notionalValue: "4680.00",
+    type: "market",
+    policyDecision: "ALLOW",
+    reasonCodes: [],
+    baseAsset: "eth",
+    quoteAsset: "usd",
+    size: "1.40",
+    filledSize: "0.70",
+    avgExecutionPrice: "3342.85",
     status: "routed",
     createdAt: "2026-08-05T10:30:00.000Z",
     updatedAt: "2026-08-05T10:30:04.000Z",
@@ -119,11 +176,17 @@ const mockOrders: OrderDto[] = [
   {
     id: "ord-7003",
     referenceId: "ref-7003",
-    symbol: "SOL-USD",
+    idempotencyKey: "idem-7003",
+    correlationId: "cor-7003",
+    accountId: "acct-core-2",
+    routeId: "route-2",
     side: "buy",
-    type: "rfq",
-    quantity: "80",
-    notionalValue: "1520.00",
+    type: "market",
+    policyDecision: "REVIEW",
+    reasonCodes: ["manual_review_required"],
+    baseAsset: "sol",
+    quoteAsset: "usd",
+    size: "80",
     status: "created",
     createdAt: "2026-08-05T11:00:00.000Z",
     updatedAt: "2026-08-05T11:00:00.000Z",
@@ -131,11 +194,19 @@ const mockOrders: OrderDto[] = [
   {
     id: "ord-7004",
     referenceId: "ref-7004",
-    symbol: "XAU-USD",
+    idempotencyKey: "idem-7004",
+    correlationId: "cor-7004",
+    accountId: "acct-core-2",
+    routeId: "route-2",
     side: "buy",
-    type: "limit",
-    quantity: "4",
-    notionalValue: "9400.00",
+    type: "market",
+    policyDecision: "ALLOW",
+    reasonCodes: [],
+    baseAsset: "xau",
+    quoteAsset: "usd",
+    size: "4",
+    filledSize: "2",
+    avgExecutionPrice: "2350.00",
     status: "partially_filled",
     createdAt: "2026-08-04T14:45:00.000Z",
     updatedAt: "2026-08-04T14:46:30.000Z",
@@ -143,11 +214,17 @@ const mockOrders: OrderDto[] = [
   {
     id: "ord-7005",
     referenceId: "ref-7005",
-    symbol: "EUR-USD",
+    idempotencyKey: "idem-7005",
+    correlationId: "cor-7005",
+    accountId: "acct-core-2",
+    routeId: "route-2",
     side: "sell",
     type: "market",
-    quantity: "10000",
-    notionalValue: "10830.00",
+    policyDecision: "DENY",
+    reasonCodes: ["policy_denied"],
+    baseAsset: "eur",
+    quoteAsset: "usd",
+    size: "10000",
     status: "canceled",
     createdAt: "2026-08-04T08:10:00.000Z",
     updatedAt: "2026-08-04T08:15:00.000Z",
@@ -155,11 +232,17 @@ const mockOrders: OrderDto[] = [
   {
     id: "ord-7006",
     referenceId: "ref-7006",
-    symbol: "BTC-USD",
+    idempotencyKey: "idem-7006",
+    correlationId: "cor-7006",
+    accountId: "acct-core-1",
+    routeId: "route-1",
     side: "sell",
-    type: "limit",
-    quantity: "0.10",
-    notionalValue: "6380.00",
+    type: "market",
+    policyDecision: "ALLOW",
+    reasonCodes: ["execution_dependency_failed"],
+    baseAsset: "btc",
+    quoteAsset: "usd",
+    size: "0.10",
     status: "failed",
     createdAt: "2026-08-03T12:20:00.000Z",
     updatedAt: "2026-08-03T12:20:12.000Z",
@@ -167,11 +250,19 @@ const mockOrders: OrderDto[] = [
   {
     id: "ord-7007",
     referenceId: "ref-7007",
-    symbol: "ETH-USD",
+    idempotencyKey: "idem-7007",
+    correlationId: "cor-7007",
+    accountId: "acct-core-1",
+    routeId: "route-1",
     side: "buy",
     type: "market",
-    quantity: "2.00",
-    notionalValue: "6900.00",
+    policyDecision: "ALLOW",
+    reasonCodes: [],
+    baseAsset: "eth",
+    quoteAsset: "usd",
+    size: "2.00",
+    filledSize: "2.00",
+    avgExecutionPrice: "3450.00",
     status: "settled",
     createdAt: "2026-08-02T16:00:00.000Z",
     updatedAt: "2026-08-02T16:00:45.000Z",
@@ -179,11 +270,17 @@ const mockOrders: OrderDto[] = [
   {
     id: "ord-7008",
     referenceId: "ref-7008",
-    symbol: "RWA-CARBON",
+    idempotencyKey: "idem-7008",
+    correlationId: "cor-7008",
+    accountId: "acct-core-3",
+    routeId: "route-3",
     side: "buy",
-    type: "rfq",
-    quantity: "250",
-    notionalValue: "1125.00",
+    type: "market",
+    policyDecision: "REVIEW",
+    reasonCodes: ["manual_review_required"],
+    baseAsset: "carbon",
+    quoteAsset: "usd",
+    size: "250",
     status: "expired",
     createdAt: "2026-08-01T09:30:00.000Z",
     updatedAt: "2026-08-01T10:00:00.000Z",
@@ -194,71 +291,96 @@ const mockPositions: PositionDto[] = [
   {
     id: "pos-8001",
     accountId: "acct-core-1",
-    assetId: "asset-btc-usd",
-    symbol: "BTC-USD",
+    asset: {
+      canonicalId: "btc",
+      symbol: "BTC",
+      decimals: 8,
+      chainId: 1,
+      assetClass: "crypto",
+    },
+    state: "open",
     side: "long",
     quantity: "0.80",
-    entryPrice: "59820.00",
-    markPrice: "63210.00",
-    unrealizedPnl: "2712.00",
-    riskState: "normal",
+    notionalQuoteAsset: "usd",
+    notionalValue: "50568.00",
+    netExposureBand: "high",
     riskFlags: [],
     updatedAt: "2026-08-06T10:05:00.000Z",
   },
   {
     id: "pos-8002",
     accountId: "acct-core-1",
-    assetId: "asset-eth-usd",
-    symbol: "ETH-USD",
+    asset: {
+      canonicalId: "eth",
+      symbol: "ETH",
+      decimals: 18,
+      chainId: 1,
+      assetClass: "crypto",
+    },
+    state: "reducing",
     side: "long",
     quantity: "7.00",
-    entryPrice: "3345.00",
-    markPrice: "3290.00",
-    unrealizedPnl: "-385.00",
-    riskState: "watch",
-    riskFlags: ["liquidity_stress"],
+    notionalQuoteAsset: "usd",
+    notionalValue: "23030.00",
+    netExposureBand: "medium",
+    riskFlags: ["size_limit_near"],
     updatedAt: "2026-08-06T10:03:00.000Z",
   },
   {
     id: "pos-8003",
     accountId: "acct-core-2",
-    assetId: "asset-eur-usd",
-    symbol: "EUR-USD",
+    asset: {
+      canonicalId: "eur",
+      symbol: "EUR",
+      decimals: 2,
+      chainId: 1,
+      assetClass: "fiat",
+    },
+    state: "suspended",
     side: "short",
     quantity: "12000",
-    entryPrice: "1.0870",
-    markPrice: "1.0940",
-    unrealizedPnl: "-84.00",
-    riskState: "at_risk",
-    riskFlags: ["exposure_limit", "volatility_halt"],
+    notionalQuoteAsset: "usd",
+    notionalValue: "13128.00",
+    netExposureBand: "medium",
+    riskFlags: ["concentration_limit_breached", "volatility_halt"],
     updatedAt: "2026-08-06T09:48:00.000Z",
   },
   {
     id: "pos-8004",
     accountId: "acct-core-2",
-    assetId: "asset-xau-usd",
-    symbol: "XAU-USD",
+    asset: {
+      canonicalId: "xau",
+      symbol: "XAU",
+      decimals: 3,
+      chainId: 1,
+      assetClass: "metal",
+    },
+    state: "open",
     side: "long",
     quantity: "3",
-    entryPrice: "2290.00",
-    markPrice: "2360.00",
-    unrealizedPnl: "210.00",
-    riskState: "normal",
+    notionalQuoteAsset: "usd",
+    notionalValue: "7080.00",
+    netExposureBand: "low",
     riskFlags: [],
     updatedAt: "2026-08-06T09:15:00.000Z",
   },
   {
     id: "pos-8005",
     accountId: "acct-core-3",
-    assetId: "asset-sol-usd",
-    symbol: "SOL-USD",
+    asset: {
+      canonicalId: "sol",
+      symbol: "SOL",
+      decimals: 9,
+      chainId: 1,
+      assetClass: "crypto",
+    },
+    state: "closed",
     side: "flat",
     quantity: "0",
-    entryPrice: "0",
-    markPrice: "19.2",
-    unrealizedPnl: "0",
-    riskState: "watch",
-    riskFlags: ["policy_review_required"],
+    notionalQuoteAsset: "usd",
+    notionalValue: "0",
+    netExposureBand: "flat",
+    riskFlags: ["manual_review_required"],
     updatedAt: "2026-08-06T08:40:00.000Z",
   },
 ];
@@ -687,107 +809,215 @@ function buildOverview(): PayOverviewDto {
 }
 
 function buildInstrumentSummary(items: InstrumentDto[]): InstrumentSummaryDto {
-  return {
-    totalCount: items.length,
-    activeCount: items.filter((item) => item.status === "active").length,
-    haltedCount: items.filter((item) => item.status === "halted").length,
-    tradableCount: items.filter((item) => item.tradable).length,
-  };
-}
+  const byAssetClass: Record<string, number> = {};
+  const byStatus: Record<string, number> = {};
+  const byAvailability: Record<string, number> = {};
 
-function buildOrderSummary(items: OrderDto[]): OrderSummaryDto {
-  return {
-    totalCount: items.length,
-    openCount: items.filter((item) =>
-      item.status === "created" ||
-      item.status === "validated" ||
-      item.status === "routed" ||
-      item.status === "partially_filled"
-    ).length,
-    filledCount: items.filter((item) => item.status === "filled" || item.status === "settled").length,
-    canceledCount: items.filter((item) => item.status === "canceled" || item.status === "expired").length,
-    failedCount: items.filter((item) => item.status === "failed").length,
-  };
-}
-
-function resolveNetExposureBand(positions: PositionDto[]): PositionSummaryDto["netExposureBand"] {
-  const longCount = positions.filter((item) => item.side === "long").length;
-  const shortCount = positions.filter((item) => item.side === "short").length;
-
-  if (longCount > shortCount) {
-    return "net_long";
+  for (const item of items) {
+    byAssetClass[item.assetClass] = (byAssetClass[item.assetClass] ?? 0) + 1;
+    byStatus[item.status] = (byStatus[item.status] ?? 0) + 1;
+    byAvailability[item.availability] = (byAvailability[item.availability] ?? 0) + 1;
   }
 
-  if (shortCount > longCount) {
-    return "net_short";
-  }
-
-  return "neutral";
-}
-
-function buildPositionSummary(items: PositionDto[]): PositionSummaryDto {
   return {
-    totalCount: items.length,
-    longCount: items.filter((item) => item.side === "long").length,
-    shortCount: items.filter((item) => item.side === "short").length,
-    flatCount: items.filter((item) => item.side === "flat").length,
-    atRiskCount: items.filter((item) => item.riskState === "at_risk").length,
-    netExposureBand: resolveNetExposureBand(items),
+    asOf: new Date().toISOString(),
+    totalInstruments: items.length,
+    tradableInstruments: items.filter((item) => item.availability === "tradable").length,
+    haltedInstruments: items.filter((item) => item.availability === "halted").length,
+    byAssetClass,
+    byStatus,
+    byAvailability,
   };
 }
 
-function buildMarketsOverview(): MarketsOverviewDto {
-  const orderSummary = buildOrderSummary(mockOrders);
-  const positionSummary = buildPositionSummary(mockPositions);
-  const recentActivity: MarketsActivityItemDto[] = [
-    ...mockOrders.map((item) => ({
-      id: `activity-order-${item.id}`,
-      type: "order" as const,
-      title: `${item.symbol} ${item.side} ${item.quantity}`,
-      status: item.status,
-      createdAt: item.updatedAt,
-      symbol: item.symbol,
-      detail: `${item.type} • ${item.notionalValue}`,
-    })),
-    ...mockPositions.map((item) => ({
-      id: `activity-position-${item.id}`,
-      type: "position" as const,
-      title: `${item.symbol} ${item.side} ${item.quantity}`,
-      status: item.riskState,
-      createdAt: item.updatedAt,
-      symbol: item.symbol,
-      detail: item.riskFlags.join(", ") || "risk_clear",
-    })),
-    ...mockInstruments.map((item) => ({
-      id: `activity-instrument-${item.id}`,
-      type: "instrument" as const,
-      title: `${item.symbol} ${item.name}`,
-      status: item.status,
-      createdAt: item.updatedAt,
-      symbol: item.symbol,
-      detail: `${item.assetClass} • ${item.availability}`,
-    })),
-  ]
-    .sort((left, right) => (left.createdAt < right.createdAt ? 1 : -1))
-    .slice(0, 12);
+function buildOrderSummary(items: OrderDto[], accountId: string): OrderSummaryDto {
+  const byStatus: Record<string, number> = {};
+  const bySide: Record<string, number> = {};
+
+  for (const item of items) {
+    byStatus[item.status] = (byStatus[item.status] ?? 0) + 1;
+    bySide[item.side] = (bySide[item.side] ?? 0) + 1;
+  }
+
+  const openOrders = items.filter((item) =>
+    item.status === "created" ||
+    item.status === "validated" ||
+    item.status === "routed" ||
+    item.status === "partially_filled"
+  ).length;
 
   return {
-    metrics: {
-      totalInstruments: mockInstruments.length,
-      activeInstruments: mockInstruments.filter((item) => item.status === "active").length,
-      openOrders: orderSummary.openCount,
-      totalPositions: mockPositions.length,
-      atRiskPositions: positionSummary.atRiskCount,
-      netExposureBand: positionSummary.netExposureBand,
+    asOf: new Date().toISOString(),
+    accountId,
+    totalOrders: items.length,
+    openOrders,
+    terminalOrders: items.length - openOrders,
+    reviewRequiredOrders: items.filter((item) => item.policyDecision === "REVIEW").length,
+    blockedOrders: items.filter((item) => item.policyDecision === "DENY").length,
+    byStatus,
+    bySide,
+  };
+}
+
+function resolveNetExposureBand(netExposureValue: number): PositionSummaryDto["netExposureBand"] {
+  const absoluteExposure = Math.abs(netExposureValue);
+
+  if (absoluteExposure === 0) {
+    return "flat";
+  }
+
+  if (absoluteExposure < 5_000) {
+    return "low";
+  }
+
+  if (absoluteExposure < 25_000) {
+    return "medium";
+  }
+
+  if (absoluteExposure < 100_000) {
+    return "high";
+  }
+
+  return "critical";
+}
+
+function computeNetExposureValue(positions: PositionDto[]): number {
+  return positions.reduce((sum, position) => {
+    const parsed = Number.parseFloat(position.notionalValue);
+    if (Number.isNaN(parsed)) {
+      return sum;
+    }
+
+    if (position.side === "short") {
+      return sum - parsed;
+    }
+
+    if (position.side === "flat") {
+      return sum;
+    }
+
+    return sum + parsed;
+  }, 0);
+}
+
+function countBy<T extends string>(entries: readonly T[]): Record<string, number> {
+  const result: Record<string, number> = {};
+
+  for (const entry of entries) {
+    result[entry] = (result[entry] ?? 0) + 1;
+  }
+
+  return result;
+}
+
+function buildPositionSummary(items: PositionDto[], accountId: string): PositionSummaryDto {
+  const netExposureValue = computeNetExposureValue(items);
+  const riskFlags = new Set<string>();
+  for (const item of items) {
+    for (const riskFlag of item.riskFlags) {
+      riskFlags.add(riskFlag);
+    }
+  }
+
+  return {
+    asOf: new Date().toISOString(),
+    accountId,
+    totalPositions: items.length,
+    openPositions: items.filter((item) => item.state === "open" || item.state === "reducing").length,
+    byState: countBy(items.map((item) => item.state)),
+    bySide: countBy(items.map((item) => item.side)),
+    netExposureQuoteAsset: "usd",
+    netExposureValue: netExposureValue.toFixed(2),
+    netExposureBand: resolveNetExposureBand(netExposureValue),
+    riskFlags: Array.from(riskFlags) as PositionSummaryDto["riskFlags"],
+  };
+}
+
+function buildMarketsOverview(accountId: string): MarketsOverviewDto {
+  const scopedOrders = mockOrders.filter((item) => item.accountId === accountId);
+  const scopedPositions = mockPositions.filter((item) => item.accountId === accountId);
+  const orderSummary = buildOrderSummary(scopedOrders, accountId);
+  const positionSummary = buildPositionSummary(scopedPositions, accountId);
+
+  return {
+    asOf: new Date().toISOString(),
+    apiVersion: "MARKETS_API_VERSION=2026-08-08",
+    accountId,
+    healthStatus: "pass",
+    instruments: buildInstrumentSummary(mockInstruments),
+    orders: orderSummary,
+    positions: positionSummary,
+  };
+}
+
+function parseLegacyPage(searchParams: URLSearchParams): number | undefined {
+  const rawPage = searchParams.get("page");
+  if (!rawPage) {
+    return undefined;
+  }
+
+  const parsed = Number.parseInt(rawPage, 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return undefined;
+  }
+
+  return parsed;
+}
+
+function parseCursorOffset(cursor: string | null): number {
+  if (!cursor) {
+    return 0;
+  }
+
+  if (cursor.startsWith("mk_")) {
+    const encoded = cursor.slice(3);
+    try {
+      const decoded = Buffer.from(encoded, "base64url").toString("utf8");
+      const parsed = Number.parseInt(decoded, 10);
+      return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+    } catch {
+      return 0;
+    }
+  }
+
+  return 0;
+}
+
+function encodeCursorOffset(offset: number): string {
+  return `mk_${Buffer.from(String(offset), "utf8").toString("base64url")}`;
+}
+
+function paginateMarkets<T>(items: T[], searchParams: URLSearchParams): MarketsListResponse<T> {
+  const parsedLimit = Number.parseInt(
+    getParam(searchParams, "limit", "page_size") ?? searchParams.get("pageSize") ?? "50",
+    10,
+  );
+  const limit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(parsedLimit, 200) : 50;
+  const cursor = searchParams.get("cursor");
+  const deprecatedPage = !cursor ? parseLegacyPage(searchParams) : undefined;
+  const startOffset = cursor ? parseCursorOffset(cursor) : ((deprecatedPage ?? 1) - 1) * limit;
+  const boundedOffset = Math.max(0, Math.min(startOffset, items.length));
+  const end = boundedOffset + limit;
+  const hasMore = end < items.length;
+
+  return {
+    asOf: new Date().toISOString(),
+    items: items.slice(boundedOffset, end),
+    pagination: {
+      limit,
+      hasMore,
+      ...(hasMore ? { nextCursor: encodeCursorOffset(end) } : {}),
+      ...(typeof deprecatedPage === "number" ? { page: deprecatedPage } : {}),
     },
-    recentActivity,
   };
 }
 
 function filterInstruments(searchParams: URLSearchParams): InstrumentDto[] {
   const statusFilter = searchParams.get("status")?.trim().toLowerCase();
   const assetClassFilter = getParam(searchParams, "asset_class", "assetClass")?.trim().toLowerCase();
-  const searchFilter = searchParams.get("search")?.trim().toLowerCase();
+  const availabilityFilter = searchParams.get("availability")?.trim().toLowerCase();
+  const chainIdFilter = Number.parseInt(searchParams.get("chain_id") ?? "", 10);
+  const searchFilter = (searchParams.get("q") ?? searchParams.get("search"))?.trim().toLowerCase();
 
   return mockInstruments.filter((item) => {
     if (statusFilter && item.status !== statusFilter) {
@@ -798,8 +1028,16 @@ function filterInstruments(searchParams: URLSearchParams): InstrumentDto[] {
       return false;
     }
 
+    if (availabilityFilter && item.availability !== availabilityFilter) {
+      return false;
+    }
+
+    if (Number.isFinite(chainIdFilter) && chainIdFilter > 0 && item.chainId !== chainIdFilter) {
+      return false;
+    }
+
     if (searchFilter) {
-      const searchTarget = `${item.id} ${item.symbol} ${item.name} ${item.assetClass}`.toLowerCase();
+      const searchTarget = `${item.id} ${item.symbol} ${item.baseAsset} ${item.quoteAsset} ${item.assetClass}`.toLowerCase();
       if (!searchTarget.includes(searchFilter)) {
         return false;
       }
@@ -810,26 +1048,36 @@ function filterInstruments(searchParams: URLSearchParams): InstrumentDto[] {
 }
 
 function listInstruments(searchParams: URLSearchParams): MarketsListResponse<InstrumentDto> {
+  const sortBy = getParam(searchParams, "sort_by", "sortField");
+  const normalizedSortBy =
+    sortBy === "updated_at" ? "updatedAt" : sortBy === "asset_class" ? "assetClass" : sortBy;
   const sortField = parseSortField(
-    getParam(searchParams, "sort_field", "sortField"),
-    ["symbol", "name", "assetClass", "status", "updatedAt"],
-    "symbol",
+    normalizedSortBy,
+    ["updatedAt", "symbol", "assetClass"],
+    "updatedAt",
   );
-  const sortDirection = getParam(searchParams, "sort_direction", "sortDirection") === "asc" ? "asc" : "desc";
+  const sortDirection = getParam(searchParams, "sort_order", "sortDirection") === "asc" ? "asc" : "desc";
   const filtered = filterInstruments(searchParams);
   const sorted = sortRows(filtered, sortField, sortDirection);
-  return paginate(sorted, searchParams.get("page"), getParam(searchParams, "page_size", "pageSize"));
+  return paginateMarkets(sorted, searchParams);
 }
 
-function filterOrders(searchParams: URLSearchParams): OrderDto[] {
+function filterOrders(searchParams: URLSearchParams, accountId: string): OrderDto[] {
+  const referenceIdFilter = (searchParams.get("reference_id") ?? searchParams.get("search"))?.trim().toLowerCase();
+  const correlationIdFilter = searchParams.get("correlation_id")?.trim().toLowerCase();
+  const routeIdFilter = searchParams.get("route_id")?.trim().toLowerCase();
   const statusFilter = searchParams.get("status")?.trim().toLowerCase();
   const sideFilter = searchParams.get("side")?.trim().toLowerCase();
   const typeFilter = searchParams.get("type")?.trim().toLowerCase();
-  const searchFilter = searchParams.get("search")?.trim().toLowerCase();
-  const from = normalizeDateInput(searchParams.get("from"));
-  const to = normalizeDateInput(searchParams.get("to"));
+  const policyDecisionFilter = searchParams.get("policy_decision")?.trim().toUpperCase();
+  const from = normalizeDateInput(searchParams.get("created_after") ?? searchParams.get("from"));
+  const to = normalizeDateInput(searchParams.get("created_before") ?? searchParams.get("to"));
 
   return mockOrders.filter((item) => {
+    if (item.accountId !== accountId) {
+      return false;
+    }
+
     if (statusFilter && item.status !== statusFilter) {
       return false;
     }
@@ -842,71 +1090,89 @@ function filterOrders(searchParams: URLSearchParams): OrderDto[] {
       return false;
     }
 
-    if (searchFilter) {
-      const searchTarget = `${item.id} ${item.referenceId} ${item.symbol}`.toLowerCase();
-      if (!searchTarget.includes(searchFilter)) {
-        return false;
-      }
+    if (policyDecisionFilter && item.policyDecision !== policyDecisionFilter) {
+      return false;
+    }
+
+    if (referenceIdFilter && !item.referenceId.toLowerCase().includes(referenceIdFilter)) {
+      return false;
+    }
+
+    if (correlationIdFilter && !item.correlationId.toLowerCase().includes(correlationIdFilter)) {
+      return false;
+    }
+
+    if (routeIdFilter && (item.routeId ?? "").toLowerCase() !== routeIdFilter) {
+      return false;
     }
 
     return inDateRange(item.createdAt, from, to);
   });
 }
 
-function listOrders(searchParams: URLSearchParams): MarketsListResponse<OrderDto> {
+function listOrders(searchParams: URLSearchParams, accountId: string): MarketsListResponse<OrderDto> {
+  const sortBy = getParam(searchParams, "sort_by", "sortField");
+  const normalizedSortBy =
+    sortBy === "updated_at" ? "updatedAt" : sortBy === "created_at" ? "createdAt" : sortBy;
   const sortField = parseSortField(
-    getParam(searchParams, "sort_field", "sortField"),
-    ["createdAt", "updatedAt", "status", "symbol", "notionalValue"],
-    "createdAt",
+    normalizedSortBy,
+    ["updatedAt", "createdAt", "status"],
+    "updatedAt",
   );
-  const sortDirection = getParam(searchParams, "sort_direction", "sortDirection") === "asc" ? "asc" : "desc";
-  const filtered = filterOrders(searchParams);
+  const sortDirection = getParam(searchParams, "sort_order", "sortDirection") === "asc" ? "asc" : "desc";
+  const filtered = filterOrders(searchParams, accountId);
   const sorted = sortRows(filtered, sortField, sortDirection);
-  return paginate(sorted, searchParams.get("page"), getParam(searchParams, "page_size", "pageSize"));
+  return paginateMarkets(sorted, searchParams);
 }
 
-function filterPositions(searchParams: URLSearchParams): PositionDto[] {
+function filterPositions(searchParams: URLSearchParams, accountId: string): PositionDto[] {
+  const assetClassFilter = getParam(searchParams, "asset_class", "assetClass")?.trim().toLowerCase();
+  const stateFilter = (searchParams.get("state") ?? getParam(searchParams, "risk_state", "riskState"))?.trim().toLowerCase();
   const sideFilter = searchParams.get("side")?.trim().toLowerCase();
-  const riskStateFilter = getParam(searchParams, "risk_state", "riskState")?.trim().toLowerCase();
-  const symbolFilter = searchParams.get("symbol")?.trim().toLowerCase();
-  const searchFilter = searchParams.get("search")?.trim().toLowerCase();
-  const from = normalizeDateInput(searchParams.get("from"));
-  const to = normalizeDateInput(searchParams.get("to"));
+  const riskFlagFilter = searchParams
+    .get("risk_flag")
+    ?.split(",")
+    .map((entry) => entry.trim().toLowerCase())
+    .filter((entry) => entry.length > 0);
 
   return mockPositions.filter((item) => {
+    if (item.accountId !== accountId) {
+      return false;
+    }
+
+    if (assetClassFilter && item.asset.assetClass !== assetClassFilter) {
+      return false;
+    }
+
     if (sideFilter && item.side !== sideFilter) {
       return false;
     }
 
-    if (riskStateFilter && item.riskState !== riskStateFilter) {
+    if (stateFilter && item.state !== stateFilter) {
       return false;
     }
 
-    if (symbolFilter && item.symbol.toLowerCase() !== symbolFilter) {
+    if (riskFlagFilter && riskFlagFilter.length > 0 && !riskFlagFilter.every((entry) => item.riskFlags.includes(entry as PositionDto["riskFlags"][number]))) {
       return false;
     }
 
-    if (searchFilter) {
-      const searchTarget = `${item.id} ${item.accountId} ${item.assetId} ${item.symbol}`.toLowerCase();
-      if (!searchTarget.includes(searchFilter)) {
-        return false;
-      }
-    }
-
-    return inDateRange(item.updatedAt, from, to);
+    return true;
   });
 }
 
-function listMarketsPositions(searchParams: URLSearchParams): MarketsListResponse<PositionDto> {
+function listMarketsPositions(searchParams: URLSearchParams, accountId: string): MarketsListResponse<PositionDto> {
+  const sortBy = getParam(searchParams, "sort_by", "sortField");
+  const normalizedSortBy =
+    sortBy === "updated_at" ? "updatedAt" : sortBy === "notional_value" ? "notionalValue" : sortBy;
   const sortField = parseSortField(
-    getParam(searchParams, "sort_field", "sortField"),
-    ["updatedAt", "symbol", "side", "riskState"],
+    normalizedSortBy,
+    ["updatedAt", "notionalValue", "quantity"],
     "updatedAt",
   );
-  const sortDirection = getParam(searchParams, "sort_direction", "sortDirection") === "asc" ? "asc" : "desc";
-  const filtered = filterPositions(searchParams);
+  const sortDirection = getParam(searchParams, "sort_order", "sortDirection") === "asc" ? "asc" : "desc";
+  const filtered = filterPositions(searchParams, accountId);
   const sorted = sortRows(filtered, sortField, sortDirection);
-  return paginate(sorted, searchParams.get("page"), getParam(searchParams, "page_size", "pageSize"));
+  return paginateMarkets(sorted, searchParams);
 }
 
 function filterInvoices(searchParams: URLSearchParams): InvoiceDto[] {
@@ -1147,6 +1413,11 @@ function errorBadRequest<T>(code: string, message: string, details?: unknown): A
   };
 }
 
+function getRequiredAccountId(searchParams: URLSearchParams): string {
+  const accountId = searchParams.get("account_id")?.trim();
+  return accountId && accountId.length > 0 ? accountId : "acct-core-1";
+}
+
 export function createMockTransport(): Transport {
   return {
     async request<T>(request: ApiRequest): Promise<ApiResult<T>> {
@@ -1157,7 +1428,8 @@ export function createMockTransport(): Transport {
       }
 
       if (request.method === "GET" && pathname === "/markets/positions") {
-        return success(listMarketsPositions(searchParams) as T);
+        const accountId = getRequiredAccountId(searchParams);
+        return success(listMarketsPositions(searchParams, accountId) as T);
       }
 
       if (request.method === "GET" && pathname === "/markets/instruments/summary") {
@@ -1165,27 +1437,39 @@ export function createMockTransport(): Transport {
       }
 
       if (request.method === "GET" && pathname === "/markets/orders") {
-        return success(listOrders(searchParams) as T);
+        const accountId = getRequiredAccountId(searchParams);
+        return success(listOrders(searchParams, accountId) as T);
       }
 
       if (request.method === "GET" && pathname === "/markets/orders/summary") {
-        return success(buildOrderSummary(filterOrders(searchParams)) as T);
+        const accountId = getRequiredAccountId(searchParams);
+        return success(buildOrderSummary(filterOrders(searchParams, accountId), accountId) as T);
       }
 
       if (request.method === "GET" && pathname === "/markets/positions/summary") {
-        return success(buildPositionSummary(filterPositions(searchParams)) as T);
+        const accountId = getRequiredAccountId(searchParams);
+        return success(buildPositionSummary(filterPositions(searchParams, accountId), accountId) as T);
       }
 
       if (request.method === "GET" && pathname === "/markets/overview") {
-        return success(buildMarketsOverview() as T);
+        const accountId = getRequiredAccountId(searchParams);
+        return success(buildMarketsOverview(accountId) as T);
       }
 
       if (request.method === "GET" && pathname === "/health") {
         return success(
           {
-            service: "pay",
-            status: "ok",
+            status: "pass",
+            service: "markets",
+            api_version: "MARKETS_API_VERSION=2026-08-08",
             timestamp: new Date().toISOString(),
+            checks: [
+              {
+                name: "mock-transport",
+                status: "pass",
+                latency_ms: 1,
+              },
+            ],
           } as T,
         );
       }

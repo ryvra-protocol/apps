@@ -3,7 +3,17 @@ import { Card, Section, themeTokens } from "@ryvra/ui";
 import { InstrumentsTableClient } from "../components/instruments-table-client";
 import { ModeBadge } from "../components/mode-badge";
 import { ErrorState, UnauthorizedState } from "../components/page-states";
-import { getFirstParam, parseInstrumentClass, parseInstrumentStatus, parsePage, parsePageSize, parseSortDirection, type RouteSearchParams } from "../lib/search-params";
+import {
+  getFirstParam,
+  parseCursor,
+  parseInstrumentAvailability,
+  parseInstrumentClass,
+  parseInstrumentStatus,
+  parseLimit,
+  parsePage,
+  parseSortDirection,
+  type RouteSearchParams,
+} from "../lib/search-params";
 import { captureMarketsPageError, createMarketsRuntimeContext } from "../lib/runtime";
 
 interface MarketsInstrumentsPageProps {
@@ -15,20 +25,25 @@ export const dynamic = "force-dynamic";
 function buildInstrumentRequest(searchParams: RouteSearchParams): MarketsListRequest<InstrumentFilters> {
   const status = parseInstrumentStatus(searchParams);
   const assetClass = parseInstrumentClass(searchParams);
-  const search = getFirstParam(searchParams, "search")?.trim();
-  const sortField = getFirstParam(searchParams, "sortField") ?? "symbol";
+  const availability = parseInstrumentAvailability(searchParams);
+  const q = getFirstParam(searchParams, "q")?.trim() ?? getFirstParam(searchParams, "search")?.trim();
+  const sortField = getFirstParam(searchParams, "sortBy") ?? getFirstParam(searchParams, "sortField") ?? "updated_at";
+  const cursor = parseCursor(searchParams);
+  const deprecatedPage = parsePage(searchParams);
 
   const filters: InstrumentFilters = {
     ...(status ? { status } : {}),
     ...(assetClass ? { assetClass } : {}),
-    ...(search ? { search } : {}),
+    ...(availability ? { availability } : {}),
+    ...(q ? { q } : {}),
   };
 
   return {
     ...(Object.keys(filters).length > 0 ? { filters } : {}),
     pagination: {
-      page: parsePage(searchParams),
-      pageSize: parsePageSize(searchParams, 20),
+      limit: parseLimit(searchParams, 50),
+      ...(cursor ? { cursor } : {}),
+      ...(typeof deprecatedPage === "number" ? { page: deprecatedPage } : {}),
     },
     sort: {
       field: sortField,
@@ -60,7 +75,7 @@ export default async function MarketsInstrumentsPage({ searchParams }: MarketsIn
     runtime.logger.info("Loaded instruments data", {
       mode: runtime.config.mode,
       instrumentCount: instrumentList.items.length,
-      totalInstruments: summary.totalCount,
+      totalInstruments: summary.totalInstruments,
     });
 
     return (
@@ -72,16 +87,13 @@ export default async function MarketsInstrumentsPage({ searchParams }: MarketsIn
 
           <div style={{ display: "grid", gap: themeTokens.spacing.md, gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))" }}>
             <Card title="Total">
-              <p style={{ margin: 0 }}>{summary.totalCount}</p>
-            </Card>
-            <Card title="Active">
-              <p style={{ margin: 0 }}>{summary.activeCount}</p>
-            </Card>
-            <Card title="Halted">
-              <p style={{ margin: 0 }}>{summary.haltedCount}</p>
+              <p style={{ margin: 0 }}>{summary.totalInstruments}</p>
             </Card>
             <Card title="Tradable">
-              <p style={{ margin: 0 }}>{summary.tradableCount}</p>
+              <p style={{ margin: 0 }}>{summary.tradableInstruments}</p>
+            </Card>
+            <Card title="Halted">
+              <p style={{ margin: 0 }}>{summary.haltedInstruments}</p>
             </Card>
           </div>
 

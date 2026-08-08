@@ -8,6 +8,7 @@ export interface MarketsRuntimeContext {
   logger: Logger;
   authDecision: AuthDecision;
   marketsClient: MarketsClient;
+  defaultAccountId?: string;
 }
 
 export interface MarketsUiError {
@@ -48,10 +49,12 @@ export function createMarketsRuntimeContext(scope: string): MarketsRuntimeContex
         ...(requestIdHeader ? { requestIdHeader } : {}),
         ...(correlationIdHeader ? { correlationIdHeader } : {}),
         ...(config.connectivityPath ? { connectivityPath: config.connectivityPath } : {}),
+        ...(config.accountId ? { defaultAccountId: config.accountId } : {}),
       },
       ...(config.compatibilityVersion ? { marketsCompatibilityVersion: config.compatibilityVersion } : {}),
       ...(config.parityCheckMarker ? { marketsParityCheckMarker: config.parityCheckMarker } : {}),
     }).markets,
+    ...(config.accountId ? { defaultAccountId: config.accountId } : {}),
   };
 }
 

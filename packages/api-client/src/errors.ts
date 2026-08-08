@@ -34,6 +34,9 @@ interface PayErrorShape {
 interface MarketsErrorShape {
   code?: string | undefined;
   message?: string | undefined;
+  retryable?: boolean | undefined;
+  source?: ApiErrorSource | string | undefined;
+  details?: unknown;
   decision?: string | undefined;
   reviewRequired?: boolean | undefined;
   reasonCodes?: string[] | undefined;
@@ -88,10 +91,21 @@ function extractMarketsErrorShape(error: unknown): MarketsErrorShape {
   const nested = asObject(candidate.error);
   const reasonCodes = getStringArray(candidate.reason_codes) ?? getStringArray(nested?.reason_codes);
   const reasonCode = getString(candidate.reason_code) ?? getString(nested?.reason_code);
+  const retryable =
+    typeof candidate.retryable === "boolean"
+      ? candidate.retryable
+      : typeof nested?.retryable === "boolean"
+        ? nested.retryable
+        : undefined;
+  const source = getString(candidate.source) ?? getString(nested?.source);
+  const details = candidate.details ?? nested?.details;
 
   return {
     code: getString(candidate.code) ?? getString(nested?.code),
     message: getString(candidate.message) ?? getString(nested?.message),
+    ...(typeof retryable === "boolean" ? { retryable } : {}),
+    ...(source ? { source } : {}),
+    ...(typeof details === "undefined" ? {} : { details }),
     decision: getString(candidate.decision) ?? getString(nested?.decision),
     reviewRequired:
       typeof candidate.review_required === "boolean"
@@ -285,6 +299,39 @@ function normalizeKnownMarketsError(
   return null;
 }
 
+function normalizeCanonicalMarketsEnvelope(
+  marketsShape: MarketsErrorShape,
+): Pick<ApiError, "code" | "message" | "retryable" | "source" | "details"> | null {
+  if (
+    typeof marketsShape.code !== "string" ||
+    typeof marketsShape.message !== "string" ||
+    typeof marketsShape.retryable !== "boolean"
+  ) {
+    return null;
+  }
+
+  return {
+    code: marketsShape.code,
+    message: marketsShape.message,
+    retryable: marketsShape.retryable,
+    source:
+      typeof marketsShape.source === "string" &&
+      (marketsShape.source === "mock" ||
+        marketsShape.source === "http" ||
+        marketsShape.source === "runtime" ||
+        marketsShape.source === "unknown" ||
+        marketsShape.source === "markets-api" ||
+        marketsShape.source === "policy-risk" ||
+        marketsShape.source === "asset-registry" ||
+        marketsShape.source === "execution-router" ||
+        marketsShape.source === "ledger-settlement" ||
+        marketsShape.source === "accounts-runtime")
+        ? marketsShape.source
+        : "unknown",
+    ...(typeof marketsShape.details === "undefined" ? {} : { details: marketsShape.details }),
+  };
+}
+
 export function normalizeApiError(error: unknown, options: NormalizeApiErrorOptions = {}): ApiError {
   const fallbackStatus = options.fallbackStatus ?? 500;
   const fallbackSource = options.source ?? "unknown";
@@ -292,6 +339,14 @@ export function normalizeApiError(error: unknown, options: NormalizeApiErrorOpti
   if (isApiErrorCandidate(error) && typeof error.message === "string") {
     const status = typeof error.status === "number" ? error.status : undefined;
     const marketsShape = extractMarketsErrorShape(error.details);
+    const canonicalMarketsError = normalizeCanonicalMarketsEnvelope(marketsShape);
+    if (canonicalMarketsError) {
+      return {
+        ...canonicalMarketsError,
+        ...(typeof status === "number" ? { status } : {}),
+      };
+    }
+
     const knownMarketsError = normalizeKnownMarketsError(
       {
         ...marketsShape,
@@ -326,6 +381,15 @@ export function normalizeApiError(error: unknown, options: NormalizeApiErrorOpti
 
   if (isApiErrorCandidate(error)) {
     const marketsShape = extractMarketsErrorShape(error);
+    const canonicalMarketsError = normalizeCanonicalMarketsEnvelope(marketsShape);
+    if (canonicalMarketsError) {
+      return {
+        ...canonicalMarketsError,
+        source: canonicalMarketsError.source === "unknown" ? fallbackSource : canonicalMarketsError.source,
+        ...(typeof options.fallbackStatus === "number" ? { status: options.fallbackStatus } : {}),
+      };
+    }
+
     const knownMarketsError = normalizeKnownMarketsError(marketsShape, options.fallbackStatus);
 
     if (knownMarketsError) {

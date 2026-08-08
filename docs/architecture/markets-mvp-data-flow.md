@@ -1,76 +1,84 @@
-# Markets MVP Data Flow (Phase 9)
+# Markets MVP Data Flow (Phase 9.5 v2)
 
 ## Scope
 
-`apps/markets-web` now ships typed Markets MVP route wiring with strict parity alignment against canonical contracts in `ryvra-protocol/markets`.
+`apps/markets-web` now consumes the merged canonical Markets OpenAPI contract from `ryvra-protocol/markets`:
 
-Runtime modes remain:
+- `openapi/markets.openapi.yaml`
+- `docs/api-contract-changelog.md`
 
-- `mock`: deterministic seeded dataset via `@ryvra/api-client` mock transport
-- `http`: live transport with parity diagnostics and canonical route mapping
+The Markets runtime preserves dual modes:
+
+- `mock`: deterministic local responses in canonical shape
+- `http`: strict parity gates for auth/account/header/cursor behavior
 
 ## Route to client boundary map
 
 - `/` and `/overview`
-  - `marketsClient.getMarketsOverview()`
+  - `marketsClient.getMarketsOverview({ accountId })`
 - `/instruments`
   - `marketsClient.listInstruments(...)`
   - `marketsClient.getInstrumentSummary(...)`
 - `/orders`
-  - `marketsClient.listOrders(...)`
-  - `marketsClient.getOrderSummary(...)`
+  - `marketsClient.listOrders({ accountId, ... })`
+  - `marketsClient.getOrderSummary({ accountId, ... })`
 - `/positions`
-  - `marketsClient.listPositions(...)`
-  - `marketsClient.getPositionSummary(...)`
+  - `marketsClient.listPositions({ accountId, ... })`
+  - `marketsClient.getPositionSummary({ accountId, ... })`
 - `/status`
   - `marketsClient.getParityDiagnostics()`
 
-## Apps method → Markets endpoint mapping
+## Hard parity gate behavior
 
-| Client method | HTTP method | Endpoint path | Contract source | Status |
-| --- | --- | --- | --- | --- |
-| `listInstruments` | GET | `/markets/instruments` | apps read-model adapter over `src/domain/unified-asset.ts` | adjusted |
-| `getInstrumentSummary` | GET | `/markets/instruments/summary` | apps read-model adapter over canonical instrument state | adjusted |
-| `listOrders` | GET | `/markets/orders` | apps read-model adapter over `src/types/order.ts` + `src/service/markets-service.ts` | adjusted |
-| `getOrderSummary` | GET | `/markets/orders/summary` | apps read-model adapter over canonical order lifecycle states | adjusted |
-| `listPositions` | GET | `/markets/positions` | apps read-model adapter over `src/domain/unified-asset.ts` exposure model | adjusted |
-| `getPositionSummary` | GET | `/markets/positions/summary` | apps read-model adapter over exposure/risk projections | adjusted |
-| `getMarketsOverview` | GET | `/markets/overview` | apps aggregate read-model adapter over canonical order/position/instrument state | adjusted |
+### Account scope
 
-> `ryvra-protocol/markets` currently publishes domain/service contracts and RFC guidance only (no OpenAPI/router-owned HTTP surface).
+`account_id` is required for:
 
-## DTO boundary ownership
+- `/markets/orders`
+- `/markets/orders/summary`
+- `/markets/positions`
+- `/markets/positions/summary`
+- `/markets/overview`
+
+HTTP mode fails fast with `invalid_request` if account scope is missing.
+
+### Auth + headers
+
+In HTTP mode:
+
+- non-health Markets routes require bearer auth in `Authorization`
+- `/health` remains auth-optional
+- `x-request-id` and `x-correlation-id` are always sent
+
+### Pagination
+
+Cursor-first policy:
+
+- canonical: `limit`, `cursor`
+- compatibility-only (deprecated): `page`
+- cursor wins if both are provided
+
+### Deprecated response field compatibility
+
+- canonical: `net_exposure_band`
+- temporary fallback accepted: `net_exposure_bucket` (remove no earlier than `2027-02-08`)
+
+## Data boundary ownership
 
 - `@ryvra/domain-markets`
-  - owns route-facing read DTOs, summary DTOs, overview DTOs
-  - owns canonical enum sets used by app filters and decoder validation
-  - owns markets list/filter/pagination/sort contracts
+  - canonical enum sets and DTO/request contracts
 - `@ryvra/api-client`
-  - owns transport mapping (`mock`/`http`)
-  - owns payload decoding/validation (`markets-codec.ts`)
-  - owns parity constants + route map (`markets-parity.ts`)
-  - owns normalized error interpretation (`normalizeApiError`)
+  - transport wiring, request guards, canonical decode/error normalization
 - `apps/markets-web`
-  - owns route orchestration, query param state, and UI composition only
+  - route orchestration, cursor-oriented query handling, status diagnostics rendering
 
-## Auth/config/observability path
+## Status diagnostics markers
 
-- Auth placeholder remains enforced on every Markets route through `createStubAuthGuard`.
-- Shared config loader now supplies mode/base URL plus Markets parity markers:
-  - `loadMarketsIntegrationConfig(...)`
-- Observability captures route-level failures through `@ryvra/observability`.
-- `/status` shows mode, base URL, compatibility marker, parity check marker, and non-destructive connectivity probe results.
+`/status` includes:
 
-## Known limitations
-
-1. `ryvra-protocol/markets` has no published OpenAPI or router/controller endpoint contract yet.
-2. Current `/markets/*` endpoints are compatibility read-model adapters derived from canonical domain/service contracts.
-3. Some UI fields (order type, position risk state bands) are app-level read-model projections and should be replaced by markets-owned read models once published.
-
-## Rollout path: mock → live HTTP mode
-
-1. Develop locally in `mock` mode with deterministic dataset + parity tests.
-2. Switch to `http` via `RYVRA_RUNTIME_MODE=http` and `RYVRA_API_BASE_URL`.
-3. Configure optional auth/correlation headers and connectivity path.
-4. Validate `/status` diagnostics before enabling broader integration.
-5. Replace compatibility paths with markets-owned OpenAPI/router endpoints when available.
+- canonical source paths
+- OpenAPI SHA + commit marker
+- compatibility/parity markers
+- auth/account requirement metadata
+- cursor/deprecation policy metadata
+- connectivity probe result

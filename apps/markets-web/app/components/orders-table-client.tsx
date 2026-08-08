@@ -3,6 +3,7 @@
 import {
   marketOrderStatuses,
   marketOrderTypes,
+  marketPolicyDecisions,
   marketSides,
   type MarketsPaginationMeta,
   type OrderDto,
@@ -21,11 +22,11 @@ interface OrdersTableClientProps {
 const statusOptions = ["ALL", ...marketOrderStatuses] as const;
 const sideOptions = ["ALL", ...marketSides] as const;
 const typeOptions = ["ALL", ...marketOrderTypes] as const;
+const policyOptions = ["ALL", ...marketPolicyDecisions] as const;
 const sortFieldOptions = [
-  { value: "createdAt", label: "Created time" },
-  { value: "updatedAt", label: "Updated time" },
+  { value: "updated_at", label: "Updated time" },
+  { value: "created_at", label: "Created time" },
   { value: "status", label: "Status" },
-  { value: "symbol", label: "Symbol" },
 ] as const;
 
 export function OrdersTableClient({ items, pagination }: OrdersTableClientProps) {
@@ -34,29 +35,30 @@ export function OrdersTableClient({ items, pagination }: OrdersTableClientProps)
   const statusParam = (searchParams.get("status") ?? "ALL").toLowerCase();
   const sideParam = (searchParams.get("side") ?? "ALL").toLowerCase();
   const typeParam = (searchParams.get("type") ?? "ALL").toLowerCase();
-  const search = searchParams.get("search") ?? "";
-  const from = searchParams.get("from") ?? "";
-  const to = searchParams.get("to") ?? "";
-  const sortField = searchParams.get("sortField") ?? "createdAt";
-  const sortDirection = searchParams.get("sortDirection") === "asc" ? "asc" : "desc";
+  const policyParam = (searchParams.get("policyDecision") ?? "ALL").toUpperCase();
+  const referenceId = searchParams.get("referenceId") ?? searchParams.get("search") ?? "";
+  const createdAfter = searchParams.get("createdAfter") ?? searchParams.get("from") ?? "";
+  const createdBefore = searchParams.get("createdBefore") ?? searchParams.get("to") ?? "";
+  const sortField = searchParams.get("sortBy") ?? "updated_at";
+  const sortDirection = searchParams.get("sortOrder") === "asc" ? "asc" : "desc";
 
   const status = statusOptions.includes(statusParam as (typeof statusOptions)[number]) ? statusParam : "ALL";
   const side = sideOptions.includes(sideParam as (typeof sideOptions)[number]) ? sideParam : "ALL";
   const type = typeOptions.includes(typeParam as (typeof typeOptions)[number]) ? typeParam : "ALL";
+  const policyDecision = policyOptions.includes(policyParam as (typeof policyOptions)[number]) ? policyParam : "ALL";
 
   const hasFilters =
     status !== "ALL" ||
     side !== "ALL" ||
     type !== "ALL" ||
-    search.length > 0 ||
-    from.length > 0 ||
-    to.length > 0 ||
-    sortField !== "createdAt" ||
+    policyDecision !== "ALL" ||
+    referenceId.length > 0 ||
+    createdAfter.length > 0 ||
+    createdBefore.length > 0 ||
+    sortField !== "updated_at" ||
     sortDirection !== "desc";
 
   const visibleRows = useMemo(() => [...items], [items]);
-  const canGoPrev = pagination.page > 1;
-  const canGoNext = pagination.page < pagination.totalPages;
 
   return (
     <section aria-labelledby="orders-table-title" style={{ display: "grid", gap: themeTokens.spacing.md }}>
@@ -124,29 +126,54 @@ export function OrdersTableClient({ items, pagination }: OrdersTableClientProps)
           </label>
 
           <label style={{ display: "grid", gap: themeTokens.spacing.xs }}>
-            <span>Search</span>
+            <span>Policy decision</span>
+            <select
+              className="markets-filter-control"
+              value={policyDecision}
+              onChange={(event) => updateQuery({ policyDecision: event.currentTarget.value === "ALL" ? undefined : event.currentTarget.value })}
+            >
+              {policyOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label style={{ display: "grid", gap: themeTokens.spacing.xs }}>
+            <span>Reference ID</span>
             <input
               className="markets-filter-control"
               type="search"
-              value={search}
-              onChange={(event) => updateQuery({ search: event.currentTarget.value || undefined })}
-              placeholder="Order id, reference, symbol"
+              value={referenceId}
+              onChange={(event) => updateQuery({ referenceId: event.currentTarget.value || undefined })}
+              placeholder="ref_123"
             />
           </label>
 
           <label style={{ display: "grid", gap: themeTokens.spacing.xs }}>
-            <span>From date</span>
-            <input className="markets-filter-control" type="date" value={from} onChange={(event) => updateQuery({ from: event.currentTarget.value || undefined })} />
+            <span>Created after</span>
+            <input
+              className="markets-filter-control"
+              type="datetime-local"
+              value={createdAfter}
+              onChange={(event) => updateQuery({ createdAfter: event.currentTarget.value || undefined })}
+            />
           </label>
 
           <label style={{ display: "grid", gap: themeTokens.spacing.xs }}>
-            <span>To date</span>
-            <input className="markets-filter-control" type="date" value={to} onChange={(event) => updateQuery({ to: event.currentTarget.value || undefined })} />
+            <span>Created before</span>
+            <input
+              className="markets-filter-control"
+              type="datetime-local"
+              value={createdBefore}
+              onChange={(event) => updateQuery({ createdBefore: event.currentTarget.value || undefined })}
+            />
           </label>
 
           <label style={{ display: "grid", gap: themeTokens.spacing.xs }}>
             <span>Sort by</span>
-            <select className="markets-filter-control" value={sortField} onChange={(event) => updateQuery({ sortField: event.currentTarget.value })}>
+            <select className="markets-filter-control" value={sortField} onChange={(event) => updateQuery({ sortBy: event.currentTarget.value })}>
               {sortFieldOptions.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
@@ -157,7 +184,7 @@ export function OrdersTableClient({ items, pagination }: OrdersTableClientProps)
 
           <label style={{ display: "grid", gap: themeTokens.spacing.xs }}>
             <span>Direction</span>
-            <select className="markets-filter-control" value={sortDirection} onChange={(event) => updateQuery({ sortDirection: event.currentTarget.value })}>
+            <select className="markets-filter-control" value={sortDirection} onChange={(event) => updateQuery({ sortOrder: event.currentTarget.value })}>
               <option value="desc">Descending</option>
               <option value="asc">Ascending</option>
             </select>
@@ -167,7 +194,24 @@ export function OrdersTableClient({ items, pagination }: OrdersTableClientProps)
             <Button
               type="button"
               variant="secondary"
-              onClick={() => clearQuery(["status", "side", "type", "search", "from", "to", "sortField", "sortDirection", "page"])}
+              onClick={() =>
+                clearQuery([
+                  "status",
+                  "side",
+                  "type",
+                  "policyDecision",
+                  "referenceId",
+                  "search",
+                  "createdAfter",
+                  "createdBefore",
+                  "from",
+                  "to",
+                  "sortBy",
+                  "sortOrder",
+                  "cursor",
+                  "page",
+                ])
+              }
               disabled={!hasFilters}
               aria-describedby={!hasFilters ? "orders-reset-hint" : undefined}
             >
@@ -189,9 +233,14 @@ export function OrdersTableClient({ items, pagination }: OrdersTableClientProps)
           { key: "side", header: "Side", render: (value) => <StatusBadge status={String(value)} /> },
           { key: "type", header: "Type" },
           {
-            key: "quantity",
-            header: "Qty / Notional",
-            render: (value, row) => `${value} / ${row.notionalValue}`,
+            key: "size",
+            header: "Size / Avg price",
+            render: (value, row) => `${value} / ${row.avgExecutionPrice ?? "n/a"}`,
+          },
+          {
+            key: "policyDecision",
+            header: "Policy",
+            render: (value) => <StatusBadge status={String(value)} />,
           },
           {
             key: "status",
@@ -199,8 +248,8 @@ export function OrdersTableClient({ items, pagination }: OrdersTableClientProps)
             render: (value) => <StatusBadge status={String(value)} />,
           },
           {
-            key: "createdAt",
-            header: "Timestamp",
+            key: "updatedAt",
+            header: "Updated",
             render: (value) => formatDateTime(String(value)),
           },
         ]}
@@ -211,8 +260,12 @@ export function OrdersTableClient({ items, pagination }: OrdersTableClientProps)
 
       {visibleRows.length === 0 ? (
         <Card title="No orders found">
-          <p style={{ marginTop: 0 }}>Try broadening the date range or clearing side/type filters.</p>
-          <Button type="button" variant="secondary" onClick={() => clearQuery(["status", "side", "type", "search", "from", "to", "page"])}>
+          <p style={{ marginTop: 0 }}>Try broadening filters or clearing the cursor/page context.</p>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => clearQuery(["status", "side", "type", "policyDecision", "referenceId", "createdAfter", "createdBefore", "cursor", "page"])}
+          >
             Clear filters
           </Button>
         </Card>
@@ -220,21 +273,18 @@ export function OrdersTableClient({ items, pagination }: OrdersTableClientProps)
 
       <div aria-label="Order pagination" style={{ display: "flex", alignItems: "center", gap: themeTokens.spacing.md, flexWrap: "wrap" }}>
         <span style={{ color: themeTokens.color.textMuted }}>
-          Page {pagination.page} of {pagination.totalPages} • {pagination.total} total orders
+          Showing {visibleRows.length} orders • limit {pagination.limit}
         </span>
-        {canGoPrev ? (
-          <Button type="button" variant="secondary" onClick={() => updateQuery({ page: String(pagination.page - 1) }, { resetPage: false })}>
-            Previous
-          </Button>
-        ) : (
-          <span style={{ color: themeTokens.color.textMuted }}>Previous page unavailable on first page.</span>
-        )}
-        {canGoNext ? (
-          <Button type="button" variant="secondary" onClick={() => updateQuery({ page: String(pagination.page + 1) }, { resetPage: false })}>
+        {pagination.hasMore && pagination.nextCursor ? (
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => updateQuery({ cursor: pagination.nextCursor, page: undefined }, { resetPagination: false })}
+          >
             Next
           </Button>
         ) : (
-          <span style={{ color: themeTokens.color.textMuted }}>No further pages available.</span>
+          <span style={{ color: themeTokens.color.textMuted }}>No further cursor pages available.</span>
         )}
       </div>
     </section>
