@@ -14,3 +14,9 @@ export interface AppConfig {
   apiBaseUrl: string;
   featureFlags: FeatureFlags;
 }
+
+export interface MarketsIntegrationConfig extends AppConfig {
+  compatibilityVersion?: string;
+  parityCheckMarker?: string;
+  connectivityPath?: string;
+}

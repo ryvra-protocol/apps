@@ -3,6 +3,16 @@ export { createFetchTransport } from "./transport";
 export { createMockTransport } from "./mock-transport";
 export { ApiClientError, normalizeApiError } from "./errors";
 export {
+  MARKETS_PARITY_CHECK_MARKER,
+  MARKETS_PROTOCOL_COMPATIBILITY_VERSION,
+  MARKETS_PROTOCOL_SOURCE,
+  marketsCanonicalAssetClasses,
+  marketsCanonicalOrderStatuses,
+  marketsCanonicalPolicyDecisions,
+  marketsCanonicalSides,
+  marketsRouteMap,
+} from "./markets-parity";
+export {
   PAY_PARITY_CHECK_MARKER,
   PAY_PROTOCOL_COMPATIBILITY_VERSION,
   PAY_PROTOCOL_SOURCE,
@@ -22,6 +32,9 @@ export type {
   ApiClientMode,
   CreateApiClientOptions,
   CreatePayClientOptions,
+  MarketsRuntimeHeaderOptions,
+  MarketsParityDiagnostics,
+  MarketsConnectivityCheckResult,
   PayRequestOptions,
   PayRuntimeHeaderOptions,
   PayParityDiagnostics,

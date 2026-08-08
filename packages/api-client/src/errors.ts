@@ -31,6 +31,14 @@ interface PayErrorShape {
   reasonCodes?: string[] | undefined;
 }
 
+interface MarketsErrorShape {
+  code?: string | undefined;
+  message?: string | undefined;
+  decision?: string | undefined;
+  reviewRequired?: boolean | undefined;
+  reasonCodes?: string[] | undefined;
+}
+
 function asObject(value: unknown): Record<string, unknown> | undefined {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     return undefined;
@@ -68,6 +76,30 @@ function extractPayErrorShape(error: unknown): PayErrorShape {
       getStringArray(candidate.reason_codes) ??
       getStringArray(nested?.reason_codes) ??
       (getString(candidate.reason_code) ? [getString(candidate.reason_code)!] : undefined),
+  };
+}
+
+function extractMarketsErrorShape(error: unknown): MarketsErrorShape {
+  const candidate = asObject(error);
+  if (!candidate) {
+    return {};
+  }
+
+  const nested = asObject(candidate.error);
+  const reasonCodes = getStringArray(candidate.reason_codes) ?? getStringArray(nested?.reason_codes);
+  const reasonCode = getString(candidate.reason_code) ?? getString(nested?.reason_code);
+
+  return {
+    code: getString(candidate.code) ?? getString(nested?.code),
+    message: getString(candidate.message) ?? getString(nested?.message),
+    decision: getString(candidate.decision) ?? getString(nested?.decision),
+    reviewRequired:
+      typeof candidate.review_required === "boolean"
+        ? candidate.review_required
+        : typeof nested?.review_required === "boolean"
+          ? nested.review_required
+          : undefined,
+    reasonCodes: reasonCodes ?? (reasonCode ? [reasonCode] : undefined),
   };
 }
 
@@ -144,12 +176,130 @@ function normalizeKnownPayError(
   return null;
 }
 
+function hasReasonCode(reasonCodes: readonly string[], predicate: (reasonCode: string) => boolean): boolean {
+  return reasonCodes.some((reasonCode) => predicate(reasonCode.trim().toLowerCase()));
+}
+
+function normalizeKnownMarketsError(
+  marketsShape: MarketsErrorShape,
+  status: number | undefined,
+): Pick<ApiError, "code" | "message" | "retryable" | "status"> | null {
+  const normalizedCode = marketsShape.code?.trim().toLowerCase();
+  const normalizedMessage = marketsShape.message?.trim();
+  const decision = marketsShape.decision?.trim().toUpperCase();
+  const reasonCodes = marketsShape.reasonCodes ?? [];
+
+  if (
+    decision === "DENY" ||
+    includesText(normalizedCode, "policy_denied") ||
+    hasReasonCode(reasonCodes, (reasonCode) => reasonCode.startsWith("policy_") && reasonCode !== "policy_review_required")
+  ) {
+    return {
+      code: "markets_policy_denied",
+      message: normalizedMessage ?? "Markets policy denied the operation",
+      retryable: false,
+      status: status ?? 403,
+    };
+  }
+
+  if (
+    decision === "REVIEW" ||
+    marketsShape.reviewRequired === true ||
+    includesText(normalizedCode, "review_required") ||
+    hasReasonCode(reasonCodes, (reasonCode) => reasonCode === "policy_review_required")
+  ) {
+    return {
+      code: "markets_policy_review_required",
+      message: normalizedMessage ?? "Markets policy requires review",
+      retryable: false,
+      status: status ?? 409,
+    };
+  }
+
+  if (
+    includesText(normalizedCode, "route_rejected") ||
+    hasReasonCode(reasonCodes, (reasonCode) => reasonCode.startsWith("route_"))
+  ) {
+    return {
+      code: "markets_route_rejected",
+      message: normalizedMessage ?? "Execution route rejected the order",
+      retryable: false,
+      status: status ?? 422,
+    };
+  }
+
+  if (
+    includesText(normalizedCode, "quote_invalid") ||
+    includesText(normalizedCode, "execution_guardrail_violation") ||
+    includesText(normalizedMessage, "quote") ||
+    includesText(normalizedMessage, "guardrail") ||
+    hasReasonCode(reasonCodes, (reasonCode) => reasonCode === "quote_invalid" || reasonCode === "execution_guardrail_violation")
+  ) {
+    return {
+      code: "markets_quote_invalid",
+      message: normalizedMessage ?? "Markets quote or execution constraints failed",
+      retryable: false,
+      status: status ?? 422,
+    };
+  }
+
+  if (
+    includesText(normalizedCode, "unified_asset_") ||
+    hasReasonCode(reasonCodes, (reasonCode) => reasonCode.startsWith("unified_asset_"))
+  ) {
+    const normalizedReasonCode = reasonCodes[0]?.trim().toLowerCase() ?? "unified_asset_validation_failed";
+    return {
+      code: normalizedReasonCode,
+      message: normalizedMessage ?? "Unified asset normalization failed",
+      retryable: false,
+      status: status ?? 422,
+    };
+  }
+
+  if (
+    includesText(normalizedCode, "timeout") ||
+    includesText(normalizedMessage, "timeout") ||
+    hasReasonCode(reasonCodes, (reasonCode) => reasonCode.includes("timeout"))
+  ) {
+    return {
+      code: "markets_dependency_timeout",
+      message: normalizedMessage ?? "Markets dependency timeout",
+      retryable: true,
+      status: status ?? 504,
+    };
+  }
+
+  if (
+    includesText(normalizedCode, "execution_dependency_failed") ||
+    includesText(normalizedMessage, "dependency failed") ||
+    hasReasonCode(reasonCodes, (reasonCode) => reasonCode === "execution_dependency_failed")
+  ) {
+    return {
+      code: "markets_dependency_failed",
+      message: normalizedMessage ?? "Markets dependency failure",
+      retryable: true,
+      status: status ?? 502,
+    };
+  }
+
+  return null;
+}
+
 export function normalizeApiError(error: unknown, options: NormalizeApiErrorOptions = {}): ApiError {
   const fallbackStatus = options.fallbackStatus ?? 500;
   const fallbackSource = options.source ?? "unknown";
 
   if (isApiErrorCandidate(error) && typeof error.message === "string") {
     const status = typeof error.status === "number" ? error.status : undefined;
+    const marketsShape = extractMarketsErrorShape(error.details);
+    const knownMarketsError = normalizeKnownMarketsError(
+      {
+        ...marketsShape,
+        code: marketsShape.code ?? error.code,
+        message: marketsShape.message ?? error.message,
+      },
+      status,
+    );
     const payShape = extractPayErrorShape(error.details);
     const knownPayError = normalizeKnownPayError(
       {
@@ -159,13 +309,15 @@ export function normalizeApiError(error: unknown, options: NormalizeApiErrorOpti
       },
       status,
     );
-    const resolvedStatus = knownPayError?.status ?? status;
+    const resolvedStatus = knownMarketsError?.status ?? knownPayError?.status ?? status;
 
     return {
-      code: knownPayError?.code ?? (typeof error.code === "string" ? error.code : "unknown_error"),
-      message: knownPayError?.message ?? (payShape.message ?? error.message),
+      code: knownMarketsError?.code ?? knownPayError?.code ?? (typeof error.code === "string" ? error.code : "unknown_error"),
+      message: knownMarketsError?.message ?? knownPayError?.message ?? (payShape.message ?? error.message),
       retryable:
-        knownPayError?.retryable ?? (typeof error.retryable === "boolean" ? error.retryable : inferRetryable(status)),
+        knownMarketsError?.retryable ??
+        knownPayError?.retryable ??
+        (typeof error.retryable === "boolean" ? error.retryable : inferRetryable(status)),
       source: error.source ?? fallbackSource,
       ...(typeof resolvedStatus === "number" ? { status: resolvedStatus } : {}),
       ...(typeof error.details === "undefined" ? {} : { details: error.details }),
@@ -173,6 +325,20 @@ export function normalizeApiError(error: unknown, options: NormalizeApiErrorOpti
   }
 
   if (isApiErrorCandidate(error)) {
+    const marketsShape = extractMarketsErrorShape(error);
+    const knownMarketsError = normalizeKnownMarketsError(marketsShape, options.fallbackStatus);
+
+    if (knownMarketsError) {
+      return {
+        code: knownMarketsError.code,
+        message: knownMarketsError.message,
+        retryable: knownMarketsError.retryable,
+        source: fallbackSource,
+        ...(typeof knownMarketsError.status === "number" ? { status: knownMarketsError.status } : {}),
+        details: error,
+      };
+    }
+
     const payShape = extractPayErrorShape(error);
     const knownPayError = normalizeKnownPayError(payShape, options.fallbackStatus);
 

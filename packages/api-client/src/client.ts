@@ -1,4 +1,11 @@
 import type {
+  InstrumentFilters,
+  MarketsDateRangeFilter,
+  MarketsListRequest,
+  OrderFilters,
+  PositionFilters,
+} from "@ryvra/domain-markets";
+import type {
   InvoiceFilters,
   PayDateRangeFilter,
   PayListRequest,
@@ -20,6 +27,21 @@ import {
   decodeSubscriptions,
 } from "./pay-codec";
 import {
+  decodeInstrumentList,
+  decodeInstrumentSummary,
+  decodeMarketsOverview,
+  decodeOrderList,
+  decodeOrderSummary,
+  decodePositionList,
+  decodePositionSummary,
+} from "./markets-codec";
+import {
+  MARKETS_PARITY_CHECK_MARKER,
+  MARKETS_PROTOCOL_COMPATIBILITY_VERSION,
+  MARKETS_PROTOCOL_SOURCE,
+  marketsRouteMap,
+} from "./markets-parity";
+import {
   PAY_PARITY_CHECK_MARKER,
   PAY_PROTOCOL_COMPATIBILITY_VERSION,
   PAY_PROTOCOL_SOURCE,
@@ -32,8 +54,9 @@ import type {
   ApiResult,
   CreateApiClientOptions,
   CreatePayClientOptions,
+  MarketsClient,
+  MarketsRuntimeHeaderOptions,
   PayClient,
-  PayConnectivityCheckResult,
   PayRequestOptions,
   PayRuntimeHeaderOptions,
   Transport,
@@ -68,14 +91,24 @@ function executeRaw<T>(transport: Transport, request: ApiRequest): Promise<T> {
   return unwrap(transport.request<T>(request));
 }
 
-function executeWithDecoder<T>(transport: Transport, request: ApiRequest, decode: Decoder<T>): Promise<T> {
+interface DecoderExecutionOptions {
+  validationCode: string;
+  validationMessage: string;
+}
+
+function executeWithDecoder<T>(
+  transport: Transport,
+  request: ApiRequest,
+  decode: Decoder<T>,
+  options: DecoderExecutionOptions,
+): Promise<T> {
   return executeRaw<unknown>(transport, request).then((payload) => {
     try {
       return decode(payload);
     } catch (error) {
       throw new ApiClientError({
-        code: "pay_payload_validation_failed",
-        message: error instanceof Error ? error.message : "Pay payload validation failed",
+        code: options.validationCode,
+        message: error instanceof Error ? error.message : options.validationMessage,
         retryable: false,
         source: "runtime",
         details: {
@@ -101,14 +134,26 @@ function setIfPresent(params: URLSearchParams, key: string, value: string | numb
   params.set(key, stringValue);
 }
 
-function setDateRange(params: URLSearchParams, dateRange: PayDateRangeFilter | undefined): void {
+function setDateRange(params: URLSearchParams, dateRange: PayDateRangeFilter | MarketsDateRangeFilter | undefined): void {
   setIfPresent(params, "from", dateRange?.from);
   setIfPresent(params, "to", dateRange?.to);
 }
 
+interface ListRequestLike<TFilters extends object> {
+  filters?: TFilters;
+  pagination?: {
+    page?: number;
+    pageSize?: number;
+  };
+  sort?: {
+    field?: string;
+    direction?: string;
+  };
+}
+
 function setPaginationAndSort<TFilters extends object>(
   params: URLSearchParams,
-  request: PayListRequest<TFilters> | undefined,
+  request: ListRequestLike<TFilters> | undefined,
 ): void {
   if (!request) {
     return;
@@ -176,6 +221,65 @@ function buildReconciliationSummaryQuery(filters: ReconciliationFilters | undefi
   return toQueryString(params);
 }
 
+function buildInstrumentListQuery(request: MarketsListRequest<InstrumentFilters> | undefined): string {
+  const params = new URLSearchParams();
+  setPaginationAndSort(params, request);
+  setIfPresent(params, "search", request?.filters?.search);
+  setIfPresent(params, "asset_class", request?.filters?.assetClass);
+  setIfPresent(params, "status", request?.filters?.status);
+  return toQueryString(params);
+}
+
+function buildInstrumentSummaryQuery(filters: InstrumentFilters | undefined): string {
+  const params = new URLSearchParams();
+  setIfPresent(params, "search", filters?.search);
+  setIfPresent(params, "asset_class", filters?.assetClass);
+  setIfPresent(params, "status", filters?.status);
+  return toQueryString(params);
+}
+
+function buildOrderListQuery(request: MarketsListRequest<OrderFilters> | undefined): string {
+  const params = new URLSearchParams();
+  setPaginationAndSort(params, request);
+  setIfPresent(params, "status", request?.filters?.status);
+  setIfPresent(params, "side", request?.filters?.side);
+  setIfPresent(params, "type", request?.filters?.type);
+  setIfPresent(params, "search", request?.filters?.search);
+  setDateRange(params, request?.filters?.dateRange);
+  return toQueryString(params);
+}
+
+function buildOrderSummaryQuery(filters: OrderFilters | undefined): string {
+  const params = new URLSearchParams();
+  setIfPresent(params, "status", filters?.status);
+  setIfPresent(params, "side", filters?.side);
+  setIfPresent(params, "type", filters?.type);
+  setIfPresent(params, "search", filters?.search);
+  setDateRange(params, filters?.dateRange);
+  return toQueryString(params);
+}
+
+function buildPositionListQuery(request: MarketsListRequest<PositionFilters> | undefined): string {
+  const params = new URLSearchParams();
+  setPaginationAndSort(params, request);
+  setIfPresent(params, "search", request?.filters?.search);
+  setIfPresent(params, "symbol", request?.filters?.symbol);
+  setIfPresent(params, "side", request?.filters?.side);
+  setIfPresent(params, "risk_state", request?.filters?.riskState);
+  setDateRange(params, request?.filters?.dateRange);
+  return toQueryString(params);
+}
+
+function buildPositionSummaryQuery(filters: PositionFilters | undefined): string {
+  const params = new URLSearchParams();
+  setIfPresent(params, "search", filters?.search);
+  setIfPresent(params, "symbol", filters?.symbol);
+  setIfPresent(params, "side", filters?.side);
+  setIfPresent(params, "risk_state", filters?.riskState);
+  setDateRange(params, filters?.dateRange);
+  return toQueryString(params);
+}
+
 function createRequestId(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
     return crypto.randomUUID();
@@ -198,11 +302,11 @@ function resolveHeaderWithFallback(
 }
 
 function resolveAuthorizationValue(
-  payOptions: PayRuntimeHeaderOptions | undefined,
-  requestOptions: PayRequestOptions | undefined,
+  runtimeOptions: Pick<PayRuntimeHeaderOptions, "authToken" | "authTokenProvider" | "authScheme"> | undefined,
+  requestOptions: Pick<PayRequestOptions, "authToken"> | undefined,
 ): string | undefined {
-  const rawToken = resolveHeaderWithFallback(requestOptions?.authToken, payOptions?.authTokenProvider) ??
-    normalizeHeaderValue(payOptions?.authToken);
+  const rawToken = resolveHeaderWithFallback(requestOptions?.authToken, runtimeOptions?.authTokenProvider) ??
+    normalizeHeaderValue(runtimeOptions?.authToken);
 
   if (!rawToken) {
     return undefined;
@@ -212,7 +316,7 @@ function resolveAuthorizationValue(
     return rawToken;
   }
 
-  const scheme = normalizeHeaderValue(payOptions?.authScheme) ?? "Bearer";
+  const scheme = normalizeHeaderValue(runtimeOptions?.authScheme) ?? "Bearer";
   return `${scheme} ${rawToken}`;
 }
 
@@ -231,6 +335,34 @@ function buildPayHeaders(
       ...headers,
       ...(requestOptions?.headers ?? {}),
     };
+  }
+
+  function buildMarketsHeaders(
+    mode: CreateApiClientOptions["mode"],
+    marketsOptions: MarketsRuntimeHeaderOptions | undefined,
+  ): Record<string, string> {
+    const headers: Record<string, string> = {
+      ...(marketsOptions?.staticHeaders ?? {}),
+    };
+
+    if (mode === "mock") {
+      return headers;
+    }
+
+    const authorization = resolveAuthorizationValue(marketsOptions, undefined);
+    if (authorization) {
+      headers.authorization = authorization;
+    }
+
+    const requestIdHeader = normalizeHeaderValue(marketsOptions?.requestIdHeader) ?? "x-request-id";
+    const requestId = normalizeHeaderValue(marketsOptions?.requestIdProvider?.()) ?? createRequestId();
+    headers[requestIdHeader] = requestId;
+
+    const correlationIdHeader = normalizeHeaderValue(marketsOptions?.correlationIdHeader) ?? "x-correlation-id";
+    const correlationId = normalizeHeaderValue(marketsOptions?.correlationIdProvider?.()) ?? requestId;
+    headers[correlationIdHeader] = correlationId;
+
+    return headers;
   }
 
   const authorization = resolveAuthorizationValue(payOptions, requestOptions);
@@ -262,7 +394,16 @@ function buildPayHeaders(
   };
 }
 
-async function probeConnectivity(transport: Transport, path: string): Promise<PayConnectivityCheckResult> {
+interface ConnectivityCheckResult {
+  checkedAt: string;
+  path: string;
+  ok: boolean;
+  source: "mock" | "http" | "runtime" | "unknown";
+  status?: number;
+  message: string;
+}
+
+async function probeConnectivity(transport: Transport, path: string): Promise<ConnectivityCheckResult> {
   const checkedAt = new Date().toISOString();
   const probe = await transport.request<unknown>({ method: "GET", path });
 
@@ -306,6 +447,10 @@ function buildPayClient(transport: Transport, options: CreateApiClientOptions): 
         },
       },
       decode,
+      {
+        validationCode: "pay_payload_validation_failed",
+        validationMessage: "Pay payload validation failed",
+      },
     );
   };
 
@@ -476,6 +621,147 @@ function buildPayClient(transport: Transport, options: CreateApiClientOptions): 
   };
 }
 
+function buildMarketsClient(transport: Transport, options: CreateApiClientOptions): MarketsClient {
+  const mode = options.mode ?? "mock";
+  const baseUrl = options.baseUrl ?? "http://localhost:4000";
+  const marketsOptions = options.markets;
+  const compatibilityVersion = options.marketsCompatibilityVersion ?? MARKETS_PROTOCOL_COMPATIBILITY_VERSION;
+  const parityCheckMarker = options.marketsParityCheckMarker ?? MARKETS_PARITY_CHECK_MARKER;
+
+  const executeMarkets = <T>(request: ApiRequest, decode: Decoder<T>): Promise<T> => {
+    const headers = buildMarketsHeaders(mode, marketsOptions);
+
+    return executeWithDecoder(
+      transport,
+      {
+        ...request,
+        headers: {
+          ...(request.headers ?? {}),
+          ...headers,
+        },
+      },
+      decode,
+      {
+        validationCode: "markets_payload_validation_failed",
+        validationMessage: "Markets payload validation failed",
+      },
+    );
+  };
+
+  return {
+    listInstruments(request) {
+      return executeMarkets(
+        {
+          method: "GET",
+          path: `${marketsRouteMap.listInstruments}${buildInstrumentListQuery(request)}`,
+        },
+        decodeInstrumentList,
+      );
+    },
+    getInstrumentSummary(filters) {
+      return executeMarkets(
+        {
+          method: "GET",
+          path: `${marketsRouteMap.getInstrumentSummary}${buildInstrumentSummaryQuery(filters)}`,
+        },
+        decodeInstrumentSummary,
+      );
+    },
+    listOrders(request) {
+      return executeMarkets(
+        {
+          method: "GET",
+          path: `${marketsRouteMap.listOrders}${buildOrderListQuery(request)}`,
+        },
+        decodeOrderList,
+      );
+    },
+    getOrderSummary(filters) {
+      return executeMarkets(
+        {
+          method: "GET",
+          path: `${marketsRouteMap.getOrderSummary}${buildOrderSummaryQuery(filters)}`,
+        },
+        decodeOrderSummary,
+      );
+    },
+    listPositions(request) {
+      return executeMarkets(
+        {
+          method: "GET",
+          path: `${marketsRouteMap.listPositions}${buildPositionListQuery(request)}`,
+        },
+        decodePositionList,
+      );
+    },
+    getPositionSummary(filters) {
+      return executeMarkets(
+        {
+          method: "GET",
+          path: `${marketsRouteMap.getPositionSummary}${buildPositionSummaryQuery(filters)}`,
+        },
+        decodePositionSummary,
+      );
+    },
+    getMarketsOverview() {
+      return executeMarkets(
+        {
+          method: "GET",
+          path: marketsRouteMap.getMarketsOverview,
+        },
+        decodeMarketsOverview,
+      );
+    },
+    async getParityDiagnostics() {
+      if (mode === "mock") {
+        return {
+          mode,
+          baseUrl,
+          compatibilityVersion,
+          sourceOfTruth: MARKETS_PROTOCOL_SOURCE,
+          parityCheckMarker,
+          connectivity: {
+            checkedAt: new Date().toISOString(),
+            path: "mock://offline",
+            ok: true,
+            source: "mock",
+            message: "Mock mode active; live connectivity probe skipped",
+          },
+        };
+      }
+
+      const primaryPath = marketsOptions?.connectivityPath ?? "/health";
+      const primaryProbe = await probeConnectivity(transport, primaryPath);
+      if (primaryProbe.ok || primaryPath === marketsRouteMap.getMarketsOverview) {
+        return {
+          mode,
+          baseUrl,
+          compatibilityVersion,
+          sourceOfTruth: MARKETS_PROTOCOL_SOURCE,
+          parityCheckMarker,
+          connectivity: primaryProbe,
+        };
+      }
+
+      const fallbackProbe = await probeConnectivity(transport, marketsRouteMap.getMarketsOverview);
+
+      return {
+        mode,
+        baseUrl,
+        compatibilityVersion,
+        sourceOfTruth: MARKETS_PROTOCOL_SOURCE,
+        parityCheckMarker,
+        connectivity: fallbackProbe.ok
+          ? {
+              ...fallbackProbe,
+              message: `Primary probe failed (${primaryProbe.message}); fallback probe succeeded`,
+            }
+          : primaryProbe,
+      };
+    },
+  };
+}
+
 export function createPayClient(options: CreatePayClientOptions = {}): PayClient {
   return buildPayClient(createTransport(options), options);
 }
@@ -484,21 +770,7 @@ export function createApiClient(options: CreateApiClientOptions = {}): ApiClient
   const transport = createTransport(options);
 
   return {
-    markets: {
-      listAssets() {
-        return executeRaw(transport, { method: "GET", path: "/markets/assets" });
-      },
-      listPositions() {
-        return executeRaw(transport, { method: "GET", path: "/markets/positions" });
-      },
-      previewExecution(intent) {
-        return executeRaw(transport, {
-          method: "POST",
-          path: "/markets/execution/preview",
-          body: intent,
-        });
-      },
-    },
+    markets: buildMarketsClient(transport, options),
     pay: buildPayClient(transport, options),
     pointsTasks: {
       getEligibility(accountId) {
