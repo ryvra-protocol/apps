@@ -71,16 +71,6 @@ function createCaptureTransport(handler: (request: ApiRequest) => ApiResult<unkn
 
 test("contract decoding validates canonical markets payloads", async () => {
   const { transport } = createCaptureTransport((request) => {
-    if (request.path.startsWith(marketsRouteMap.listInstruments)) {
-      return {
-        ok: true,
-        data: {
-          items: [instrumentFixture],
-          pagination: { page: 1, pageSize: 20, total: 1, totalPages: 1 },
-        },
-      };
-    }
-
     if (request.path.startsWith(marketsRouteMap.getInstrumentSummary)) {
       return {
         ok: true,
@@ -93,11 +83,11 @@ test("contract decoding validates canonical markets payloads", async () => {
       };
     }
 
-    if (request.path.startsWith(marketsRouteMap.listOrders)) {
+    if (request.path.startsWith(marketsRouteMap.listInstruments)) {
       return {
         ok: true,
         data: {
-          items: [orderFixture],
+          items: [instrumentFixture],
           pagination: { page: 1, pageSize: 20, total: 1, totalPages: 1 },
         },
       };
@@ -116,11 +106,11 @@ test("contract decoding validates canonical markets payloads", async () => {
       };
     }
 
-    if (request.path.startsWith(marketsRouteMap.listPositions)) {
+    if (request.path.startsWith(marketsRouteMap.listOrders)) {
       return {
         ok: true,
         data: {
-          items: [positionFixture],
+          items: [orderFixture],
           pagination: { page: 1, pageSize: 20, total: 1, totalPages: 1 },
         },
       };
@@ -136,6 +126,16 @@ test("contract decoding validates canonical markets payloads", async () => {
           flatCount: 0,
           atRiskCount: 0,
           netExposureBand: "net_long",
+        },
+      };
+    }
+
+    if (request.path.startsWith(marketsRouteMap.listPositions)) {
+      return {
+        ok: true,
+        data: {
+          items: [positionFixture],
+          pagination: { page: 1, pageSize: 20, total: 1, totalPages: 1 },
         },
       };
     }
@@ -219,13 +219,45 @@ test("contract decoding rejects invalid markets payloads", async () => {
 });
 
 test("route mapping uses parity-aligned methods, paths, filters, and headers", async () => {
-  const { transport, calls } = createCaptureTransport(() => ({
-    ok: true,
-    data: {
-      items: [instrumentFixture],
-      pagination: { page: 1, pageSize: 20, total: 1, totalPages: 1 },
-    },
-  }));
+  const { transport, calls } = createCaptureTransport((request) => {
+    if (request.path.startsWith(marketsRouteMap.listInstruments)) {
+      return {
+        ok: true,
+        data: {
+          items: [instrumentFixture],
+          pagination: { page: 1, pageSize: 20, total: 1, totalPages: 1 },
+        },
+      };
+    }
+
+    if (request.path.startsWith(marketsRouteMap.listOrders)) {
+      return {
+        ok: true,
+        data: {
+          items: [orderFixture],
+          pagination: { page: 1, pageSize: 20, total: 1, totalPages: 1 },
+        },
+      };
+    }
+
+    if (request.path.startsWith(marketsRouteMap.listPositions)) {
+      return {
+        ok: true,
+        data: {
+          items: [positionFixture],
+          pagination: { page: 1, pageSize: 20, total: 1, totalPages: 1 },
+        },
+      };
+    }
+
+    return {
+      ok: true,
+      data: {
+        items: [],
+        pagination: { page: 1, pageSize: 20, total: 0, totalPages: 1 },
+      },
+    };
+  });
 
   const client = createApiClient({
     mode: "http",

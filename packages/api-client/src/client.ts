@@ -337,34 +337,6 @@ function buildPayHeaders(
     };
   }
 
-  function buildMarketsHeaders(
-    mode: CreateApiClientOptions["mode"],
-    marketsOptions: MarketsRuntimeHeaderOptions | undefined,
-  ): Record<string, string> {
-    const headers: Record<string, string> = {
-      ...(marketsOptions?.staticHeaders ?? {}),
-    };
-
-    if (mode === "mock") {
-      return headers;
-    }
-
-    const authorization = resolveAuthorizationValue(marketsOptions, undefined);
-    if (authorization) {
-      headers.authorization = authorization;
-    }
-
-    const requestIdHeader = normalizeHeaderValue(marketsOptions?.requestIdHeader) ?? "x-request-id";
-    const requestId = normalizeHeaderValue(marketsOptions?.requestIdProvider?.()) ?? createRequestId();
-    headers[requestIdHeader] = requestId;
-
-    const correlationIdHeader = normalizeHeaderValue(marketsOptions?.correlationIdHeader) ?? "x-correlation-id";
-    const correlationId = normalizeHeaderValue(marketsOptions?.correlationIdProvider?.()) ?? requestId;
-    headers[correlationIdHeader] = correlationId;
-
-    return headers;
-  }
-
   const authorization = resolveAuthorizationValue(payOptions, requestOptions);
   if (authorization) {
     headers.authorization = authorization;
@@ -392,6 +364,34 @@ function buildPayHeaders(
     ...headers,
     ...(requestOptions?.headers ?? {}),
   };
+}
+
+function buildMarketsHeaders(
+  mode: CreateApiClientOptions["mode"],
+  marketsOptions: MarketsRuntimeHeaderOptions | undefined,
+): Record<string, string> {
+  const headers: Record<string, string> = {
+    ...(marketsOptions?.staticHeaders ?? {}),
+  };
+
+  if (mode === "mock") {
+    return headers;
+  }
+
+  const authorization = resolveAuthorizationValue(marketsOptions, undefined);
+  if (authorization) {
+    headers.authorization = authorization;
+  }
+
+  const requestIdHeader = normalizeHeaderValue(marketsOptions?.requestIdHeader) ?? "x-request-id";
+  const requestId = normalizeHeaderValue(marketsOptions?.requestIdProvider?.()) ?? createRequestId();
+  headers[requestIdHeader] = requestId;
+
+  const correlationIdHeader = normalizeHeaderValue(marketsOptions?.correlationIdHeader) ?? "x-correlation-id";
+  const correlationId = normalizeHeaderValue(marketsOptions?.correlationIdProvider?.()) ?? requestId;
+  headers[correlationIdHeader] = correlationId;
+
+  return headers;
 }
 
 interface ConnectivityCheckResult {

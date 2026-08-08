@@ -62,39 +62,41 @@ export function parsePageSize(searchParams: RouteSearchParams, fallback = 20): n
 
 export function parseInstrumentStatus(searchParams: RouteSearchParams): InstrumentFilters["status"] | undefined {
   const status = getFirstParam(searchParams, "status")?.trim().toLowerCase();
-  return status && instrumentStatusSet.has(status as InstrumentFilters["status"]) ? (status as InstrumentFilters["status"]) : undefined;
+  return status && instrumentStatusSet.has(status as (typeof marketInstrumentStatuses)[number])
+    ? (status as InstrumentFilters["status"])
+    : undefined;
 }
 
 export function parseInstrumentClass(searchParams: RouteSearchParams): InstrumentFilters["assetClass"] | undefined {
   const assetClass = getFirstParam(searchParams, "assetClass")?.trim().toLowerCase();
-  return assetClass && instrumentClassSet.has(assetClass as InstrumentFilters["assetClass"])
+  return assetClass && instrumentClassSet.has(assetClass as (typeof marketInstrumentClasses)[number])
     ? (assetClass as InstrumentFilters["assetClass"])
     : undefined;
 }
 
 export function parseOrderStatus(searchParams: RouteSearchParams): OrderFilters["status"] | undefined {
   const status = getFirstParam(searchParams, "status")?.trim().toLowerCase();
-  return status && orderStatusSet.has(status as OrderFilters["status"]) ? (status as OrderFilters["status"]) : undefined;
+  return status && orderStatusSet.has(status as (typeof marketOrderStatuses)[number]) ? (status as OrderFilters["status"]) : undefined;
 }
 
 export function parseOrderSide(searchParams: RouteSearchParams): OrderFilters["side"] | undefined {
   const side = getFirstParam(searchParams, "side")?.trim().toLowerCase();
-  return side && orderSideSet.has(side as OrderFilters["side"]) ? (side as OrderFilters["side"]) : undefined;
+  return side && orderSideSet.has(side as (typeof marketSides)[number]) ? (side as OrderFilters["side"]) : undefined;
 }
 
 export function parseOrderType(searchParams: RouteSearchParams): OrderFilters["type"] | undefined {
   const type = getFirstParam(searchParams, "type")?.trim().toLowerCase();
-  return type && orderTypeSet.has(type as OrderFilters["type"]) ? (type as OrderFilters["type"]) : undefined;
+  return type && orderTypeSet.has(type as (typeof marketOrderTypes)[number]) ? (type as OrderFilters["type"]) : undefined;
 }
 
 export function parsePositionSide(searchParams: RouteSearchParams): PositionFilters["side"] | undefined {
   const side = getFirstParam(searchParams, "side")?.trim().toLowerCase();
-  return side && positionSideSet.has(side as PositionFilters["side"]) ? (side as PositionFilters["side"]) : undefined;
+  return side && positionSideSet.has(side as (typeof marketPositionSides)[number]) ? (side as PositionFilters["side"]) : undefined;
 }
 
 export function parsePositionRiskState(searchParams: RouteSearchParams): PositionFilters["riskState"] | undefined {
   const riskState = getFirstParam(searchParams, "riskState")?.trim().toLowerCase();
-  return riskState && positionRiskStateSet.has(riskState as PositionFilters["riskState"])
+  return riskState && positionRiskStateSet.has(riskState as (typeof marketPositionRiskStates)[number])
     ? (riskState as PositionFilters["riskState"])
     : undefined;
 }
