@@ -1,7 +1,7 @@
 import type { MarketsAccountScopedListRequest, PositionFilters } from "@ryvra/domain-markets";
 import { Card, Section, themeTokens } from "@ryvra/ui";
 import { ModeBadge } from "../components/mode-badge";
-import { ErrorState, UnauthorizedState } from "../components/page-states";
+import { EmptyState, ErrorState, UnauthorizedState } from "../components/page-states";
 import { PositionsTableClient } from "../components/positions-table-client";
 import {
   parseAccountId,
@@ -108,6 +108,14 @@ export default async function MarketsPositionsPage({ searchParams }: MarketsPosi
           </div>
 
           <PositionsTableClient items={positionList.items} pagination={positionList.pagination} />
+
+          {positionList.items.length === 0 ? (
+            <EmptyState
+              title="No positions"
+              description="No positions matched the current account scope and filters."
+              actionLink={{ href: "/positions", label: "Reset filters" }}
+            />
+          ) : null}
         </Section>
       </section>
     );

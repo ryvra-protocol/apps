@@ -9,7 +9,7 @@
     "lint": "eslint --max-warnings 0 --ext .ts src",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "build": "tsc -p tsconfig.json",
-    "test": "node -e \"console.log('No tests configured for @ryvra/config')\""
+    "test": "node --experimental-strip-types --test src/__tests__/**/*.spec.mjs"
   },
   "dependencies": {
     "zod": "^3.24.1"

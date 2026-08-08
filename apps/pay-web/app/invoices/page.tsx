@@ -2,7 +2,7 @@ import type { InvoiceFilters, PayListRequest } from "@ryvra/domain-payments";
 import { Card, Section, themeTokens } from "@ryvra/ui";
 import { InvoicesTableClient } from "../components/invoices-table-client";
 import { ModeBadge } from "../components/mode-badge";
-import { ErrorState, UnauthorizedState } from "../components/page-states";
+import { EmptyState, ErrorState, UnauthorizedState } from "../components/page-states";
 import { formatCurrencyMinor } from "../lib/format";
 import { getFirstParam, parseDateRange, parseInvoiceStatus, parsePage, parsePageSize, parseSortDirection, type RouteSearchParams } from "../lib/search-params";
 import { capturePayPageError, createPayRuntimeContext } from "../lib/runtime";
@@ -89,6 +89,14 @@ export default async function PayInvoicesPage({ searchParams }: PayInvoicesPageP
           </div>
 
           <InvoicesTableClient items={invoiceList.items} pagination={invoiceList.pagination} />
+
+          {invoiceList.items.length === 0 ? (
+            <EmptyState
+              title="No invoices"
+              description="No invoices matched the current filters."
+              actionLink={{ href: "/invoices", label: "Reset filters" }}
+            />
+          ) : null}
         </Section>
       </section>
     );

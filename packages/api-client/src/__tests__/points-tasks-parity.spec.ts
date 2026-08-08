@@ -499,6 +499,32 @@ test("auth/header enforcement keeps status auth-required while health is auth-op
   assert.equal(calls[0]?.headers?.["x-correlation-id"], "correlation-health");
 });
 
+test("non-canonical /health probe does not bypass auth and falls back to canonical health route", async () => {
+  const { transport, calls } = createCaptureTransport((request) => canonicalRouteHandler(request));
+  const client = createApiClient({
+    mode: "http",
+    baseUrl: "https://points-tasks.example",
+    transport,
+    pointsTasks: {
+      connectivityPath: "/health",
+      requestIdProvider: () => "request-fallback",
+      correlationIdProvider: () => "correlation-fallback",
+      defaultAccountId: "acct_123",
+    },
+  });
+
+  const diagnostics = await client.pointsTasks.getParityDiagnostics();
+
+  assert.equal(diagnostics.connectivity.ok, true);
+  assert.equal(diagnostics.connectivity.path, pointsTasksRouteMap.health);
+  assert.equal(diagnostics.connectivity.message.includes("Primary probe failed"), true);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0]?.path, pointsTasksRouteMap.health);
+  assert.equal(calls[0]?.headers?.authorization, undefined);
+  assert.equal(calls[0]?.headers?.["x-request-id"], "request-fallback");
+  assert.equal(calls[0]?.headers?.["x-correlation-id"], "correlation-fallback");
+});
+
 test("request serialization uses canonical filter/sort keys and pagination rules", async () => {
   const { transport, calls } = createCaptureTransport((request) => canonicalRouteHandler(request));
   const client = createApiClient({
@@ -706,6 +732,23 @@ test("canonical error normalization preserves points/tasks envelope", async () =
   assert.equal(normalized.retryable, false);
   assert.equal(normalized.source, "points_tasks_api");
   assert.equal(normalized.status, 403);
+
+  const inferredRetryable = normalizeApiError({
+    status: 503,
+    code: "http_request_failed",
+    message: "Service Unavailable",
+    details: {
+      code: "upstream_unavailable",
+      message: "tasks engine unavailable",
+      source: "tasks_engine",
+    },
+  });
+
+  assert.equal(inferredRetryable.code, "upstream_unavailable");
+  assert.equal(inferredRetryable.message, "tasks engine unavailable");
+  assert.equal(inferredRetryable.retryable, true);
+  assert.equal(inferredRetryable.source, "tasks_engine");
+  assert.equal(inferredRetryable.status, 503);
 
   const transport = createFetchTransport({
     baseUrl: "https://points-tasks.example",

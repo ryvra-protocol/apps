@@ -20,20 +20,41 @@ const envSchema = z.object({
   RYVRA_MARKETS_PARITY_CHECK_MARKER: z.string().optional(),
   RYVRA_MARKETS_CONNECTIVITY_PATH: z.string().optional(),
   RYVRA_MARKETS_ACCOUNT_ID: z.string().optional(),
+  RYVRA_MARKETS_AUTH_TOKEN: z.string().optional(),
   RYVRA_POINTS_TASKS_COMPATIBILITY_VERSION: z.string().optional(),
   RYVRA_POINTS_TASKS_PARITY_CHECK_MARKER: z.string().optional(),
   RYVRA_POINTS_TASKS_CONNECTIVITY_PATH: z.string().optional(),
   RYVRA_POINTS_TASKS_ACCOUNT_ID: z.string().optional(),
+  RYVRA_POINTS_TASKS_AUTH_TOKEN: z.string().optional(),
   RYVRA_FEATURE_MARKETS_ENABLED: z.coerce.boolean().default(true),
   RYVRA_FEATURE_PAY_ENABLED: z.coerce.boolean().default(true),
   RYVRA_FEATURE_POINTS_TASKS_ENABLED: z.coerce.boolean().default(true),
 });
 
+type ParsedEnv = z.infer<typeof envSchema>;
+
+function parseEnv(env: NodeJS.ProcessEnv): ParsedEnv {
+  const parsed = envSchema.safeParse(env);
+
+  if (parsed.success) {
+    return parsed.data;
+  }
+
+  const issues = parsed.error.issues
+    .map((issue) => {
+      const path = issue.path.join(".") || "env";
+      return `${path}: ${issue.message}`;
+    })
+    .join("; ");
+
+  throw new Error(`[config] Invalid environment configuration: ${issues}`);
+}
+
 function normalizeRuntimeMode(value: z.infer<typeof runtimeModeSchema>): RuntimeMode {
   return value === "live" ? "http" : value;
 }
 
-function toFeatureFlags(parsedEnv: z.infer<typeof envSchema>): FeatureFlags {
+function toFeatureFlags(parsedEnv: ParsedEnv): FeatureFlags {
   return {
     marketsEnabled: parsedEnv.RYVRA_FEATURE_MARKETS_ENABLED,
     payEnabled: parsedEnv.RYVRA_FEATURE_PAY_ENABLED,
@@ -41,7 +62,7 @@ function toFeatureFlags(parsedEnv: z.infer<typeof envSchema>): FeatureFlags {
   };
 }
 
-function resolveMode(appId: AppId, parsedEnv: z.infer<typeof envSchema>): RuntimeMode {
+function resolveMode(appId: AppId, parsedEnv: ParsedEnv): RuntimeMode {
   if (appId === "pay" && parsedEnv.RYVRA_PAY_RUNTIME_MODE) {
     return normalizeRuntimeMode(parsedEnv.RYVRA_PAY_RUNTIME_MODE);
   }
@@ -49,7 +70,7 @@ function resolveMode(appId: AppId, parsedEnv: z.infer<typeof envSchema>): Runtim
   return normalizeRuntimeMode(parsedEnv.RYVRA_RUNTIME_MODE);
 }
 
-function resolveApiBaseUrl(appId: AppId, parsedEnv: z.infer<typeof envSchema>): string {
+function resolveApiBaseUrl(appId: AppId, parsedEnv: ParsedEnv): string {
   if (appId === "pay" && parsedEnv.RYVRA_PAY_API_BASE_URL) {
     return parsedEnv.RYVRA_PAY_API_BASE_URL;
   }
@@ -62,13 +83,34 @@ function normalizeOptionalString(value: string | undefined): string | undefined 
   return normalized && normalized.length > 0 ? normalized : undefined;
 }
 
+function assertRequiredHttpVars(appId: AppId, mode: RuntimeMode, parsedEnv: ParsedEnv): void {
+  if (mode !== "http") {
+    return;
+  }
+
+  if (appId === "markets" && !normalizeOptionalString(parsedEnv.RYVRA_MARKETS_AUTH_TOKEN)) {
+    throw new Error(
+      "[config] RYVRA_MARKETS_AUTH_TOKEN is required in http mode for Markets non-health routes. Set RYVRA_MARKETS_AUTH_TOKEN or switch RYVRA_RUNTIME_MODE=mock.",
+    );
+  }
+
+  if (appId === "points-tasks" && !normalizeOptionalString(parsedEnv.RYVRA_POINTS_TASKS_AUTH_TOKEN)) {
+    throw new Error(
+      "[config] RYVRA_POINTS_TASKS_AUTH_TOKEN is required in http mode for Points/Tasks canonical routes. Set RYVRA_POINTS_TASKS_AUTH_TOKEN or switch RYVRA_RUNTIME_MODE=mock.",
+    );
+  }
+}
+
 export function loadAppConfig(appId: AppId, env: NodeJS.ProcessEnv = process.env): AppConfig {
-  const parsedEnv = envSchema.parse(env);
+  const parsedEnv = parseEnv(env);
+  const mode = resolveMode(appId, parsedEnv);
+
+  assertRequiredHttpVars(appId, mode, parsedEnv);
 
   return {
     appId,
     nodeEnv: parsedEnv.NODE_ENV,
-    mode: resolveMode(appId, parsedEnv),
+    mode,
     apiBaseUrl: resolveApiBaseUrl(appId, parsedEnv),
     featureFlags: toFeatureFlags(parsedEnv),
   };
@@ -80,7 +122,7 @@ export function loadMarketsConfig(env: NodeJS.ProcessEnv = process.env): AppConf
 
 export function loadMarketsIntegrationConfig(env: NodeJS.ProcessEnv = process.env): MarketsIntegrationConfig {
   const base = loadMarketsConfig(env);
-  const parsedEnv = envSchema.parse(env);
+  const parsedEnv = parseEnv(env);
   const compatibilityVersion = normalizeOptionalString(parsedEnv.RYVRA_MARKETS_COMPATIBILITY_VERSION);
   const parityCheckMarker = normalizeOptionalString(parsedEnv.RYVRA_MARKETS_PARITY_CHECK_MARKER);
   const connectivityPath = normalizeOptionalString(parsedEnv.RYVRA_MARKETS_CONNECTIVITY_PATH);
@@ -105,7 +147,7 @@ export function loadPointsTasksConfig(env: NodeJS.ProcessEnv = process.env): App
 
 export function loadPointsTasksIntegrationConfig(env: NodeJS.ProcessEnv = process.env): PointsTasksIntegrationConfig {
   const base = loadPointsTasksConfig(env);
-  const parsedEnv = envSchema.parse(env);
+  const parsedEnv = parseEnv(env);
   const compatibilityVersion = normalizeOptionalString(parsedEnv.RYVRA_POINTS_TASKS_COMPATIBILITY_VERSION);
   const parityCheckMarker = normalizeOptionalString(parsedEnv.RYVRA_POINTS_TASKS_PARITY_CHECK_MARKER);
   const connectivityPath = normalizeOptionalString(parsedEnv.RYVRA_POINTS_TASKS_CONNECTIVITY_PATH);

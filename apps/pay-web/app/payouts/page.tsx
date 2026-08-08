@@ -1,7 +1,7 @@
 import type { PayListRequest, PayoutFilters } from "@ryvra/domain-payments";
 import { Card, Section, themeTokens } from "@ryvra/ui";
 import { ModeBadge } from "../components/mode-badge";
-import { ErrorState, UnauthorizedState } from "../components/page-states";
+import { EmptyState, ErrorState, UnauthorizedState } from "../components/page-states";
 import { PayoutsTableClient } from "../components/payouts-table-client";
 import { formatCurrencyMinor } from "../lib/format";
 import {
@@ -97,6 +97,14 @@ export default async function PayPayoutsPage({ searchParams }: PayPayoutsPagePro
           </div>
 
           <PayoutsTableClient items={payoutList.items} pagination={payoutList.pagination} />
+
+          {payoutList.items.length === 0 ? (
+            <EmptyState
+              title="No payouts"
+              description="No payouts matched the current filters."
+              actionLink={{ href: "/payouts", label: "Reset filters" }}
+            />
+          ) : null}
         </Section>
       </section>
     );

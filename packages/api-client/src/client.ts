@@ -516,6 +516,19 @@ function normalizeHeaderValue(value: string | undefined): string | undefined {
   return trimmed && trimmed.length > 0 ? trimmed : undefined;
 }
 
+function setRequestCorrelationHeaders(
+  headers: Record<string, string>,
+  requestIdHeader: string,
+  requestId: string,
+  correlationIdHeader: string,
+  correlationId: string,
+): void {
+  headers[requestIdHeader] = requestId;
+  headers["x-request-id"] = requestId;
+  headers[correlationIdHeader] = correlationId;
+  headers["x-correlation-id"] = correlationId;
+}
+
 function resolveHeaderWithFallback(
   provided: string | undefined,
   runtimeProvider: (() => string | undefined) | undefined,
@@ -553,40 +566,36 @@ function buildPayHeaders(
     ...(payOptions?.staticHeaders ?? {}),
   };
 
-  if (mode === "mock") {
-    return {
-      ...headers,
-      ...(requestOptions?.headers ?? {}),
-    };
-  }
-
-  const authorization = resolveAuthorizationValue(payOptions, requestOptions);
-  if (authorization) {
-    headers.authorization = authorization;
-  }
-
   const requestIdHeader = normalizeHeaderValue(payOptions?.requestIdHeader) ?? "x-request-id";
   const requestId = normalizeHeaderValue(requestOptions?.requestId) ??
     normalizeHeaderValue(payOptions?.requestIdProvider?.()) ??
     createRequestId();
-  headers[requestIdHeader] = requestId;
-
   const correlationIdHeader = normalizeHeaderValue(payOptions?.correlationIdHeader) ?? "x-correlation-id";
   const correlationId = normalizeHeaderValue(requestOptions?.correlationId) ??
     normalizeHeaderValue(payOptions?.correlationIdProvider?.()) ??
     requestId;
-  headers[correlationIdHeader] = correlationId;
 
-  const idempotencyKey = normalizeHeaderValue(requestOptions?.idempotencyKey);
-  if (idempotencyKey && method !== "GET") {
-    const idempotencyHeader = normalizeHeaderValue(payOptions?.idempotencyHeader) ?? "idempotency-key";
-    headers[idempotencyHeader] = idempotencyKey;
+  if (mode !== "mock") {
+    const authorization = resolveAuthorizationValue(payOptions, requestOptions);
+    if (authorization) {
+      headers.authorization = authorization;
+    }
+
+    const idempotencyKey = normalizeHeaderValue(requestOptions?.idempotencyKey);
+    if (idempotencyKey && method !== "GET") {
+      const idempotencyHeader = normalizeHeaderValue(payOptions?.idempotencyHeader) ?? "idempotency-key";
+      headers[idempotencyHeader] = idempotencyKey;
+    }
   }
 
-  return {
+  const mergedHeaders = {
     ...headers,
     ...(requestOptions?.headers ?? {}),
   };
+
+  setRequestCorrelationHeaders(mergedHeaders, requestIdHeader, requestId, correlationIdHeader, correlationId);
+
+  return mergedHeaders;
 }
 
 function buildMarketsHeaders(
@@ -597,24 +606,19 @@ function buildMarketsHeaders(
     ...(marketsOptions?.staticHeaders ?? {}),
   };
 
-  if (mode === "mock") {
-    return headers;
-  }
-
-  const authorization = resolveAuthorizationValue(marketsOptions, undefined);
-  if (authorization) {
-    headers.authorization = authorization;
-  }
-
   const requestIdHeader = normalizeHeaderValue(marketsOptions?.requestIdHeader) ?? "x-request-id";
   const requestId = normalizeHeaderValue(marketsOptions?.requestIdProvider?.()) ?? createRequestId();
-  headers[requestIdHeader] = requestId;
-  headers["x-request-id"] = requestId;
-
   const correlationIdHeader = normalizeHeaderValue(marketsOptions?.correlationIdHeader) ?? "x-correlation-id";
   const correlationId = normalizeHeaderValue(marketsOptions?.correlationIdProvider?.()) ?? requestId;
-  headers[correlationIdHeader] = correlationId;
-  headers["x-correlation-id"] = correlationId;
+
+  setRequestCorrelationHeaders(headers, requestIdHeader, requestId, correlationIdHeader, correlationId);
+
+  if (mode !== "mock") {
+    const authorization = resolveAuthorizationValue(marketsOptions, undefined);
+    if (authorization) {
+      headers.authorization = authorization;
+    }
+  }
 
   return headers;
 }
@@ -629,13 +633,9 @@ function buildPointsTasksHeaders(
 
   const requestIdHeader = normalizeHeaderValue(pointsTasksOptions?.requestIdHeader) ?? "x-request-id";
   const requestId = normalizeHeaderValue(pointsTasksOptions?.requestIdProvider?.()) ?? createRequestId();
-  headers[requestIdHeader] = requestId;
-  headers["x-request-id"] = requestId;
-
   const correlationIdHeader = normalizeHeaderValue(pointsTasksOptions?.correlationIdHeader) ?? "x-correlation-id";
   const correlationId = normalizeHeaderValue(pointsTasksOptions?.correlationIdProvider?.()) ?? requestId;
-  headers[correlationIdHeader] = correlationId;
-  headers["x-correlation-id"] = correlationId;
+  setRequestCorrelationHeaders(headers, requestIdHeader, requestId, correlationIdHeader, correlationId);
 
   if (mode === "mock") {
     return headers;
@@ -703,10 +703,14 @@ function enforceMarketsHttpGuards(
   if (!isHealthRoute) {
     const authorization = headers.authorization?.trim();
     if (!authorization || !authorization.startsWith("Bearer ")) {
-      throw createMarketsValidationError("unauthorized", "bearer token is required for non-health Markets routes", {
+      throw createMarketsValidationError(
+        "unauthorized",
+        "bearer token is required for non-health Markets routes; set RYVRA_MARKETS_AUTH_TOKEN in http mode",
+        {
         path: request.path,
         method: request.method,
-      });
+        },
+      );
     }
   }
 
@@ -722,11 +726,15 @@ function enforceMarketsHttpGuards(
   if (marketsAccountScopedRoutes.includes(pathname as (typeof marketsAccountScopedRoutes)[number])) {
     const accountId = getSearchParam(request.path, "account_id");
     if (!accountId) {
-      throw createMarketsValidationError("invalid_request", "account_id is required for this Markets endpoint", {
-        path: request.path,
-        method: request.method,
-        requiredParam: "account_id",
-      });
+      throw createMarketsValidationError(
+        "invalid_request",
+        "account_id is required for this Markets endpoint; provide account_id or configure RYVRA_MARKETS_ACCOUNT_ID",
+        {
+          path: request.path,
+          method: request.method,
+          requiredParam: "account_id",
+        },
+      );
     }
   }
 }
@@ -741,15 +749,14 @@ function enforcePointsTasksHttpGuards(
   }
 
   const pathname = extractPathname(request.path);
-  const isAuthOptionalRoute =
-    pathname === "/health" || pointsTasksAuthOptionalRoutes.includes(pathname as (typeof pointsTasksAuthOptionalRoutes)[number]);
+  const isAuthOptionalRoute = pointsTasksAuthOptionalRoutes.includes(pathname as (typeof pointsTasksAuthOptionalRoutes)[number]);
 
   if (!isAuthOptionalRoute) {
     const authorization = headers.authorization?.trim();
     if (!authorization || !authorization.startsWith("Bearer ")) {
       throw createPointsTasksValidationError(
         "unauthorized",
-        "bearer token is required for this Points/Tasks route",
+        "bearer token is required for this Points/Tasks route; set RYVRA_POINTS_TASKS_AUTH_TOKEN in http mode",
         {
           path: request.path,
           method: request.method,
@@ -776,7 +783,7 @@ function enforcePointsTasksHttpGuards(
     if (!accountId) {
       throw createPointsTasksValidationError(
         "invalid_request",
-        "account_id is required for this Points/Tasks endpoint",
+        "account_id is required for this Points/Tasks endpoint; provide account_id or configure RYVRA_POINTS_TASKS_ACCOUNT_ID",
         {
           path: request.path,
           method: request.method,
@@ -794,30 +801,6 @@ interface ConnectivityCheckResult {
   source: ApiErrorSource;
   status?: number;
   message: string;
-}
-
-async function probeConnectivity(transport: Transport, path: string): Promise<ConnectivityCheckResult> {
-  const checkedAt = new Date().toISOString();
-  const probe = await transport.request<unknown>({ method: "GET", path });
-
-  if (probe.ok) {
-    return {
-      checkedAt,
-      path,
-      ok: true,
-      source: "http",
-      message: "Connectivity probe succeeded",
-    };
-  }
-
-  return {
-    checkedAt,
-    path,
-    ok: false,
-    source: probe.error.source,
-    ...(typeof probe.error.status === "number" ? { status: probe.error.status } : {}),
-    message: probe.error.message,
-  };
 }
 
 function buildPayClient(transport: Transport, options: CreateApiClientOptions): PayClient {
@@ -845,6 +828,34 @@ function buildPayClient(transport: Transport, options: CreateApiClientOptions): 
         validationMessage: "Pay payload validation failed",
       },
     );
+  };
+
+  const probePayConnectivity = async (path: string): Promise<ConnectivityCheckResult> => {
+    const checkedAt = new Date().toISOString();
+    const probe = await transport.request<unknown>({
+      method: "GET",
+      path,
+      headers: buildPayHeaders(mode, payOptions, undefined, "GET"),
+    });
+
+    if (probe.ok) {
+      return {
+        checkedAt,
+        path,
+        ok: true,
+        source: "http",
+        message: "Connectivity probe succeeded",
+      };
+    }
+
+    return {
+      checkedAt,
+      path,
+      ok: false,
+      source: probe.error.source,
+      ...(typeof probe.error.status === "number" ? { status: probe.error.status } : {}),
+      message: probe.error.message,
+    };
   };
 
   return {
@@ -983,7 +994,7 @@ function buildPayClient(transport: Transport, options: CreateApiClientOptions): 
       }
 
       const primaryPath = payOptions?.connectivityPath ?? "/health";
-      const primaryProbe = await probeConnectivity(transport, primaryPath);
+      const primaryProbe = await probePayConnectivity(primaryPath);
       if (primaryProbe.ok || primaryPath === payRouteMap.getPayOverview) {
         return {
           mode,
@@ -995,7 +1006,7 @@ function buildPayClient(transport: Transport, options: CreateApiClientOptions): 
         };
       }
 
-      const fallbackProbe = await probeConnectivity(transport, payRouteMap.getPayOverview);
+      const fallbackProbe = await probePayConnectivity(payRouteMap.getPayOverview);
 
       return {
         mode,
@@ -1318,10 +1329,14 @@ function buildPointsTasksClient(transport: Transport, options: CreateApiClientOp
   const resolveRequiredAccountId = (provided: string | undefined, route: string): string => {
     const accountId = resolveAccountId(provided);
     if (!accountId) {
-      throw createPointsTasksValidationError("invalid_request", "account_id is required for this Points/Tasks endpoint", {
-        route,
-        requiredParam: "account_id",
-      });
+      throw createPointsTasksValidationError(
+        "invalid_request",
+        "account_id is required for this Points/Tasks endpoint; provide account_id or configure RYVRA_POINTS_TASKS_ACCOUNT_ID",
+        {
+          route,
+          requiredParam: "account_id",
+        },
+      );
     }
 
     return accountId;

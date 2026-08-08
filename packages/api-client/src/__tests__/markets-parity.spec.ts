@@ -503,6 +503,25 @@ test("error normalization preserves canonical markets error envelope", async () 
   assert.equal(normalized.source, "policy-risk");
   assert.equal(normalized.status, 403);
 
+  const sourceFallback = normalizeApiError({
+    status: 400,
+    source: "http",
+    code: "http_request_failed",
+    message: "Bad Request",
+    details: {
+      code: "invalid_request",
+      message: "invalid query payload",
+      retryable: false,
+      source: "unsupported-backend",
+    },
+  });
+
+  assert.equal(sourceFallback.code, "invalid_request");
+  assert.equal(sourceFallback.message, "invalid query payload");
+  assert.equal(sourceFallback.retryable, false);
+  assert.equal(sourceFallback.source, "http");
+  assert.equal(sourceFallback.status, 400);
+
   const transport = createFetchTransport({
     baseUrl: "https://markets.example",
     fetchImpl: async () =>
