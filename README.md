@@ -1,6 +1,6 @@
 # Ryvra Apps Platform Monorepo
 
-This repository hosts the Phase 8 unified-shell + Pay MVP data wiring foundation for the Ryvra web app platform:
+This repository hosts the unified-shell baseline with Pay and Markets MVP data wiring for the Ryvra web app platform:
 
 - `apps/markets-web`
 - `apps/pay-web`
@@ -49,6 +49,44 @@ pnpm test
 pnpm dev:markets
 pnpm dev:pay
 pnpm dev:points
+```
+
+## Markets MVP parity development (Phase 9)
+
+`apps/markets-web` now supports typed Markets MVP wiring with preserved dual-mode transport:
+
+- `mock` for deterministic local development
+- `http` for live integration parity checks
+
+### Environment variables
+
+Core mode/base URL:
+
+- `RYVRA_RUNTIME_MODE` (`mock` or `http`)
+- `RYVRA_API_BASE_URL` (default: `http://localhost:4000`)
+
+Markets parity/auth/header controls:
+
+- `RYVRA_MARKETS_AUTH_TOKEN` (optional bearer token)
+- `RYVRA_MARKETS_AUTH_SCHEME` (default: `Bearer`)
+- `RYVRA_MARKETS_REQUEST_ID_HEADER` (default: `x-request-id`)
+- `RYVRA_MARKETS_CORRELATION_ID_HEADER` (default: `x-correlation-id`)
+- `RYVRA_MARKETS_CONNECTIVITY_PATH` (default probe: `/health`, fallback `/markets/overview`)
+- `RYVRA_MARKETS_COMPATIBILITY_VERSION` (optional override)
+- `RYVRA_MARKETS_PARITY_CHECK_MARKER` (optional override)
+
+Optional smoke-test guard:
+
+- `RYVRA_MARKETS_CONNECTIVITY_SMOKE_URL`
+- `RYVRA_MARKETS_CONNECTIVITY_SMOKE_PATH` (optional, defaults to `/health`)
+
+### Useful commands
+
+```bash
+pnpm --filter @ryvra/markets-web dev
+pnpm --filter @ryvra/markets-web typecheck
+pnpm --filter @ryvra/markets-web build
+pnpm --filter @ryvra/api-client test:parity
 ```
 
 ## Pay integration parity development (Phase 8.5)
@@ -140,5 +178,6 @@ See `docs/architecture/` for boundaries, responsibilities, and integration mappi
 
 - `docs/architecture/unified-shell.md`
 - `docs/architecture/cross-app-routing.md`
+- `docs/architecture/markets-mvp-data-flow.md`
 - `docs/architecture/pay-mvp-data-flow.md`
 - `docs/architecture/pay-integration-parity.md`

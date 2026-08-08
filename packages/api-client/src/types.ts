@@ -1,4 +1,17 @@
-import type { AssetDto, ExecutionIntent, OrderDto, PositionDto } from "@ryvra/domain-markets";
+import type {
+  InstrumentDto,
+  InstrumentFilters,
+  InstrumentSummaryDto,
+  MarketsListRequest,
+  MarketsListResponse,
+  MarketsOverviewDto,
+  OrderDto,
+  OrderFilters,
+  OrderSummaryDto,
+  PositionDto,
+  PositionFilters,
+  PositionSummaryDto,
+} from "@ryvra/domain-markets";
 import type {
   InvoiceDto,
   InvoiceFilters,
@@ -77,6 +90,18 @@ export interface PayRuntimeHeaderOptions {
   connectivityPath?: string;
 }
 
+export interface MarketsRuntimeHeaderOptions {
+  authToken?: string;
+  authTokenProvider?: () => string | undefined;
+  authScheme?: string;
+  requestIdHeader?: string;
+  requestIdProvider?: () => string;
+  correlationIdHeader?: string;
+  correlationIdProvider?: () => string;
+  staticHeaders?: Record<string, string>;
+  connectivityPath?: string;
+}
+
 export interface PayConnectivityCheckResult {
   checkedAt: string;
   path: string;
@@ -95,10 +120,33 @@ export interface PayParityDiagnostics {
   connectivity: PayConnectivityCheckResult;
 }
 
+export interface MarketsConnectivityCheckResult {
+  checkedAt: string;
+  path: string;
+  ok: boolean;
+  source: ApiErrorSource;
+  status?: number;
+  message: string;
+}
+
+export interface MarketsParityDiagnostics {
+  mode: ApiClientMode;
+  baseUrl: string;
+  compatibilityVersion: string;
+  sourceOfTruth: string;
+  parityCheckMarker: string;
+  connectivity: MarketsConnectivityCheckResult;
+}
+
 export interface MarketsClient {
-  listAssets(): Promise<AssetDto[]>;
-  listPositions(): Promise<PositionDto[]>;
-  previewExecution(intent: ExecutionIntent): Promise<OrderDto>;
+  listInstruments(request?: MarketsListRequest<InstrumentFilters>): Promise<MarketsListResponse<InstrumentDto>>;
+  getInstrumentSummary(filters?: InstrumentFilters): Promise<InstrumentSummaryDto>;
+  listOrders(request?: MarketsListRequest<OrderFilters>): Promise<MarketsListResponse<OrderDto>>;
+  getOrderSummary(filters?: OrderFilters): Promise<OrderSummaryDto>;
+  listPositions(request?: MarketsListRequest<PositionFilters>): Promise<MarketsListResponse<PositionDto>>;
+  getPositionSummary(filters?: PositionFilters): Promise<PositionSummaryDto>;
+  getMarketsOverview(): Promise<MarketsOverviewDto>;
+  getParityDiagnostics(): Promise<MarketsParityDiagnostics>;
 }
 
 export interface PayClient {
@@ -139,6 +187,9 @@ export interface CreateApiClientOptions {
   mode?: ApiClientMode;
   baseUrl?: string;
   transport?: Transport;
+  markets?: MarketsRuntimeHeaderOptions;
+  marketsCompatibilityVersion?: string;
+  marketsParityCheckMarker?: string;
   pay?: PayRuntimeHeaderOptions;
   payCompatibilityVersion?: string;
   payParityCheckMarker?: string;

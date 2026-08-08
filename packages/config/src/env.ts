@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { AppConfig, AppId, FeatureFlags, RuntimeMode } from "./types";
+import type { AppConfig, AppId, FeatureFlags, MarketsIntegrationConfig, RuntimeMode } from "./types";
 
 const runtimeModeSchema = z.enum(["mock", "http", "live"]);
 
@@ -9,6 +9,9 @@ const envSchema = z.object({
   RYVRA_API_BASE_URL: z.string().url().default("http://localhost:4000"),
   RYVRA_PAY_RUNTIME_MODE: runtimeModeSchema.optional(),
   RYVRA_PAY_API_BASE_URL: z.string().url().optional(),
+  RYVRA_MARKETS_COMPATIBILITY_VERSION: z.string().optional(),
+  RYVRA_MARKETS_PARITY_CHECK_MARKER: z.string().optional(),
+  RYVRA_MARKETS_CONNECTIVITY_PATH: z.string().optional(),
   RYVRA_FEATURE_MARKETS_ENABLED: z.coerce.boolean().default(true),
   RYVRA_FEATURE_PAY_ENABLED: z.coerce.boolean().default(true),
   RYVRA_FEATURE_POINTS_TASKS_ENABLED: z.coerce.boolean().default(true),
@@ -42,6 +45,11 @@ function resolveApiBaseUrl(appId: AppId, parsedEnv: z.infer<typeof envSchema>): 
   return parsedEnv.RYVRA_API_BASE_URL;
 }
 
+function normalizeOptionalString(value: string | undefined): string | undefined {
+  const normalized = value?.trim();
+  return normalized && normalized.length > 0 ? normalized : undefined;
+}
+
 export function loadAppConfig(appId: AppId, env: NodeJS.ProcessEnv = process.env): AppConfig {
   const parsedEnv = envSchema.parse(env);
 
@@ -56,6 +64,21 @@ export function loadAppConfig(appId: AppId, env: NodeJS.ProcessEnv = process.env
 
 export function loadMarketsConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   return loadAppConfig("markets", env);
+}
+
+export function loadMarketsIntegrationConfig(env: NodeJS.ProcessEnv = process.env): MarketsIntegrationConfig {
+  const base = loadMarketsConfig(env);
+  const parsedEnv = envSchema.parse(env);
+  const compatibilityVersion = normalizeOptionalString(parsedEnv.RYVRA_MARKETS_COMPATIBILITY_VERSION);
+  const parityCheckMarker = normalizeOptionalString(parsedEnv.RYVRA_MARKETS_PARITY_CHECK_MARKER);
+  const connectivityPath = normalizeOptionalString(parsedEnv.RYVRA_MARKETS_CONNECTIVITY_PATH);
+
+  return {
+    ...base,
+    ...(compatibilityVersion ? { compatibilityVersion } : {}),
+    ...(parityCheckMarker ? { parityCheckMarker } : {}),
+    ...(connectivityPath ? { connectivityPath } : {}),
+  };
 }
 
 export function loadPayConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {

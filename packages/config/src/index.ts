@@ -1,5 +1,5 @@
-export type { AppId, RuntimeMode, FeatureFlags, AppConfig } from "./types";
-export { loadAppConfig, loadMarketsConfig, loadPayConfig, loadPointsTasksConfig } from "./env";
+export type { AppId, RuntimeMode, FeatureFlags, AppConfig, MarketsIntegrationConfig } from "./types";
+export { loadAppConfig, loadMarketsConfig, loadMarketsIntegrationConfig, loadPayConfig, loadPointsTasksConfig } from "./env";
 export {
   routeRegistry,
   getGlobalNavItems,
