@@ -19,4 +19,5 @@ export interface MarketsIntegrationConfig extends AppConfig {
   compatibilityVersion?: string;
   parityCheckMarker?: string;
   connectivityPath?: string;
+  accountId?: string;
 }

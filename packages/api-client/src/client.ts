@@ -1,5 +1,8 @@
 import type {
   InstrumentFilters,
+  MarketsAccountScopedListRequest,
+  MarketsAccountScopedRequest,
+  MarketsAccountScopedSummaryRequest,
   MarketsDateRangeFilter,
   MarketsListRequest,
   OrderFilters,
@@ -36,9 +39,14 @@ import {
   decodePositionSummary,
 } from "./markets-codec";
 import {
+  MARKETS_PROTOCOL_CHANGELOG_PATH,
   MARKETS_PARITY_CHECK_MARKER,
   MARKETS_PROTOCOL_COMPATIBILITY_VERSION,
+  MARKETS_PROTOCOL_OPENAPI_COMMIT,
+  MARKETS_PROTOCOL_OPENAPI_PATH,
+  MARKETS_PROTOCOL_OPENAPI_SHA,
   MARKETS_PROTOCOL_SOURCE,
+  marketsAccountScopedRoutes,
   marketsRouteMap,
 } from "./markets-parity";
 import {
@@ -50,6 +58,7 @@ import {
 import { createFetchTransport } from "./transport";
 import type {
   ApiClient,
+  ApiErrorSource,
   ApiRequest,
   ApiResult,
   CreateApiClientOptions,
@@ -165,6 +174,53 @@ function setPaginationAndSort<TFilters extends object>(
   setIfPresent(params, "sort_direction", request.sort?.direction);
 }
 
+interface MarketsListRequestLike<TFilters extends object> {
+  filters?: TFilters;
+  pagination?: {
+    limit?: number;
+    cursor?: string;
+    page?: number;
+    pageSize?: number;
+  };
+  sort?: {
+    field?: string;
+    direction?: string;
+  };
+}
+
+function setMarketsPaginationAndSort<TFilters extends object>(
+  params: URLSearchParams,
+  request: MarketsListRequestLike<TFilters> | undefined,
+): void {
+  if (!request) {
+    return;
+  }
+
+  const limit = request.pagination?.limit ?? request.pagination?.pageSize;
+  setIfPresent(params, "limit", limit);
+
+  const cursor = request.pagination?.cursor?.trim();
+  if (cursor) {
+    params.set("cursor", cursor);
+  } else {
+    // Deprecated compatibility shim per canonical contract deprecation window (no earlier than 2027-02-08).
+    setIfPresent(params, "page", request.pagination?.page);
+  }
+
+  setIfPresent(params, "sort_by", request.sort?.field);
+  setIfPresent(params, "sort_order", request.sort?.direction);
+}
+
+function setCreatedDateRange(
+  params: URLSearchParams,
+  createdAfter: string | undefined,
+  createdBefore: string | undefined,
+  dateRange: MarketsDateRangeFilter | undefined,
+): void {
+  setIfPresent(params, "created_after", createdAfter ?? dateRange?.from);
+  setIfPresent(params, "created_before", createdBefore ?? dateRange?.to);
+}
+
 function toQueryString(params: URLSearchParams): string {
   const serialized = params.toString();
   return serialized.length > 0 ? `?${serialized}` : "";
@@ -223,60 +279,92 @@ function buildReconciliationSummaryQuery(filters: ReconciliationFilters | undefi
 
 function buildInstrumentListQuery(request: MarketsListRequest<InstrumentFilters> | undefined): string {
   const params = new URLSearchParams();
-  setPaginationAndSort(params, request);
-  setIfPresent(params, "search", request?.filters?.search);
+  setMarketsPaginationAndSort(params, request);
+  setIfPresent(params, "q", request?.filters?.q ?? request?.filters?.search);
   setIfPresent(params, "asset_class", request?.filters?.assetClass);
   setIfPresent(params, "status", request?.filters?.status);
+  setIfPresent(params, "availability", request?.filters?.availability);
+  setIfPresent(params, "chain_id", request?.filters?.chainId);
   return toQueryString(params);
 }
 
 function buildInstrumentSummaryQuery(filters: InstrumentFilters | undefined): string {
   const params = new URLSearchParams();
-  setIfPresent(params, "search", filters?.search);
+  setIfPresent(params, "q", filters?.q ?? filters?.search);
   setIfPresent(params, "asset_class", filters?.assetClass);
   setIfPresent(params, "status", filters?.status);
+  setIfPresent(params, "availability", filters?.availability);
+  setIfPresent(params, "chain_id", filters?.chainId);
   return toQueryString(params);
 }
 
-function buildOrderListQuery(request: MarketsListRequest<OrderFilters> | undefined): string {
+function buildOrderListQuery(request: MarketsAccountScopedListRequest<OrderFilters>): string {
   const params = new URLSearchParams();
-  setPaginationAndSort(params, request);
+  setMarketsPaginationAndSort(params, request);
+  setIfPresent(params, "account_id", request.accountId);
+  setIfPresent(params, "reference_id", request.filters?.referenceId ?? request.filters?.search);
+  setIfPresent(params, "correlation_id", request.filters?.correlationId);
+  setIfPresent(params, "route_id", request.filters?.routeId);
   setIfPresent(params, "status", request?.filters?.status);
   setIfPresent(params, "side", request?.filters?.side);
   setIfPresent(params, "type", request?.filters?.type);
-  setIfPresent(params, "search", request?.filters?.search);
-  setDateRange(params, request?.filters?.dateRange);
+  setIfPresent(params, "policy_decision", request?.filters?.policyDecision);
+  setCreatedDateRange(
+    params,
+    request.filters?.createdAfter,
+    request.filters?.createdBefore,
+    request.filters?.dateRange,
+  );
   return toQueryString(params);
 }
 
-function buildOrderSummaryQuery(filters: OrderFilters | undefined): string {
+function buildOrderSummaryQuery(request: MarketsAccountScopedSummaryRequest<OrderFilters>): string {
   const params = new URLSearchParams();
-  setIfPresent(params, "status", filters?.status);
-  setIfPresent(params, "side", filters?.side);
-  setIfPresent(params, "type", filters?.type);
-  setIfPresent(params, "search", filters?.search);
-  setDateRange(params, filters?.dateRange);
+  setIfPresent(params, "account_id", request.accountId);
+  setIfPresent(params, "reference_id", request.filters?.referenceId ?? request.filters?.search);
+  setIfPresent(params, "correlation_id", request.filters?.correlationId);
+  setIfPresent(params, "route_id", request.filters?.routeId);
+  setIfPresent(params, "status", request.filters?.status);
+  setIfPresent(params, "side", request.filters?.side);
+  setIfPresent(params, "type", request.filters?.type);
+  setIfPresent(params, "policy_decision", request.filters?.policyDecision);
+  setCreatedDateRange(
+    params,
+    request.filters?.createdAfter,
+    request.filters?.createdBefore,
+    request.filters?.dateRange,
+  );
   return toQueryString(params);
 }
 
-function buildPositionListQuery(request: MarketsListRequest<PositionFilters> | undefined): string {
+function buildPositionListQuery(request: MarketsAccountScopedListRequest<PositionFilters>): string {
   const params = new URLSearchParams();
-  setPaginationAndSort(params, request);
-  setIfPresent(params, "search", request?.filters?.search);
-  setIfPresent(params, "symbol", request?.filters?.symbol);
-  setIfPresent(params, "side", request?.filters?.side);
-  setIfPresent(params, "risk_state", request?.filters?.riskState);
-  setDateRange(params, request?.filters?.dateRange);
+  setMarketsPaginationAndSort(params, request);
+  setIfPresent(params, "account_id", request.accountId);
+  setIfPresent(params, "asset_class", request.filters?.assetClass);
+  setIfPresent(params, "state", request.filters?.state ?? request.filters?.riskState);
+  setIfPresent(params, "side", request.filters?.side);
+  if (request.filters?.riskFlags && request.filters.riskFlags.length > 0) {
+    params.set("risk_flag", request.filters.riskFlags.join(","));
+  }
   return toQueryString(params);
 }
 
-function buildPositionSummaryQuery(filters: PositionFilters | undefined): string {
+function buildPositionSummaryQuery(request: MarketsAccountScopedSummaryRequest<PositionFilters>): string {
   const params = new URLSearchParams();
-  setIfPresent(params, "search", filters?.search);
-  setIfPresent(params, "symbol", filters?.symbol);
-  setIfPresent(params, "side", filters?.side);
-  setIfPresent(params, "risk_state", filters?.riskState);
-  setDateRange(params, filters?.dateRange);
+  setIfPresent(params, "account_id", request.accountId);
+  setIfPresent(params, "asset_class", request.filters?.assetClass);
+  setIfPresent(params, "state", request.filters?.state ?? request.filters?.riskState);
+  setIfPresent(params, "side", request.filters?.side);
+  if (request.filters?.riskFlags && request.filters.riskFlags.length > 0) {
+    params.set("risk_flag", request.filters.riskFlags.join(","));
+  }
+  return toQueryString(params);
+}
+
+function buildMarketsOverviewQuery(request: MarketsAccountScopedRequest): string {
+  const params = new URLSearchParams();
+  setIfPresent(params, "account_id", request.accountId);
   return toQueryString(params);
 }
 
@@ -386,19 +474,93 @@ function buildMarketsHeaders(
   const requestIdHeader = normalizeHeaderValue(marketsOptions?.requestIdHeader) ?? "x-request-id";
   const requestId = normalizeHeaderValue(marketsOptions?.requestIdProvider?.()) ?? createRequestId();
   headers[requestIdHeader] = requestId;
+  headers["x-request-id"] = requestId;
 
   const correlationIdHeader = normalizeHeaderValue(marketsOptions?.correlationIdHeader) ?? "x-correlation-id";
   const correlationId = normalizeHeaderValue(marketsOptions?.correlationIdProvider?.()) ?? requestId;
   headers[correlationIdHeader] = correlationId;
+  headers["x-correlation-id"] = correlationId;
 
   return headers;
+}
+
+function extractPathname(path: string): string {
+  try {
+    return new URL(path, "http://localhost").pathname;
+  } catch {
+    const [pathname] = path.split("?");
+    return pathname ?? path;
+  }
+}
+
+function getSearchParam(path: string, key: string): string | undefined {
+  try {
+    const url = new URL(path, "http://localhost");
+    const value = url.searchParams.get(key)?.trim();
+    return value && value.length > 0 ? value : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function createMarketsValidationError(code: string, message: string, details: Record<string, unknown>): ApiClientError {
+  return new ApiClientError({
+    code,
+    message,
+    retryable: false,
+    source: "runtime",
+    details,
+  });
+}
+
+function enforceMarketsHttpGuards(
+  mode: CreateApiClientOptions["mode"],
+  request: ApiRequest,
+  headers: Record<string, string>,
+): void {
+  if (mode !== "http") {
+    return;
+  }
+
+  const pathname = extractPathname(request.path);
+  const isHealthRoute = pathname === "/health";
+
+  if (!isHealthRoute) {
+    const authorization = headers.authorization?.trim();
+    if (!authorization || !authorization.startsWith("Bearer ")) {
+      throw createMarketsValidationError("unauthorized", "bearer token is required for non-health Markets routes", {
+        path: request.path,
+        method: request.method,
+      });
+    }
+  }
+
+  const requestId = headers["x-request-id"]?.trim();
+  const correlationId = headers["x-correlation-id"]?.trim();
+  if (!requestId || !correlationId) {
+    throw createMarketsValidationError("invalid_request", "x-request-id and x-correlation-id are required for Markets requests", {
+      path: request.path,
+      method: request.method,
+    });
+  }
+
+  if (marketsAccountScopedRoutes.includes(pathname as (typeof marketsAccountScopedRoutes)[number])) {
+    const accountId = getSearchParam(request.path, "account_id");
+    if (!accountId) {
+      throw createMarketsValidationError("invalid_request", "account_id is required for this Markets endpoint", {
+        path: request.path,
+        method: request.method,
+        requiredParam: "account_id",
+      });
+    }
+  }
 }
 
 interface ConnectivityCheckResult {
   checkedAt: string;
   path: string;
   ok: boolean;
-  source: "mock" | "http" | "runtime" | "unknown";
+  source: ApiErrorSource;
   status?: number;
   message: string;
 }
@@ -627,25 +789,82 @@ function buildMarketsClient(transport: Transport, options: CreateApiClientOption
   const marketsOptions = options.markets;
   const compatibilityVersion = options.marketsCompatibilityVersion ?? MARKETS_PROTOCOL_COMPATIBILITY_VERSION;
   const parityCheckMarker = options.marketsParityCheckMarker ?? MARKETS_PARITY_CHECK_MARKER;
+  const defaultAccountId = normalizeHeaderValue(marketsOptions?.defaultAccountId);
+
+  const resolveAccountId = (provided: string | undefined): string =>
+    normalizeHeaderValue(provided) ?? defaultAccountId ?? "";
 
   const executeMarkets = <T>(request: ApiRequest, decode: Decoder<T>): Promise<T> => {
-    const headers = buildMarketsHeaders(mode, marketsOptions);
+    const marketHeaders = buildMarketsHeaders(mode, marketsOptions);
+    const headers = {
+      ...(request.headers ?? {}),
+      ...marketHeaders,
+    };
+    const requestWithHeaders: ApiRequest = {
+      ...request,
+      headers,
+    };
+
+    enforceMarketsHttpGuards(mode, requestWithHeaders, headers);
 
     return executeWithDecoder(
       transport,
-      {
-        ...request,
-        headers: {
-          ...(request.headers ?? {}),
-          ...headers,
-        },
-      },
+      requestWithHeaders,
       decode,
       {
         validationCode: "markets_payload_validation_failed",
         validationMessage: "Markets payload validation failed",
       },
     );
+  };
+
+  const probeMarketsConnectivity = async (path: string): Promise<ConnectivityCheckResult> => {
+    const checkedAt = new Date().toISOString();
+    const headers = buildMarketsHeaders(mode, marketsOptions);
+    const request: ApiRequest = { method: "GET", path, headers };
+
+    try {
+      enforceMarketsHttpGuards(mode, request, headers);
+    } catch (error) {
+      if (error instanceof ApiClientError) {
+        return {
+          checkedAt,
+          path,
+          ok: false,
+          source: error.source,
+          ...(typeof error.status === "number" ? { status: error.status } : {}),
+          message: error.message,
+        };
+      }
+
+      return {
+        checkedAt,
+        path,
+        ok: false,
+        source: "runtime",
+        message: error instanceof Error ? error.message : "Unknown markets connectivity guard failure",
+      };
+    }
+
+    const probe = await transport.request<unknown>(request);
+    if (probe.ok) {
+      return {
+        checkedAt,
+        path,
+        ok: true,
+        source: "http",
+        message: "Connectivity probe succeeded",
+      };
+    }
+
+    return {
+      checkedAt,
+      path,
+      ok: false,
+      source: probe.error.source,
+      ...(typeof probe.error.status === "number" ? { status: probe.error.status } : {}),
+      message: probe.error.message,
+    };
   };
 
   return {
@@ -668,58 +887,103 @@ function buildMarketsClient(transport: Transport, options: CreateApiClientOption
       );
     },
     listOrders(request) {
+      const scopedRequest: MarketsAccountScopedListRequest<OrderFilters> = {
+        ...request,
+        accountId: resolveAccountId(request.accountId),
+      };
       return executeMarkets(
         {
           method: "GET",
-          path: `${marketsRouteMap.listOrders}${buildOrderListQuery(request)}`,
+          path: `${marketsRouteMap.listOrders}${buildOrderListQuery(scopedRequest)}`,
         },
         decodeOrderList,
       );
     },
-    getOrderSummary(filters) {
+    getOrderSummary(request) {
+      const scopedRequest: MarketsAccountScopedSummaryRequest<OrderFilters> = {
+        ...request,
+        accountId: resolveAccountId(request.accountId),
+      };
       return executeMarkets(
         {
           method: "GET",
-          path: `${marketsRouteMap.getOrderSummary}${buildOrderSummaryQuery(filters)}`,
+          path: `${marketsRouteMap.getOrderSummary}${buildOrderSummaryQuery(scopedRequest)}`,
         },
         decodeOrderSummary,
       );
     },
     listPositions(request) {
+      const scopedRequest: MarketsAccountScopedListRequest<PositionFilters> = {
+        ...request,
+        accountId: resolveAccountId(request.accountId),
+      };
       return executeMarkets(
         {
           method: "GET",
-          path: `${marketsRouteMap.listPositions}${buildPositionListQuery(request)}`,
+          path: `${marketsRouteMap.listPositions}${buildPositionListQuery(scopedRequest)}`,
         },
         decodePositionList,
       );
     },
-    getPositionSummary(filters) {
+    getPositionSummary(request) {
+      const scopedRequest: MarketsAccountScopedSummaryRequest<PositionFilters> = {
+        ...request,
+        accountId: resolveAccountId(request.accountId),
+      };
       return executeMarkets(
         {
           method: "GET",
-          path: `${marketsRouteMap.getPositionSummary}${buildPositionSummaryQuery(filters)}`,
+          path: `${marketsRouteMap.getPositionSummary}${buildPositionSummaryQuery(scopedRequest)}`,
         },
         decodePositionSummary,
       );
     },
-    getMarketsOverview() {
+    getMarketsOverview(request) {
+      const scopedRequest: MarketsAccountScopedRequest = {
+        accountId: resolveAccountId(request.accountId),
+      };
       return executeMarkets(
         {
           method: "GET",
-          path: marketsRouteMap.getMarketsOverview,
+          path: `${marketsRouteMap.getMarketsOverview}${buildMarketsOverviewQuery(scopedRequest)}`,
         },
         decodeMarketsOverview,
       );
     },
     async getParityDiagnostics() {
+      const authHeader = resolveAuthorizationValue(marketsOptions, undefined);
+
       if (mode === "mock") {
         return {
           mode,
           baseUrl,
           compatibilityVersion,
           sourceOfTruth: MARKETS_PROTOCOL_SOURCE,
+          sourceOpenApiPath: MARKETS_PROTOCOL_OPENAPI_PATH,
+          sourceChangelogPath: MARKETS_PROTOCOL_CHANGELOG_PATH,
+          sourceOpenApiSha: MARKETS_PROTOCOL_OPENAPI_SHA,
+          sourceOpenApiCommit: MARKETS_PROTOCOL_OPENAPI_COMMIT,
           parityCheckMarker,
+          auth: {
+            requiredForMarketsRoutes: false,
+            hasAuthorization: Boolean(authHeader?.startsWith("Bearer ")),
+            requestIdHeader: "x-request-id",
+            correlationIdHeader: "x-correlation-id",
+          },
+          accountScope: {
+            ...(defaultAccountId ? { defaultAccountId } : {}),
+            requiredEndpoints: marketsAccountScopedRoutes,
+          },
+          paginationPolicy: {
+            preferredMode: "cursor",
+            deprecatedParam: "page",
+            deprecatedRemovalNotBefore: "2027-02-08",
+          },
+          deprecatedFieldFallback: {
+            canonicalField: "net_exposure_band",
+            fallbackField: "net_exposure_bucket",
+            fallbackRemovalNotBefore: "2027-02-08",
+          },
           connectivity: {
             checkedAt: new Date().toISOString(),
             path: "mock://offline",
@@ -731,26 +995,74 @@ function buildMarketsClient(transport: Transport, options: CreateApiClientOption
       }
 
       const primaryPath = marketsOptions?.connectivityPath ?? "/health";
-      const primaryProbe = await probeConnectivity(transport, primaryPath);
-      if (primaryProbe.ok || primaryPath === marketsRouteMap.getMarketsOverview) {
+      const primaryProbe = await probeMarketsConnectivity(primaryPath);
+      if (primaryProbe.ok || primaryPath === marketsRouteMap.listInstruments) {
         return {
           mode,
           baseUrl,
           compatibilityVersion,
           sourceOfTruth: MARKETS_PROTOCOL_SOURCE,
+          sourceOpenApiPath: MARKETS_PROTOCOL_OPENAPI_PATH,
+          sourceChangelogPath: MARKETS_PROTOCOL_CHANGELOG_PATH,
+          sourceOpenApiSha: MARKETS_PROTOCOL_OPENAPI_SHA,
+          sourceOpenApiCommit: MARKETS_PROTOCOL_OPENAPI_COMMIT,
           parityCheckMarker,
+          auth: {
+            requiredForMarketsRoutes: true,
+            hasAuthorization: Boolean(authHeader?.startsWith("Bearer ")),
+            requestIdHeader: "x-request-id",
+            correlationIdHeader: "x-correlation-id",
+          },
+          accountScope: {
+            ...(defaultAccountId ? { defaultAccountId } : {}),
+            requiredEndpoints: marketsAccountScopedRoutes,
+          },
+          paginationPolicy: {
+            preferredMode: "cursor",
+            deprecatedParam: "page",
+            deprecatedRemovalNotBefore: "2027-02-08",
+          },
+          deprecatedFieldFallback: {
+            canonicalField: "net_exposure_band",
+            fallbackField: "net_exposure_bucket",
+            fallbackRemovalNotBefore: "2027-02-08",
+          },
           connectivity: primaryProbe,
         };
       }
 
-      const fallbackProbe = await probeConnectivity(transport, marketsRouteMap.getMarketsOverview);
+      const fallbackProbe = await probeMarketsConnectivity(`${marketsRouteMap.listInstruments}?limit=1`);
 
       return {
         mode,
         baseUrl,
         compatibilityVersion,
         sourceOfTruth: MARKETS_PROTOCOL_SOURCE,
+        sourceOpenApiPath: MARKETS_PROTOCOL_OPENAPI_PATH,
+        sourceChangelogPath: MARKETS_PROTOCOL_CHANGELOG_PATH,
+        sourceOpenApiSha: MARKETS_PROTOCOL_OPENAPI_SHA,
+        sourceOpenApiCommit: MARKETS_PROTOCOL_OPENAPI_COMMIT,
         parityCheckMarker,
+        auth: {
+          requiredForMarketsRoutes: true,
+          hasAuthorization: Boolean(authHeader?.startsWith("Bearer ")),
+          requestIdHeader: "x-request-id",
+          correlationIdHeader: "x-correlation-id",
+        },
+        accountScope: {
+          ...(defaultAccountId ? { defaultAccountId } : {}),
+          requiredEndpoints: marketsAccountScopedRoutes,
+        },
+        paginationPolicy: {
+          preferredMode: "cursor",
+          deprecatedParam: "page",
+          deprecatedRemovalNotBefore: "2027-02-08",
+        },
+        deprecatedFieldFallback: {
+          canonicalField: "net_exposure_band",
+          fallbackField: "net_exposure_bucket",
+          fallbackRemovalNotBefore: "2027-02-08",
+        },
         connectivity: fallbackProbe.ok
           ? {
               ...fallbackProbe,

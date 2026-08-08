@@ -12,7 +12,8 @@ function resolveStatusColor(status: string): string {
     normalized.includes("settled") ||
     normalized.includes("active") ||
     normalized.includes("tradable") ||
-    normalized.includes("normal")
+    normalized.includes("pass") ||
+    normalized.includes("open")
   ) {
     return "#2f855a";
   }
@@ -22,7 +23,10 @@ function resolveStatusColor(status: string): string {
     normalized.includes("denied") ||
     normalized.includes("rejected") ||
     normalized.includes("halted") ||
-    normalized.includes("at_risk")
+    normalized.includes("suspended") ||
+    normalized.includes("critical") ||
+    normalized.includes("breached") ||
+    normalized.includes("fail")
   ) {
     return "#b83232";
   }
@@ -32,7 +36,11 @@ function resolveStatusColor(status: string): string {
     normalized.includes("watch") ||
     normalized.includes("partial") ||
     normalized.includes("created") ||
-    normalized.includes("routed")
+    normalized.includes("routed") ||
+    normalized.includes("reducing") ||
+    normalized.includes("degraded") ||
+    normalized.includes("medium") ||
+    normalized.includes("high")
   ) {
     return "#975a16";
   }

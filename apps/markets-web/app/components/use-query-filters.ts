@@ -6,6 +6,10 @@ import { useCallback } from "react";
 type QueryValue = string | null | undefined;
 
 interface SetQueryOptions {
+  resetPagination?: boolean;
+  /**
+   * @deprecated Use `resetPagination`.
+   */
   resetPage?: boolean;
 }
 
@@ -28,7 +32,8 @@ export function useQueryFilters() {
         nextParams.set(key, normalized);
       }
 
-      if (options.resetPage ?? true) {
+      if (options.resetPagination ?? options.resetPage ?? true) {
+        nextParams.delete("cursor");
         nextParams.delete("page");
       }
 

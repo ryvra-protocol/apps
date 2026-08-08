@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  marketInstrumentAvailabilities,
   marketInstrumentClasses,
   marketInstrumentStatuses,
   type InstrumentDto,
@@ -19,29 +20,37 @@ interface InstrumentsTableClientProps {
 
 const classOptions = ["ALL", ...marketInstrumentClasses] as const;
 const statusOptions = ["ALL", ...marketInstrumentStatuses] as const;
+const availabilityOptions = ["ALL", ...marketInstrumentAvailabilities] as const;
 const sortFieldOptions = [
+  { value: "updated_at", label: "Updated" },
   { value: "symbol", label: "Symbol" },
-  { value: "name", label: "Name" },
-  { value: "assetClass", label: "Class" },
-  { value: "updatedAt", label: "Last updated" },
+  { value: "asset_class", label: "Asset class" },
 ] as const;
 
 export function InstrumentsTableClient({ items, pagination }: InstrumentsTableClientProps) {
   const { searchParams, updateQuery, clearQuery } = useQueryFilters();
 
-  const search = searchParams.get("search") ?? "";
+  const search = searchParams.get("q") ?? searchParams.get("search") ?? "";
   const assetClassParam = (searchParams.get("assetClass") ?? "ALL").toLowerCase();
   const statusParam = (searchParams.get("status") ?? "ALL").toLowerCase();
-  const sortField = searchParams.get("sortField") ?? "symbol";
-  const sortDirection = searchParams.get("sortDirection") === "asc" ? "asc" : "desc";
+  const availabilityParam = (searchParams.get("availability") ?? "ALL").toLowerCase();
+  const sortField = searchParams.get("sortBy") ?? "updated_at";
+  const sortDirection = searchParams.get("sortOrder") === "asc" ? "asc" : "desc";
 
   const assetClass = classOptions.includes(assetClassParam as (typeof classOptions)[number]) ? assetClassParam : "ALL";
   const status = statusOptions.includes(statusParam as (typeof statusOptions)[number]) ? statusParam : "ALL";
-  const hasFilters = search.length > 0 || assetClass !== "ALL" || status !== "ALL" || sortField !== "symbol" || sortDirection !== "desc";
+  const availability = availabilityOptions.includes(availabilityParam as (typeof availabilityOptions)[number])
+    ? availabilityParam
+    : "ALL";
+  const hasFilters =
+    search.length > 0 ||
+    assetClass !== "ALL" ||
+    status !== "ALL" ||
+    availability !== "ALL" ||
+    sortField !== "updated_at" ||
+    sortDirection !== "desc";
 
   const visibleRows = useMemo(() => [...items], [items]);
-  const canGoPrev = pagination.page > 1;
-  const canGoNext = pagination.page < pagination.totalPages;
 
   return (
     <section aria-labelledby="instruments-table-title" style={{ display: "grid", gap: themeTokens.spacing.md }}>
@@ -77,8 +86,8 @@ export function InstrumentsTableClient({ items, pagination }: InstrumentsTableCl
               className="markets-filter-control"
               type="search"
               value={search}
-              onChange={(event) => updateQuery({ search: event.currentTarget.value || undefined })}
-              placeholder="Symbol, name, id"
+              onChange={(event) => updateQuery({ q: event.currentTarget.value || undefined })}
+              placeholder="symbol, base, quote"
             />
           </label>
 
@@ -87,11 +96,7 @@ export function InstrumentsTableClient({ items, pagination }: InstrumentsTableCl
             <select
               className="markets-filter-control"
               value={assetClass}
-              onChange={(event) =>
-                updateQuery({
-                  assetClass: event.currentTarget.value === "ALL" ? undefined : event.currentTarget.value,
-                })
-              }
+              onChange={(event) => updateQuery({ assetClass: event.currentTarget.value === "ALL" ? undefined : event.currentTarget.value })}
             >
               {classOptions.map((option) => (
                 <option key={option} value={option}>
@@ -117,8 +122,23 @@ export function InstrumentsTableClient({ items, pagination }: InstrumentsTableCl
           </label>
 
           <label style={{ display: "grid", gap: themeTokens.spacing.xs }}>
+            <span>Availability</span>
+            <select
+              className="markets-filter-control"
+              value={availability}
+              onChange={(event) => updateQuery({ availability: event.currentTarget.value === "ALL" ? undefined : event.currentTarget.value })}
+            >
+              {availabilityOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label style={{ display: "grid", gap: themeTokens.spacing.xs }}>
             <span>Sort by</span>
-            <select className="markets-filter-control" value={sortField} onChange={(event) => updateQuery({ sortField: event.currentTarget.value })}>
+            <select className="markets-filter-control" value={sortField} onChange={(event) => updateQuery({ sortBy: event.currentTarget.value })}>
               {sortFieldOptions.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
@@ -128,12 +148,8 @@ export function InstrumentsTableClient({ items, pagination }: InstrumentsTableCl
           </label>
 
           <label style={{ display: "grid", gap: themeTokens.spacing.xs }}>
-            <span>Direction</span>
-            <select
-              className="markets-filter-control"
-              value={sortDirection}
-              onChange={(event) => updateQuery({ sortDirection: event.currentTarget.value })}
-            >
+            <span>Order</span>
+            <select className="markets-filter-control" value={sortDirection} onChange={(event) => updateQuery({ sortOrder: event.currentTarget.value })}>
               <option value="desc">Descending</option>
               <option value="asc">Ascending</option>
             </select>
@@ -143,7 +159,7 @@ export function InstrumentsTableClient({ items, pagination }: InstrumentsTableCl
             <Button
               type="button"
               variant="secondary"
-              onClick={() => clearQuery(["search", "assetClass", "status", "sortField", "sortDirection", "page"])}
+              onClick={() => clearQuery(["q", "search", "assetClass", "status", "availability", "sortBy", "sortOrder", "cursor", "page"])}
               disabled={!hasFilters}
               aria-describedby={!hasFilters ? "instruments-reset-hint" : undefined}
             >
@@ -163,7 +179,11 @@ export function InstrumentsTableClient({ items, pagination }: InstrumentsTableCl
         caption="Instruments"
         columns={[
           { key: "symbol", header: "Symbol" },
-          { key: "name", header: "Name" },
+          {
+            key: "baseAsset",
+            header: "Pair",
+            render: (_, row) => `${row.baseAsset.toUpperCase()} / ${row.quoteAsset.toUpperCase()}`,
+          },
           { key: "assetClass", header: "Class" },
           { key: "availability", header: "Availability" },
           {
@@ -185,7 +205,7 @@ export function InstrumentsTableClient({ items, pagination }: InstrumentsTableCl
       {visibleRows.length === 0 ? (
         <Card title="No instruments found">
           <p style={{ marginTop: 0 }}>Adjust filters or clear search criteria to broaden the catalog.</p>
-          <Button type="button" variant="secondary" onClick={() => clearQuery(["search", "assetClass", "status", "page"])}>
+          <Button type="button" variant="secondary" onClick={() => clearQuery(["q", "search", "assetClass", "status", "availability", "cursor", "page"])}>
             Clear filters
           </Button>
         </Card>
@@ -193,21 +213,18 @@ export function InstrumentsTableClient({ items, pagination }: InstrumentsTableCl
 
       <div aria-label="Instrument pagination" style={{ display: "flex", alignItems: "center", gap: themeTokens.spacing.md, flexWrap: "wrap" }}>
         <span style={{ color: themeTokens.color.textMuted }}>
-          Page {pagination.page} of {pagination.totalPages} • {pagination.total} total instruments
+          Showing {visibleRows.length} items • limit {pagination.limit}
         </span>
-        {canGoPrev ? (
-          <Button type="button" variant="secondary" onClick={() => updateQuery({ page: String(pagination.page - 1) }, { resetPage: false })}>
-            Previous
-          </Button>
-        ) : (
-          <span style={{ color: themeTokens.color.textMuted }}>Previous page unavailable on first page.</span>
-        )}
-        {canGoNext ? (
-          <Button type="button" variant="secondary" onClick={() => updateQuery({ page: String(pagination.page + 1) }, { resetPage: false })}>
+        {pagination.hasMore && pagination.nextCursor ? (
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => updateQuery({ cursor: pagination.nextCursor, page: undefined }, { resetPagination: false })}
+          >
             Next
           </Button>
         ) : (
-          <span style={{ color: themeTokens.color.textMuted }}>No further pages available.</span>
+          <span style={{ color: themeTokens.color.textMuted }}>No further cursor pages available.</span>
         )}
       </div>
     </section>

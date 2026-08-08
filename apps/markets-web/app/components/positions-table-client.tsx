@@ -1,14 +1,15 @@
 "use client";
 
 import {
-  marketPositionRiskStates,
+  marketInstrumentClasses,
   marketPositionSides,
+  marketPositionStates,
   type MarketsPaginationMeta,
   type PositionDto,
 } from "@ryvra/domain-markets";
 import { Button, Card, DataTable, themeTokens } from "@ryvra/ui";
 import { useMemo } from "react";
-import { formatDateTime, formatSigned } from "../lib/format";
+import { formatDateTime } from "../lib/format";
 import { StatusBadge } from "./status-badge";
 import { useQueryFilters } from "./use-query-filters";
 
@@ -17,42 +18,37 @@ interface PositionsTableClientProps {
   pagination: MarketsPaginationMeta;
 }
 
-const riskStateOptions = ["ALL", ...marketPositionRiskStates] as const;
+const stateOptions = ["ALL", ...marketPositionStates] as const;
 const sideOptions = ["ALL", ...marketPositionSides] as const;
+const classOptions = ["ALL", ...marketInstrumentClasses] as const;
 const sortFieldOptions = [
-  { value: "updatedAt", label: "Updated time" },
-  { value: "symbol", label: "Symbol" },
-  { value: "riskState", label: "Risk state" },
-  { value: "side", label: "Position side" },
+  { value: "updated_at", label: "Updated time" },
+  { value: "notional_value", label: "Notional value" },
+  { value: "quantity", label: "Quantity" },
 ] as const;
 
 export function PositionsTableClient({ items, pagination }: PositionsTableClientProps) {
   const { searchParams, updateQuery, clearQuery } = useQueryFilters();
 
-  const riskStateParam = (searchParams.get("riskState") ?? "ALL").toLowerCase();
+  const stateParam = (searchParams.get("state") ?? searchParams.get("riskState") ?? "ALL").toLowerCase();
   const sideParam = (searchParams.get("side") ?? "ALL").toLowerCase();
-  const symbol = searchParams.get("symbol") ?? "";
-  const search = searchParams.get("search") ?? "";
-  const from = searchParams.get("from") ?? "";
-  const to = searchParams.get("to") ?? "";
-  const sortField = searchParams.get("sortField") ?? "updatedAt";
-  const sortDirection = searchParams.get("sortDirection") === "asc" ? "asc" : "desc";
+  const classParam = (searchParams.get("assetClass") ?? "ALL").toLowerCase();
+  const riskFlag = searchParams.get("riskFlag") ?? searchParams.get("risk_flag") ?? "";
+  const sortField = searchParams.get("sortBy") ?? "updated_at";
+  const sortDirection = searchParams.get("sortOrder") === "asc" ? "asc" : "desc";
 
-  const riskState = riskStateOptions.includes(riskStateParam as (typeof riskStateOptions)[number]) ? riskStateParam : "ALL";
+  const state = stateOptions.includes(stateParam as (typeof stateOptions)[number]) ? stateParam : "ALL";
   const side = sideOptions.includes(sideParam as (typeof sideOptions)[number]) ? sideParam : "ALL";
+  const assetClass = classOptions.includes(classParam as (typeof classOptions)[number]) ? classParam : "ALL";
   const hasFilters =
-    riskState !== "ALL" ||
+    state !== "ALL" ||
     side !== "ALL" ||
-    symbol.length > 0 ||
-    search.length > 0 ||
-    from.length > 0 ||
-    to.length > 0 ||
-    sortField !== "updatedAt" ||
+    assetClass !== "ALL" ||
+    riskFlag.length > 0 ||
+    sortField !== "updated_at" ||
     sortDirection !== "desc";
 
   const visibleRows = useMemo(() => [...items], [items]);
-  const canGoPrev = pagination.page > 1;
-  const canGoNext = pagination.page < pagination.totalPages;
 
   return (
     <section aria-labelledby="positions-table-title" style={{ display: "grid", gap: themeTokens.spacing.md }}>
@@ -83,35 +79,28 @@ export function PositionsTableClient({ items, pagination }: PositionsTableClient
           style={{ display: "grid", gap: themeTokens.spacing.md, gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))" }}
         >
           <label style={{ display: "grid", gap: themeTokens.spacing.xs }}>
-            <span>Symbol</span>
-            <input
-              className="markets-filter-control"
-              type="search"
-              value={symbol}
-              onChange={(event) => updateQuery({ symbol: event.currentTarget.value || undefined })}
-              placeholder="BTC-USD"
-            />
-          </label>
-
-          <label style={{ display: "grid", gap: themeTokens.spacing.xs }}>
-            <span>Search</span>
-            <input
-              className="markets-filter-control"
-              type="search"
-              value={search}
-              onChange={(event) => updateQuery({ search: event.currentTarget.value || undefined })}
-              placeholder="Position id, account, asset"
-            />
-          </label>
-
-          <label style={{ display: "grid", gap: themeTokens.spacing.xs }}>
-            <span>Risk state</span>
+            <span>Asset class</span>
             <select
               className="markets-filter-control"
-              value={riskState}
-              onChange={(event) => updateQuery({ riskState: event.currentTarget.value === "ALL" ? undefined : event.currentTarget.value })}
+              value={assetClass}
+              onChange={(event) => updateQuery({ assetClass: event.currentTarget.value === "ALL" ? undefined : event.currentTarget.value })}
             >
-              {riskStateOptions.map((option) => (
+              {classOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label style={{ display: "grid", gap: themeTokens.spacing.xs }}>
+            <span>State</span>
+            <select
+              className="markets-filter-control"
+              value={state}
+              onChange={(event) => updateQuery({ state: event.currentTarget.value === "ALL" ? undefined : event.currentTarget.value })}
+            >
+              {stateOptions.map((option) => (
                 <option key={option} value={option}>
                   {option}
                 </option>
@@ -131,18 +120,19 @@ export function PositionsTableClient({ items, pagination }: PositionsTableClient
           </label>
 
           <label style={{ display: "grid", gap: themeTokens.spacing.xs }}>
-            <span>From date</span>
-            <input className="markets-filter-control" type="date" value={from} onChange={(event) => updateQuery({ from: event.currentTarget.value || undefined })} />
-          </label>
-
-          <label style={{ display: "grid", gap: themeTokens.spacing.xs }}>
-            <span>To date</span>
-            <input className="markets-filter-control" type="date" value={to} onChange={(event) => updateQuery({ to: event.currentTarget.value || undefined })} />
+            <span>Risk flags (comma-separated)</span>
+            <input
+              className="markets-filter-control"
+              type="text"
+              value={riskFlag}
+              onChange={(event) => updateQuery({ riskFlag: event.currentTarget.value || undefined })}
+              placeholder="concentration_limit_near"
+            />
           </label>
 
           <label style={{ display: "grid", gap: themeTokens.spacing.xs }}>
             <span>Sort by</span>
-            <select className="markets-filter-control" value={sortField} onChange={(event) => updateQuery({ sortField: event.currentTarget.value })}>
+            <select className="markets-filter-control" value={sortField} onChange={(event) => updateQuery({ sortBy: event.currentTarget.value })}>
               {sortFieldOptions.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
@@ -152,8 +142,8 @@ export function PositionsTableClient({ items, pagination }: PositionsTableClient
           </label>
 
           <label style={{ display: "grid", gap: themeTokens.spacing.xs }}>
-            <span>Direction</span>
-            <select className="markets-filter-control" value={sortDirection} onChange={(event) => updateQuery({ sortDirection: event.currentTarget.value })}>
+            <span>Order</span>
+            <select className="markets-filter-control" value={sortDirection} onChange={(event) => updateQuery({ sortOrder: event.currentTarget.value })}>
               <option value="desc">Descending</option>
               <option value="asc">Ascending</option>
             </select>
@@ -163,7 +153,7 @@ export function PositionsTableClient({ items, pagination }: PositionsTableClient
             <Button
               type="button"
               variant="secondary"
-              onClick={() => clearQuery(["symbol", "search", "riskState", "side", "from", "to", "sortField", "sortDirection", "page"])}
+              onClick={() => clearQuery(["assetClass", "state", "riskState", "side", "riskFlag", "risk_flag", "sortBy", "sortOrder", "cursor", "page"])}
               disabled={!hasFilters}
               aria-describedby={!hasFilters ? "positions-reset-hint" : undefined}
             >
@@ -181,30 +171,36 @@ export function PositionsTableClient({ items, pagination }: PositionsTableClient
       <DataTable<PositionDto>
         caption="Positions"
         columns={[
-          { key: "symbol", header: "Asset / Symbol" },
+          { key: "id", header: "Position id" },
           {
-            key: "quantity",
-            header: "Size",
-            render: (value, row) => `${value} (${row.side})`,
+            key: "asset",
+            header: "Asset",
+            render: (_, row) => `${row.asset.symbol} (${row.asset.canonicalId})`,
           },
           {
-            key: "entryPrice",
-            header: "Entry / Mark",
-            render: (value, row) => `${value ?? "n/a"} / ${row.markPrice ?? "n/a"}`,
-          },
-          {
-            key: "unrealizedPnl",
-            header: "PnL",
-            render: (value) => formatSigned(typeof value === "string" ? value : undefined),
-          },
-          {
-            key: "riskState",
-            header: "Risk state",
+            key: "state",
+            header: "State",
             render: (value) => <StatusBadge status={String(value)} />,
           },
           {
+            key: "side",
+            header: "Side",
+            render: (value) => <StatusBadge status={String(value)} />,
+          },
+          { key: "quantity", header: "Qty" },
+          { key: "notionalValue", header: "Notional" },
+          { key: "netExposureBand", header: "Exposure band" },
+          {
+            key: "riskFlags",
+            header: "Risk flags",
+            render: (value) => {
+              const flags = Array.isArray(value) ? value : [];
+              return flags.length > 0 ? flags.join(", ") : "none";
+            },
+          },
+          {
             key: "updatedAt",
-            header: "Timestamp",
+            header: "Updated",
             render: (value) => formatDateTime(String(value)),
           },
         ]}
@@ -215,8 +211,8 @@ export function PositionsTableClient({ items, pagination }: PositionsTableClient
 
       {visibleRows.length === 0 ? (
         <Card title="No positions found">
-          <p style={{ marginTop: 0 }}>Try clearing symbol/risk filters or widening the date range.</p>
-          <Button type="button" variant="secondary" onClick={() => clearQuery(["symbol", "search", "riskState", "side", "from", "to", "page"])}>
+          <p style={{ marginTop: 0 }}>Try clearing state/risk filters.</p>
+          <Button type="button" variant="secondary" onClick={() => clearQuery(["assetClass", "state", "side", "riskFlag", "cursor", "page"])}>
             Clear filters
           </Button>
         </Card>
@@ -224,21 +220,18 @@ export function PositionsTableClient({ items, pagination }: PositionsTableClient
 
       <div aria-label="Position pagination" style={{ display: "flex", alignItems: "center", gap: themeTokens.spacing.md, flexWrap: "wrap" }}>
         <span style={{ color: themeTokens.color.textMuted }}>
-          Page {pagination.page} of {pagination.totalPages} • {pagination.total} total positions
+          Showing {visibleRows.length} positions • limit {pagination.limit}
         </span>
-        {canGoPrev ? (
-          <Button type="button" variant="secondary" onClick={() => updateQuery({ page: String(pagination.page - 1) }, { resetPage: false })}>
-            Previous
-          </Button>
-        ) : (
-          <span style={{ color: themeTokens.color.textMuted }}>Previous page unavailable on first page.</span>
-        )}
-        {canGoNext ? (
-          <Button type="button" variant="secondary" onClick={() => updateQuery({ page: String(pagination.page + 1) }, { resetPage: false })}>
+        {pagination.hasMore && pagination.nextCursor ? (
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => updateQuery({ cursor: pagination.nextCursor, page: undefined }, { resetPagination: false })}
+          >
             Next
           </Button>
         ) : (
-          <span style={{ color: themeTokens.color.textMuted }}>No further pages available.</span>
+          <span style={{ color: themeTokens.color.textMuted }}>No further cursor pages available.</span>
         )}
       </div>
     </section>

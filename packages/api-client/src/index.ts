@@ -4,12 +4,19 @@ export { createMockTransport } from "./mock-transport";
 export { ApiClientError, normalizeApiError } from "./errors";
 export {
   MARKETS_PARITY_CHECK_MARKER,
+  MARKETS_PROTOCOL_CHANGELOG_PATH,
   MARKETS_PROTOCOL_COMPATIBILITY_VERSION,
+  MARKETS_PROTOCOL_OPENAPI_COMMIT,
+  MARKETS_PROTOCOL_OPENAPI_PATH,
+  MARKETS_PROTOCOL_OPENAPI_SHA,
   MARKETS_PROTOCOL_SOURCE,
+  marketsAccountScopedRoutes,
   marketsCanonicalAssetClasses,
+  marketsCanonicalErrorCodes,
   marketsCanonicalOrderStatuses,
   marketsCanonicalPolicyDecisions,
   marketsCanonicalSides,
+  isMarketPolicyDecision,
   marketsRouteMap,
 } from "./markets-parity";
 export {

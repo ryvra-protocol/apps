@@ -1,7 +1,6 @@
 import type { MarketsOverviewDto } from "@ryvra/domain-markets";
 import type { RuntimeMode } from "@ryvra/config";
-import { Card, DataTable, Section, themeTokens } from "@ryvra/ui";
-import { formatDateTime } from "../lib/format";
+import { Card, Section, themeTokens } from "@ryvra/ui";
 import { ModeBadge } from "./mode-badge";
 import { StatusBadge } from "./status-badge";
 
@@ -22,47 +21,38 @@ export function MarketsOverviewContent({ title, description, mode, overview }: M
 
         <div style={{ display: "grid", gap: themeTokens.spacing.md, gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))" }}>
           <Card title="Total instruments">
-            <p style={{ margin: 0 }}>{overview.metrics.totalInstruments}</p>
+            <p style={{ margin: 0 }}>{overview.instruments.totalInstruments}</p>
           </Card>
-          <Card title="Active instruments">
-            <p style={{ margin: 0 }}>{overview.metrics.activeInstruments}</p>
+          <Card title="Tradable instruments">
+            <p style={{ margin: 0 }}>{overview.instruments.tradableInstruments}</p>
           </Card>
           <Card title="Open orders">
-            <p style={{ margin: 0 }}>{overview.metrics.openOrders}</p>
+            <p style={{ margin: 0 }}>{overview.orders.openOrders}</p>
           </Card>
           <Card title="Positions">
-            <p style={{ margin: 0 }}>{overview.metrics.totalPositions}</p>
+            <p style={{ margin: 0 }}>{overview.positions.totalPositions}</p>
           </Card>
-          <Card title="At-risk positions">
-            <p style={{ margin: 0 }}>{overview.metrics.atRiskPositions}</p>
+          <Card title="Open positions">
+            <p style={{ margin: 0 }}>{overview.positions.openPositions}</p>
           </Card>
           <Card title="Net exposure">
-            <p style={{ margin: 0 }}>{overview.metrics.netExposureBand}</p>
+            <p style={{ margin: 0 }}>{overview.positions.netExposureBand}</p>
           </Card>
         </div>
 
-        <Card title="Recent market activity">
-          <DataTable
-            caption="Recent markets activity"
-            columns={[
-              { key: "type", header: "Type" },
-              { key: "title", header: "Title" },
-              {
-                key: "status",
-                header: "Status",
-                render: (value) => <StatusBadge status={String(value)} />,
-              },
-              { key: "symbol", header: "Symbol", render: (value) => (value ? String(value) : "n/a") },
-              {
-                key: "createdAt",
-                header: "Time",
-                render: (value) => formatDateTime(String(value)),
-              },
-            ]}
-            rows={overview.recentActivity}
-            getRowKey={(row) => row.id}
-            emptyMessage="No recent markets activity available."
-          />
+        <Card title="Canonical contract snapshot">
+          <div style={{ display: "grid", gap: themeTokens.spacing.sm }}>
+            <p style={{ margin: 0 }}>
+              Account: <strong>{overview.accountId}</strong>
+            </p>
+            <p style={{ margin: 0 }}>
+              API version: <strong>{overview.apiVersion}</strong>
+            </p>
+            <p style={{ margin: 0 }}>
+              Health: <StatusBadge status={overview.healthStatus} />
+            </p>
+            <p style={{ margin: 0 }}>As of: {overview.asOf}</p>
+          </div>
         </Card>
       </Section>
     </section>

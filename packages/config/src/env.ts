@@ -12,6 +12,7 @@ const envSchema = z.object({
   RYVRA_MARKETS_COMPATIBILITY_VERSION: z.string().optional(),
   RYVRA_MARKETS_PARITY_CHECK_MARKER: z.string().optional(),
   RYVRA_MARKETS_CONNECTIVITY_PATH: z.string().optional(),
+  RYVRA_MARKETS_ACCOUNT_ID: z.string().optional(),
   RYVRA_FEATURE_MARKETS_ENABLED: z.coerce.boolean().default(true),
   RYVRA_FEATURE_PAY_ENABLED: z.coerce.boolean().default(true),
   RYVRA_FEATURE_POINTS_TASKS_ENABLED: z.coerce.boolean().default(true),
@@ -72,12 +73,14 @@ export function loadMarketsIntegrationConfig(env: NodeJS.ProcessEnv = process.en
   const compatibilityVersion = normalizeOptionalString(parsedEnv.RYVRA_MARKETS_COMPATIBILITY_VERSION);
   const parityCheckMarker = normalizeOptionalString(parsedEnv.RYVRA_MARKETS_PARITY_CHECK_MARKER);
   const connectivityPath = normalizeOptionalString(parsedEnv.RYVRA_MARKETS_CONNECTIVITY_PATH);
+  const accountId = normalizeOptionalString(parsedEnv.RYVRA_MARKETS_ACCOUNT_ID);
 
   return {
     ...base,
     ...(compatibilityVersion ? { compatibilityVersion } : {}),
     ...(parityCheckMarker ? { parityCheckMarker } : {}),
     ...(connectivityPath ? { connectivityPath } : {}),
+    ...(accountId ? { accountId } : {}),
   };
 }
 
