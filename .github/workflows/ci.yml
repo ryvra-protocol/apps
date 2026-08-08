@@ -16,6 +16,10 @@ permissions:
 jobs:
   quality:
     runs-on: ubuntu-latest
+    env:
+      TURBO_TELEMETRY_DISABLED: "1"
+      NEXT_TELEMETRY_DISABLED: "1"
+      CI: "true"
 
     steps:
       - name: Checkout
@@ -32,6 +36,26 @@ jobs:
           node-version: 24.19.0
           cache: pnpm
 
+      - name: Verify runtime policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          NODE_VERSION="$(node -v)"
+          PNPM_VERSION="$(pnpm -v)"
+          NODE_MAJOR="$(node -p "process.versions.node.split('.')[0]")"
+
+          if [[ "${NODE_MAJOR}" != "24" ]]; then
+            echo "::error::Node policy mismatch. Expected Node 24.x (engines >=24 <25), got ${NODE_VERSION}."
+            exit 1
+          fi
+
+          if [[ "${PNPM_VERSION}" != "10.16.0" ]]; then
+            echo "::error::pnpm policy mismatch. Expected pnpm 10.16.0, got ${PNPM_VERSION}. Run 'corepack prepare pnpm@10.16.0 --activate' before commit."
+            exit 1
+          fi
+
+          echo "Runtime policy verified: ${NODE_VERSION} / pnpm ${PNPM_VERSION}"
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -46,3 +70,11 @@ jobs:
 
       - name: Test
         run: pnpm test
+
+      - name: Troubleshooting hints (failure only)
+        if: failure()
+        run: |
+          echo "Common CI fixes:"
+          echo "- Ensure Node 24.x and pnpm 10.16.0 are active (corepack prepare pnpm@10.16.0 --activate)."
+          echo "- Re-run pnpm install --frozen-lockfile after dependency or lockfile updates."
+          echo "- Verify required HTTP-mode env vars for Markets/Points-Tasks auth paths."

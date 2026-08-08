@@ -29,6 +29,7 @@
     - required `account_id` for account-scoped endpoints
     - required request/correlation ids
   - canonical error-envelope normalization (`code`, `message`, `retryable`, `source`, optional `details`)
+  - diagnostics route now surfaces actionable error states when parity probes fail
 - query/filter parity in HTTP mode uses canonical snake_case keys.
 - `/markets/status` displays mode, base URL, source OpenAPI refs, compatibility marker, parity marker, and connectivity probe result.
 
@@ -52,8 +53,10 @@
   - read-model methods used by current UI
   - parity write methods (`createPaymentIntent`, `transitionPaymentIntent`, `reconcileSettlement`)
   - runtime payload decoding and parity diagnostics (`getParityDiagnostics`)
+  - canonical request/correlation id emission across both data paths and diagnostics probes
 - query/filter parity in HTTP mode uses snake_case compatibility keys.
 - `/pay/status` displays mode, base URL, compatibility version, parity marker, and connectivity probe result.
+- `/pay/status` now renders explicit retryable error state when diagnostics cannot be loaded.
 
 ## Pay source-of-truth linkage (`ryvra-protocol/pay`)
 
@@ -82,6 +85,7 @@
     - required `account_id` on scoped endpoints
     - required request/correlation ids
   - canonical Points/Tasks error-envelope normalization (`code`, `message`, `retryable`, `source`, optional `details`)
+  - canonical health optionality hardened: non-canonical `/health` no longer bypasses auth guards
 - query/filter parity now uses canonical Points/Tasks keys (`entry_*`, `task_*`, `occurred_*`, `due_*`, `sort`).
 - `/status` displays canonical OpenAPI/changelog linkage, compatibility marker, parity marker, and connectivity probe result.
 
@@ -102,6 +106,12 @@
 - **Ryvra Pay services:** canonical HTTP/API publication still pending.
 - **Ryvra Points/Tasks services:** canonical endpoint-level OpenAPI is now published and wired in apps parity contracts.
 - **Ryvra observability stack:** structured logs, tracing, and alerting pipeline.
+
+## Phase 11 release-readiness hardening highlights
+
+- `@ryvra/config` now fails fast in HTTP mode when critical Markets/Points-Tasks auth token env vars are missing.
+- `@ryvra/api-client` normalizes canonical error envelopes more consistently on fallback paths.
+- Status routes across apps now keep retry-oriented UX and aligned diagnostics error handling behavior.
 
 ## Placement guidance for future business logic
 

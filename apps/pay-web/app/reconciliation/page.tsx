@@ -1,7 +1,7 @@
 import type { PayListRequest, ReconciliationFilters } from "@ryvra/domain-payments";
 import { Card, Section, themeTokens } from "@ryvra/ui";
 import { ModeBadge } from "../components/mode-badge";
-import { ErrorState, UnauthorizedState } from "../components/page-states";
+import { EmptyState, ErrorState, UnauthorizedState } from "../components/page-states";
 import { ReconciliationTableClient } from "../components/reconciliation-table-client";
 import { formatDateTime } from "../lib/format";
 import {
@@ -102,6 +102,14 @@ export default async function PayReconciliationPage({ searchParams }: PayReconci
           </div>
 
           <ReconciliationTableClient items={reconciliationList.items} pagination={reconciliationList.pagination} />
+
+          {reconciliationList.items.length === 0 ? (
+            <EmptyState
+              title="No reconciliation items"
+              description="No reconciliation items matched the current filters."
+              actionLink={{ href: "/reconciliation", label: "Reset filters" }}
+            />
+          ) : null}
         </Section>
       </section>
     );

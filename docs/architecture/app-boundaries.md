@@ -11,18 +11,21 @@ Define clear responsibility boundaries between the three frontend apps and share
 - Owns Markets product user flows, page composition, and local feature state.
 - Consumes canonical Markets contracts via `@ryvra/api-client` + `@ryvra/domain-markets`.
 - Must not implement protocol-level transport logic directly in pages/components.
+- Surfaces actionable runtime errors (including diagnostics/status failures) without bypassing shared guardrails.
 
 ### `apps/pay-web`
 
 - Owns Pay product user flows, page composition, and local feature state.
 - Consumes Pay contracts via `@ryvra/api-client` + `@ryvra/domain-payments`.
 - Keeps write/transition behavior behind API client methods; no raw protocol payload crafting in UI layers.
+- Maintains parity diagnostics with explicit retry/error handling and shared request/correlation headers.
 
 ### `apps/points-tasks-web`
 
 - Owns Points/Tasks product user flows, page composition, and local feature state.
 - Consumes canonical Points/Tasks OpenAPI contracts via `@ryvra/api-client` + `@ryvra/domain-points`/`@ryvra/domain-tasks`.
 - Must not bypass shared parity/auth/scope guards with direct fetch calls.
+- Preserves canonical auth optionality: health-only route (`/points-tasks/status/health`) may bypass bearer auth; status/data routes may not.
 
 ## Shared packages
 
@@ -30,6 +33,7 @@ Define clear responsibility boundaries between the three frontend apps and share
 
 - Single boundary for backend/API access and transport behavior (`mock`/`http`).
 - Enforces canonical route mappings, auth requirements, scope guards, header policy, pagination/deprecation behavior, and error normalization.
+- Emits canonical request/correlation IDs for transport and diagnostics probes in both mock and http modes.
 - Exposes parity diagnostics metadata for status pages.
 
 ### `@ryvra/domain-*`
@@ -40,6 +44,7 @@ Define clear responsibility boundaries between the three frontend apps and share
 ### `@ryvra/config`
 
 - Source of navigation maps, deep-link helpers, and environment/runtime config parsing.
+- Fails fast with variable-level messages for invalid env values and missing HTTP-mode auth tokens on Markets/Points-Tasks integration paths.
 
 ### `@ryvra/ui`
 

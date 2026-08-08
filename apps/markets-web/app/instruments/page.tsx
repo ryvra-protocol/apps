@@ -2,7 +2,7 @@ import type { InstrumentFilters, MarketsListRequest } from "@ryvra/domain-market
 import { Card, Section, themeTokens } from "@ryvra/ui";
 import { InstrumentsTableClient } from "../components/instruments-table-client";
 import { ModeBadge } from "../components/mode-badge";
-import { ErrorState, UnauthorizedState } from "../components/page-states";
+import { EmptyState, ErrorState, UnauthorizedState } from "../components/page-states";
 import {
   getFirstParam,
   parseCursor,
@@ -98,6 +98,14 @@ export default async function MarketsInstrumentsPage({ searchParams }: MarketsIn
           </div>
 
           <InstrumentsTableClient items={instrumentList.items} pagination={instrumentList.pagination} />
+
+          {instrumentList.items.length === 0 ? (
+            <EmptyState
+              title="No instruments"
+              description="No instruments matched the current filters."
+              actionLink={{ href: "/instruments", label: "Reset filters" }}
+            />
+          ) : null}
         </Section>
       </section>
     );

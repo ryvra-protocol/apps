@@ -223,6 +223,94 @@ test("route mapping uses parity-aligned methods, paths, filters, and idempotency
   assert.equal(transitionRequest?.headers?.["x-correlation-id"], "correlation-fixed");
 });
 
+test("pay requests emit canonical request and correlation ids even with custom header names", async () => {
+  const { transport, calls } = createCaptureTransport((request) => {
+    if (request.path.startsWith("/pay/invoices")) {
+      return {
+        ok: true,
+        data: {
+          items: [],
+          pagination: { page: 1, pageSize: 10, total: 0, totalPages: 0 },
+        },
+      };
+    }
+
+    return { ok: false, error: { code: "unhandled", message: "Unhandled route", retryable: false, source: "mock" } };
+  });
+
+  const client = createPayClient({
+    mode: "mock",
+    baseUrl: "https://pay.example",
+    transport,
+    pay: {
+      requestIdHeader: "x-request-id-custom",
+      correlationIdHeader: "x-correlation-id-custom",
+      requestIdProvider: () => "request-mock",
+      correlationIdProvider: () => "correlation-mock",
+    },
+  });
+
+  await client.listInvoices({
+    pagination: { page: 1, pageSize: 10 },
+  });
+
+  const request = calls[0];
+  assert.equal(request?.headers?.["x-request-id-custom"], "request-mock");
+  assert.equal(request?.headers?.["x-correlation-id-custom"], "correlation-mock");
+  assert.equal(request?.headers?.["x-request-id"], "request-mock");
+  assert.equal(request?.headers?.["x-correlation-id"], "correlation-mock");
+});
+
+test("pay diagnostics probe includes headers and falls back to pay overview", async () => {
+  const { transport, calls } = createCaptureTransport((request) => {
+    if (request.path === "/custom-health") {
+      return {
+        ok: false,
+        error: {
+          code: "upstream_unavailable",
+          message: "primary connectivity probe failed",
+          retryable: true,
+          source: "http",
+          status: 503,
+        },
+      };
+    }
+
+    if (request.path === payRouteMap.getPayOverview) {
+      return {
+        ok: true,
+        data: {
+          status: "ok",
+        },
+      };
+    }
+
+    return { ok: false, error: { code: "unhandled", message: "Unhandled route", retryable: false, source: "mock" } };
+  });
+
+  const client = createPayClient({
+    mode: "http",
+    baseUrl: "https://pay.example",
+    transport,
+    pay: {
+      connectivityPath: "/custom-health",
+      requestIdProvider: () => "request-health",
+      correlationIdProvider: () => "correlation-health",
+    },
+  });
+
+  const diagnostics = await client.getParityDiagnostics();
+
+  assert.equal(diagnostics.connectivity.ok, true);
+  assert.equal(diagnostics.connectivity.path, payRouteMap.getPayOverview);
+  assert.equal(diagnostics.connectivity.message.includes("Primary probe failed"), true);
+  assert.equal(calls.length, 2);
+  assert.equal(calls[0]?.headers?.["x-request-id"], "request-health");
+  assert.equal(calls[0]?.headers?.["x-correlation-id"], "correlation-health");
+  assert.equal(calls[1]?.headers?.["x-request-id"], "request-health");
+  assert.equal(calls[1]?.headers?.["x-correlation-id"], "correlation-health");
+});
+
 test("enum parity keeps canonical payment intent states", () => {
   assert.deepEqual(payCanonicalPaymentIntentStates, [
     "created",

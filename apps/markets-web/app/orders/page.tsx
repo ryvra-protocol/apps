@@ -2,7 +2,7 @@ import type { MarketsAccountScopedListRequest, OrderFilters } from "@ryvra/domai
 import { Card, Section, themeTokens } from "@ryvra/ui";
 import { ModeBadge } from "../components/mode-badge";
 import { OrdersTableClient } from "../components/orders-table-client";
-import { ErrorState, UnauthorizedState } from "../components/page-states";
+import { EmptyState, ErrorState, UnauthorizedState } from "../components/page-states";
 import {
   parseAccountId,
   parseCursor,
@@ -124,6 +124,14 @@ export default async function MarketsOrdersPage({ searchParams }: MarketsOrdersP
           </div>
 
           <OrdersTableClient items={orderList.items} pagination={orderList.pagination} />
+
+          {orderList.items.length === 0 ? (
+            <EmptyState
+              title="No orders"
+              description="No orders matched the current account scope and filters."
+              actionLink={{ href: "/orders", label: "Reset filters" }}
+            />
+          ) : null}
         </Section>
       </section>
     );

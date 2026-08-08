@@ -301,19 +301,16 @@ function normalizeKnownMarketsError(
 
 function normalizeCanonicalMarketsEnvelope(
   marketsShape: MarketsErrorShape,
+  status: number | undefined,
 ): Pick<ApiError, "code" | "message" | "retryable" | "source" | "details"> | null {
-  if (
-    typeof marketsShape.code !== "string" ||
-    typeof marketsShape.message !== "string" ||
-    typeof marketsShape.retryable !== "boolean"
-  ) {
+  if (typeof marketsShape.code !== "string" || typeof marketsShape.message !== "string" || typeof marketsShape.source !== "string") {
     return null;
   }
 
   return {
     code: marketsShape.code,
     message: marketsShape.message,
-    retryable: marketsShape.retryable,
+    retryable: typeof marketsShape.retryable === "boolean" ? marketsShape.retryable : inferRetryable(status),
     source:
       typeof marketsShape.source === "string" &&
       (marketsShape.source === "mock" ||
@@ -346,10 +343,12 @@ export function normalizeApiError(error: unknown, options: NormalizeApiErrorOpti
   if (isApiErrorCandidate(error) && typeof error.message === "string") {
     const status = typeof error.status === "number" ? error.status : undefined;
     const marketsShape = extractMarketsErrorShape(error.details);
-    const canonicalMarketsError = normalizeCanonicalMarketsEnvelope(marketsShape);
+    const canonicalMarketsError = normalizeCanonicalMarketsEnvelope(marketsShape, status);
+    const canonicalFallbackSource = typeof error.source === "string" ? error.source : fallbackSource;
     if (canonicalMarketsError) {
       return {
         ...canonicalMarketsError,
+        source: canonicalMarketsError.source === "unknown" ? canonicalFallbackSource : canonicalMarketsError.source,
         ...(typeof status === "number" ? { status } : {}),
       };
     }
@@ -388,11 +387,12 @@ export function normalizeApiError(error: unknown, options: NormalizeApiErrorOpti
 
   if (isApiErrorCandidate(error)) {
     const marketsShape = extractMarketsErrorShape(error);
-    const canonicalMarketsError = normalizeCanonicalMarketsEnvelope(marketsShape);
+    const canonicalMarketsError = normalizeCanonicalMarketsEnvelope(marketsShape, options.fallbackStatus);
+    const canonicalFallbackSource = typeof error.source === "string" ? error.source : fallbackSource;
     if (canonicalMarketsError) {
       return {
         ...canonicalMarketsError,
-        source: canonicalMarketsError.source === "unknown" ? fallbackSource : canonicalMarketsError.source,
+        source: canonicalMarketsError.source === "unknown" ? canonicalFallbackSource : canonicalMarketsError.source,
         ...(typeof options.fallbackStatus === "number" ? { status: options.fallbackStatus } : {}),
       };
     }

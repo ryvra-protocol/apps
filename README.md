@@ -18,6 +18,7 @@ This repository hosts the unified-shell baseline with Pay, Markets, and Points/T
 ## Runtime requirements
 
 - **Node.js:** `24.x` (workspace engines: `>=24 <25`)
+- **CI Node pin:** `24.19.0`
 - **pnpm:** `10.16.0` (via Corepack)
 
 ## Post-upgrade notes (Node 24 / pnpm 10.16.0 / Next.js 16.3.0)
@@ -31,6 +32,8 @@ This repository hosts the unified-shell baseline with Pay, Markets, and Points/T
 ```bash
 corepack enable
 corepack prepare pnpm@10.16.0 --activate
+node -v
+pnpm -v
 pnpm install
 ```
 
@@ -81,6 +84,7 @@ Contract behavior notes:
 - account-scoped routes require `account_id` (`orders`, `orders/summary`, `positions`, `positions/summary`, `overview`)
 - pagination is cursor-first (`limit`, `cursor`); `page` is deprecated compatibility only
 - decoder normalizes deprecated `net_exposure_bucket` into canonical `net_exposure_band`
+- runtime config now fails fast in `http` mode if `RYVRA_MARKETS_AUTH_TOKEN` is missing
 
 Optional smoke-test guard:
 
@@ -134,6 +138,7 @@ Contract behavior notes:
 - canonical filters/sort use OpenAPI keys (`entry_*`, `task_*`, `occurred_*`, `due_*`, `sort`)
 - Points/Tasks HTTP errors are normalized to canonical envelope (`code`, `message`, `retryable`, `source`, optional `details`)
 - deprecated payload aliases are accepted only where canonical compatibility allows
+- runtime config now fails fast in `http` mode if `RYVRA_POINTS_TASKS_AUTH_TOKEN` is missing
 
 Optional smoke-test guard:
 
@@ -215,6 +220,7 @@ Pull requests into `main` must pass:
 - `pnpm typecheck`
 - `pnpm build`
 - `pnpm test`
+- runtime policy verification (`Node 24.x`, `pnpm 10.16.0`)
 
 > Contributor caveat: keep Corepack pinned to `pnpm@10.16.0` when regenerating `pnpm-lock.yaml` to avoid lockfile churn.
 
@@ -244,3 +250,4 @@ See `docs/architecture/` for boundaries, responsibilities, and integration mappi
 - `docs/architecture/pay-integration-parity.md`
 - `docs/architecture/points-tasks-mvp-data-flow.md`
 - `docs/architecture/points-tasks-integration-parity.md`
+- `docs/architecture/release-readiness-checklist.md`
