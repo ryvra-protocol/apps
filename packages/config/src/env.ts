@@ -1,5 +1,12 @@
 import { z } from "zod";
-import type { AppConfig, AppId, FeatureFlags, MarketsIntegrationConfig, RuntimeMode } from "./types";
+import type {
+  AppConfig,
+  AppId,
+  FeatureFlags,
+  MarketsIntegrationConfig,
+  PointsTasksIntegrationConfig,
+  RuntimeMode,
+} from "./types";
 
 const runtimeModeSchema = z.enum(["mock", "http", "live"]);
 
@@ -13,6 +20,10 @@ const envSchema = z.object({
   RYVRA_MARKETS_PARITY_CHECK_MARKER: z.string().optional(),
   RYVRA_MARKETS_CONNECTIVITY_PATH: z.string().optional(),
   RYVRA_MARKETS_ACCOUNT_ID: z.string().optional(),
+  RYVRA_POINTS_TASKS_COMPATIBILITY_VERSION: z.string().optional(),
+  RYVRA_POINTS_TASKS_PARITY_CHECK_MARKER: z.string().optional(),
+  RYVRA_POINTS_TASKS_CONNECTIVITY_PATH: z.string().optional(),
+  RYVRA_POINTS_TASKS_ACCOUNT_ID: z.string().optional(),
   RYVRA_FEATURE_MARKETS_ENABLED: z.coerce.boolean().default(true),
   RYVRA_FEATURE_PAY_ENABLED: z.coerce.boolean().default(true),
   RYVRA_FEATURE_POINTS_TASKS_ENABLED: z.coerce.boolean().default(true),
@@ -90,4 +101,21 @@ export function loadPayConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
 
 export function loadPointsTasksConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   return loadAppConfig("points-tasks", env);
+}
+
+export function loadPointsTasksIntegrationConfig(env: NodeJS.ProcessEnv = process.env): PointsTasksIntegrationConfig {
+  const base = loadPointsTasksConfig(env);
+  const parsedEnv = envSchema.parse(env);
+  const compatibilityVersion = normalizeOptionalString(parsedEnv.RYVRA_POINTS_TASKS_COMPATIBILITY_VERSION);
+  const parityCheckMarker = normalizeOptionalString(parsedEnv.RYVRA_POINTS_TASKS_PARITY_CHECK_MARKER);
+  const connectivityPath = normalizeOptionalString(parsedEnv.RYVRA_POINTS_TASKS_CONNECTIVITY_PATH);
+  const accountId = normalizeOptionalString(parsedEnv.RYVRA_POINTS_TASKS_ACCOUNT_ID);
+
+  return {
+    ...base,
+    ...(compatibilityVersion ? { compatibilityVersion } : {}),
+    ...(parityCheckMarker ? { parityCheckMarker } : {}),
+    ...(connectivityPath ? { connectivityPath } : {}),
+    ...(accountId ? { accountId } : {}),
+  };
 }

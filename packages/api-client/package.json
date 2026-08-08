@@ -13,6 +13,8 @@
     "test:parity": "tsx --test src/__tests__/**/*.spec.ts"
   },
   "dependencies": {
+    "@ryvra/domain-points": "workspace:*",
+    "@ryvra/domain-tasks": "workspace:*",
     "@ryvra/domain-markets": "workspace:*",
     "@ryvra/domain-payments": "workspace:*",
     "@ryvra/domain-tokenomics": "workspace:*"

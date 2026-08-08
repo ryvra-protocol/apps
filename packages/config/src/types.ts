@@ -21,3 +21,10 @@ export interface MarketsIntegrationConfig extends AppConfig {
   connectivityPath?: string;
   accountId?: string;
 }
+
+export interface PointsTasksIntegrationConfig extends AppConfig {
+  compatibilityVersion?: string;
+  parityCheckMarker?: string;
+  connectivityPath?: string;
+  accountId?: string;
+}

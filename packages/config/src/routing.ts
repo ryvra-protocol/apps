@@ -166,19 +166,19 @@ const productRoutes = {
   ],
   points: [
     {
-      id: "points-overview",
-      label: "Points Overview",
+      id: "points-dashboard",
+      label: "Dashboard",
       product: "points",
       path: "/",
       href: "/",
       visible: true,
     },
     {
-      id: "points-activity",
-      label: "Activity",
+      id: "points-ledger",
+      label: "Points",
       product: "points",
-      path: "/activity",
-      href: "/activity",
+      path: "/points",
+      href: "/points",
       visible: true,
     },
     {
@@ -192,6 +192,14 @@ const productRoutes = {
         roles: ["member", "admin"],
         permission: "tasks:read",
       },
+    },
+    {
+      id: "points-status",
+      label: "Status",
+      product: "points",
+      path: "/status",
+      href: "/status",
+      visible: true,
     },
   ],
 } as const satisfies Record<ProductId, readonly RouteDefinition[]>;

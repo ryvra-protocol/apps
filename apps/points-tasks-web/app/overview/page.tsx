@@ -1,15 +1,88 @@
-import { Card, Section, themeTokens } from "@ryvra/ui";
+import { Section, themeTokens } from "@ryvra/ui";
+import { ErrorState, UnauthorizedState } from "../components/page-states";
+import { PointsTasksOverviewContent } from "../components/points-tasks-overview-content";
+import { parseAccountId, type RouteSearchParams } from "../lib/search-params";
+import { capturePointsTasksPageError, createPointsTasksRuntimeContext } from "../lib/runtime";
 
-export default function PointsOverviewPage() {
-  return (
-    <section style={{ display: "grid", gap: themeTokens.spacing.lg }}>
-      <Section title="Platform Overview" description="Shared shell overview route for the Points & Tasks product surface.">
-        <Card title="Overview Placeholder">
-          <p style={{ margin: 0 }}>
-            This route keeps global navigation stable while reward and tasks feature pages are implemented in later phases.
-          </p>
-        </Card>
-      </Section>
-    </section>
-  );
+interface PointsTasksOverviewPageProps {
+  searchParams?: Record<string, string | string[] | undefined>;
+}
+
+export const dynamic = "force-dynamic";
+
+function resolveAccountId(searchParams: RouteSearchParams, defaultAccountId: string | undefined): string {
+  return parseAccountId(searchParams) ?? defaultAccountId ?? "";
+}
+
+export default async function PointsOverviewPage({ searchParams }: PointsTasksOverviewPageProps) {
+  const runtime = createPointsTasksRuntimeContext("points-tasks-web:overview");
+
+  if (!runtime.authDecision.allowed) {
+    return (
+      <section style={{ display: "grid", gap: themeTokens.spacing.lg }}>
+        <Section title="Points & Tasks Overview" description="Access-controlled points and tasks summary route.">
+          <UnauthorizedState />
+        </Section>
+      </section>
+    );
+  }
+
+  const accountId = resolveAccountId(searchParams, runtime.defaultAccountId);
+  if (!accountId) {
+    return (
+      <section style={{ display: "grid", gap: themeTokens.spacing.lg }}>
+        <Section title="Points & Tasks Overview" description="Typed overview metrics and recent activity feed.">
+          <ErrorState
+            title="Account scope is required"
+            message="Set account_id in the URL or configure RYVRA_POINTS_TASKS_ACCOUNT_ID before requesting overview data."
+            source="runtime"
+            retryable={false}
+            retryLink={{ href: "/overview", label: "Retry overview" }}
+          />
+        </Section>
+      </section>
+    );
+  }
+
+  try {
+    const [pointsOverview, tasksOverview] = await Promise.all([
+      runtime.pointsTasksClient.getPointsOverview({ accountId }),
+      runtime.pointsTasksClient.getTasksOverview({ accountId }),
+    ]);
+
+    runtime.logger.info("Loaded points/tasks overview route", {
+      mode: runtime.config.mode,
+      accountId,
+      totalPoints: pointsOverview.summary.totalPoints,
+      totalTasks: tasksOverview.summary.total,
+    });
+
+    return (
+      <PointsTasksOverviewContent
+        title="Points & Tasks Overview"
+        description="Summary-focused parity view with points/task aggregates and recent activity."
+        mode={runtime.config.mode}
+        baseUrl={runtime.config.apiBaseUrl}
+        accountId={accountId}
+        pointsOverview={pointsOverview}
+        tasksOverview={tasksOverview}
+      />
+    );
+  } catch (error) {
+    const uiError = capturePointsTasksPageError(runtime.logger, "/overview", error);
+
+    return (
+      <section style={{ display: "grid", gap: themeTokens.spacing.lg }}>
+        <Section title="Points & Tasks Overview" description="Summary-focused parity view.">
+          <ErrorState
+            title="Unable to load overview"
+            message={uiError.message}
+            source={uiError.source}
+            retryable={uiError.retryable}
+            retryLink={{ href: "/overview", label: "Retry overview" }}
+          />
+        </Section>
+      </section>
+    );
+  }
 }

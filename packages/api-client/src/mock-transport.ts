@@ -23,8 +23,30 @@ import {
   type SettlementSnapshot,
   type SubscriptionDto,
 } from "@ryvra/domain-payments";
+import type {
+  PointEntryDto,
+  PointSummaryDto,
+  PointsListResponse,
+  PointsOverviewDto,
+} from "@ryvra/domain-points";
+import type {
+  TaskDto,
+  TaskSummaryDto,
+  TasksListResponse,
+  TasksOverviewDto,
+} from "@ryvra/domain-tasks";
 import type { ConversionPreviewDto, EligibilityResult } from "@ryvra/domain-tokenomics";
 import { payCanonicalPaymentIntentStates } from "./pay-parity";
+import {
+  POINTS_TASKS_API_OPENAPI_AVAILABLE,
+  POINTS_TASKS_CONTRACTS_EVENTS_PATH,
+  POINTS_TASKS_CONTRACTS_IDS_PATH,
+  POINTS_TASKS_CONTRACT_SCHEMA_VERSION,
+  POINTS_TASKS_PARITY_CHECK_MARKER,
+  POINTS_TASKS_PROTOCOL_COMPATIBILITY_VERSION,
+  POINTS_TASKS_PROTOCOL_SOURCE,
+  pointsTasksRouteMap,
+} from "./points-tasks-parity";
 import type { ApiRequest, ApiResult, Transport } from "./types";
 
 const mockInstruments: InstrumentDto[] = [
@@ -586,6 +608,190 @@ const mockSubscriptions: SubscriptionDto[] = [
   { id: "sub-1", customerId: "cust-1", status: "ACTIVE", renewalAt: "2026-12-01T00:00:00Z" },
 ];
 
+const mockPointEntries: PointEntryDto[] = [
+  {
+    id: "pt-1001",
+    accountId: "acct-core-1",
+    type: "award",
+    source: "task",
+    amount: 120,
+    balance: 1_120,
+    status: "posted",
+    timestamp: "2026-08-07T08:00:00.000Z",
+    referenceId: "ref-task-501",
+    taskId: "task-501",
+    description: "Referral milestone completion",
+  },
+  {
+    id: "pt-1002",
+    accountId: "acct-core-1",
+    type: "spend",
+    source: "ledger",
+    amount: -50,
+    balance: 1_070,
+    status: "posted",
+    timestamp: "2026-08-06T14:10:00.000Z",
+    referenceId: "ref-redemption-11",
+    description: "Marketplace coupon redemption",
+  },
+  {
+    id: "pt-1003",
+    accountId: "acct-core-1",
+    type: "adjustment",
+    source: "manual",
+    amount: 30,
+    balance: 1_100,
+    status: "pending",
+    timestamp: "2026-08-06T11:30:00.000Z",
+    referenceId: "ref-review-18",
+    description: "Manual anti-abuse review pending",
+  },
+  {
+    id: "pt-1004",
+    accountId: "acct-core-1",
+    type: "award",
+    source: "ledger",
+    amount: 80,
+    balance: 1_180,
+    status: "posted",
+    timestamp: "2026-08-05T09:45:00.000Z",
+    referenceId: "ref-order-303",
+    description: "Net eligible contribution",
+  },
+  {
+    id: "pt-1005",
+    accountId: "acct-core-1",
+    type: "reversal",
+    source: "manual",
+    amount: -20,
+    balance: 1_160,
+    status: "reversed",
+    timestamp: "2026-08-04T16:22:00.000Z",
+    referenceId: "ref-dispute-77",
+    description: "Retroactive adjustment after dispute",
+  },
+  {
+    id: "pt-1006",
+    accountId: "acct-core-1",
+    type: "award",
+    source: "bonus",
+    amount: 45,
+    balance: 1_205,
+    status: "posted",
+    timestamp: "2026-08-03T07:01:00.000Z",
+    referenceId: "ref-bonus-10",
+  },
+  {
+    id: "pt-1007",
+    accountId: "acct-core-2",
+    type: "award",
+    source: "task",
+    amount: 65,
+    balance: 860,
+    status: "posted",
+    timestamp: "2026-08-06T10:00:00.000Z",
+    referenceId: "ref-task-700",
+    taskId: "task-700",
+  },
+  {
+    id: "pt-1008",
+    accountId: "acct-core-2",
+    type: "adjustment",
+    source: "manual",
+    amount: -15,
+    balance: 845,
+    status: "failed",
+    timestamp: "2026-08-05T10:30:00.000Z",
+    referenceId: "ref-review-88",
+  },
+];
+
+const mockTasks: TaskDto[] = [
+  {
+    id: "task-501",
+    accountId: "acct-core-1",
+    title: "Verify referral proof",
+    type: "verification",
+    ownerId: "analyst-a",
+    status: "done",
+    progressPercent: 100,
+    createdAt: "2026-08-05T08:30:00.000Z",
+    updatedAt: "2026-08-07T08:00:00.000Z",
+    completedAt: "2026-08-07T08:00:00.000Z",
+  },
+  {
+    id: "task-502",
+    accountId: "acct-core-1",
+    title: "Review anti-abuse signal spike",
+    type: "review",
+    ownerId: "risk-ops",
+    status: "in_progress",
+    progressPercent: 60,
+    createdAt: "2026-08-06T10:00:00.000Z",
+    updatedAt: "2026-08-07T09:15:00.000Z",
+    dueAt: "2026-08-09T00:00:00.000Z",
+  },
+  {
+    id: "task-503",
+    accountId: "acct-core-1",
+    title: "Issue bonus campaign award batch",
+    type: "reward",
+    ownerId: "growth-ops",
+    status: "open",
+    progressPercent: 0,
+    createdAt: "2026-08-07T05:10:00.000Z",
+    updatedAt: "2026-08-07T05:10:00.000Z",
+    dueAt: "2026-08-10T00:00:00.000Z",
+  },
+  {
+    id: "task-504",
+    accountId: "acct-core-1",
+    title: "Backfill settlement references",
+    type: "operations",
+    ownerId: "ops-core",
+    status: "failed",
+    progressPercent: 25,
+    createdAt: "2026-08-04T13:00:00.000Z",
+    updatedAt: "2026-08-05T11:20:00.000Z",
+    dueAt: "2026-08-06T00:00:00.000Z",
+  },
+  {
+    id: "task-505",
+    accountId: "acct-core-1",
+    title: "Escalate blocked contribution review",
+    type: "review",
+    ownerId: "risk-ops",
+    status: "blocked",
+    progressPercent: 40,
+    createdAt: "2026-08-03T09:40:00.000Z",
+    updatedAt: "2026-08-06T07:30:00.000Z",
+    dueAt: "2026-08-08T00:00:00.000Z",
+  },
+  {
+    id: "task-506",
+    accountId: "acct-core-1",
+    title: "Cancel stale reward migration",
+    type: "operations",
+    ownerId: "ops-core",
+    status: "canceled",
+    progressPercent: 10,
+    createdAt: "2026-08-01T09:40:00.000Z",
+    updatedAt: "2026-08-02T07:30:00.000Z",
+  },
+  {
+    id: "task-700",
+    accountId: "acct-core-2",
+    title: "Verify retained loyalty activity",
+    type: "verification",
+    ownerId: "analyst-b",
+    status: "done",
+    progressPercent: 100,
+    createdAt: "2026-08-05T08:30:00.000Z",
+    updatedAt: "2026-08-06T10:00:00.000Z",
+    completedAt: "2026-08-06T10:00:00.000Z",
+  },
+];
+
 const paymentIntentStateSet = new Set(payCanonicalPaymentIntentStates);
 
 const mockPaymentIntents = new Map<string, PaymentIntent>([
@@ -1010,6 +1216,225 @@ function paginateMarkets<T>(items: T[], searchParams: URLSearchParams): MarketsL
       ...(typeof deprecatedPage === "number" ? { page: deprecatedPage } : {}),
     },
   };
+}
+
+function paginatePointsTasks<T>(items: T[], searchParams: URLSearchParams): {
+  asOf: string;
+  items: T[];
+  pagination: {
+    limit: number;
+    hasMore: boolean;
+    nextCursor?: string;
+    page?: number;
+  };
+} {
+  const parsedLimit = Number.parseInt(
+    getParam(searchParams, "limit", "page_size") ?? searchParams.get("pageSize") ?? "50",
+    10,
+  );
+  const limit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(parsedLimit, 200) : 50;
+  const cursor = searchParams.get("cursor");
+  const deprecatedPage = !cursor ? parseLegacyPage(searchParams) : undefined;
+  const startOffset = cursor ? parseCursorOffset(cursor) : ((deprecatedPage ?? 1) - 1) * limit;
+  const boundedOffset = Math.max(0, Math.min(startOffset, items.length));
+  const end = boundedOffset + limit;
+  const hasMore = end < items.length;
+
+  return {
+    asOf: new Date().toISOString(),
+    items: items.slice(boundedOffset, end),
+    pagination: {
+      limit,
+      hasMore,
+      ...(hasMore ? { nextCursor: encodeCursorOffset(end) } : {}),
+      ...(typeof deprecatedPage === "number" ? { page: deprecatedPage } : {}),
+    },
+  };
+}
+
+function buildPointSummary(items: PointEntryDto[], accountId: string): PointSummaryDto {
+  const byStatus: Record<string, number> = {};
+  for (const item of items) {
+    byStatus[item.status] = (byStatus[item.status] ?? 0) + 1;
+  }
+
+  const latestBalance = [...items].sort((left, right) => (left.timestamp < right.timestamp ? 1 : -1))[0]?.balance ?? 0;
+
+  return {
+    asOf: new Date().toISOString(),
+    accountId,
+    totalPoints: latestBalance,
+    earnedPoints: items
+      .filter((item) => item.amount > 0 && item.status === "posted")
+      .reduce((sum, item) => sum + item.amount, 0),
+    spentPoints: Math.abs(
+      items
+        .filter((item) => item.amount < 0 && (item.status === "posted" || item.status === "reversed"))
+        .reduce((sum, item) => sum + item.amount, 0),
+    ),
+    adjustedPoints: items
+      .filter((item) => item.type === "adjustment" || item.type === "reversal")
+      .reduce((sum, item) => sum + item.amount, 0),
+    pendingPoints: items.filter((item) => item.status === "pending").reduce((sum, item) => sum + item.amount, 0),
+    byStatus,
+  };
+}
+
+function buildTaskSummary(items: TaskDto[], accountId: string): TaskSummaryDto {
+  const byStatus: Record<string, number> = {};
+  for (const item of items) {
+    byStatus[item.status] = (byStatus[item.status] ?? 0) + 1;
+  }
+
+  return {
+    asOf: new Date().toISOString(),
+    accountId,
+    total: items.length,
+    open: items.filter((item) => item.status === "open").length,
+    inProgress: items.filter((item) => item.status === "in_progress").length,
+    done: items.filter((item) => item.status === "done").length,
+    failed: items.filter((item) => item.status === "failed").length,
+    byStatus,
+  };
+}
+
+function buildPointsOverview(accountId: string): PointsOverviewDto {
+  const scopedEntries = mockPointEntries.filter((item) => item.accountId === accountId);
+  const sortedEntries = [...scopedEntries].sort((left, right) => (left.timestamp < right.timestamp ? 1 : -1));
+
+  return {
+    asOf: new Date().toISOString(),
+    accountId,
+    summary: buildPointSummary(scopedEntries, accountId),
+    recentEntries: sortedEntries.slice(0, 10),
+  };
+}
+
+function buildTasksOverview(accountId: string): TasksOverviewDto {
+  const scopedTasks = mockTasks.filter((item) => item.accountId === accountId);
+  const sortedTasks = [...scopedTasks].sort((left, right) => (left.updatedAt < right.updatedAt ? 1 : -1));
+
+  return {
+    asOf: new Date().toISOString(),
+    accountId,
+    summary: buildTaskSummary(scopedTasks, accountId),
+    recentTasks: sortedTasks.slice(0, 10),
+  };
+}
+
+function filterPointEntries(searchParams: URLSearchParams, accountId: string): PointEntryDto[] {
+  const typeFilter = (searchParams.get("type") ?? searchParams.get("entry_type"))?.trim().toLowerCase();
+  const statusFilter = searchParams.get("status")?.trim().toLowerCase();
+  const sourceFilter = searchParams.get("source")?.trim().toLowerCase();
+  const searchFilter = searchParams.get("search")?.trim().toLowerCase();
+  const from = normalizeDateInput(searchParams.get("from"));
+  const to = normalizeDateInput(searchParams.get("to"));
+
+  return mockPointEntries.filter((item) => {
+    if (item.accountId !== accountId) {
+      return false;
+    }
+
+    if (typeFilter && item.type !== typeFilter) {
+      return false;
+    }
+
+    if (statusFilter && item.status !== statusFilter) {
+      return false;
+    }
+
+    if (sourceFilter && item.source !== sourceFilter) {
+      return false;
+    }
+
+    if (searchFilter) {
+      const searchTarget =
+        `${item.id} ${item.referenceId ?? ""} ${item.taskId ?? ""} ${item.description ?? ""} ${item.source}`.toLowerCase();
+      if (!searchTarget.includes(searchFilter)) {
+        return false;
+      }
+    }
+
+    return inDateRange(item.timestamp, from, to);
+  });
+}
+
+function listPointEntries(searchParams: URLSearchParams, accountId: string): PointsListResponse<PointEntryDto> {
+  const sortBy = getParam(searchParams, "sort_by", "sortField");
+  const normalizedSortBy =
+    sortBy === "occurred_at" || sortBy === "timestamp"
+      ? "timestamp"
+      : sortBy === "amount_points"
+        ? "amount"
+        : sortBy === "running_balance"
+          ? "balance"
+          : sortBy;
+  const sortField = parseSortField(
+    normalizedSortBy,
+    ["timestamp", "amount", "balance", "status"],
+    "timestamp",
+  );
+  const sortDirection = getParam(searchParams, "sort_order", "sortDirection") === "asc" ? "asc" : "desc";
+  const filtered = filterPointEntries(searchParams, accountId);
+  const sorted = sortRows(filtered, sortField, sortDirection);
+  return paginatePointsTasks(sorted, searchParams);
+}
+
+function filterTasks(searchParams: URLSearchParams, accountId: string): TaskDto[] {
+  const statusFilter = searchParams.get("status")?.trim().toLowerCase();
+  const typeFilter = searchParams.get("type")?.trim().toLowerCase();
+  const ownerFilter = (searchParams.get("owner_id") ?? searchParams.get("owner"))?.trim().toLowerCase();
+  const searchFilter = searchParams.get("search")?.trim().toLowerCase();
+  const dueFrom = normalizeDateInput(searchParams.get("due_from") ?? searchParams.get("from"));
+  const dueTo = normalizeDateInput(searchParams.get("due_to") ?? searchParams.get("to"));
+
+  return mockTasks.filter((item) => {
+    if (item.accountId !== accountId) {
+      return false;
+    }
+
+    if (statusFilter && item.status !== statusFilter) {
+      return false;
+    }
+
+    if (typeFilter && item.type !== typeFilter) {
+      return false;
+    }
+
+    if (ownerFilter && item.ownerId.toLowerCase() !== ownerFilter) {
+      return false;
+    }
+
+    if (searchFilter) {
+      const searchTarget = `${item.id} ${item.title} ${item.ownerId} ${item.description ?? ""}`.toLowerCase();
+      if (!searchTarget.includes(searchFilter)) {
+        return false;
+      }
+    }
+
+    return inDateRange(item.dueAt ?? item.updatedAt, dueFrom, dueTo);
+  });
+}
+
+function listTasks(searchParams: URLSearchParams, accountId: string): TasksListResponse<TaskDto> {
+  const sortBy = getParam(searchParams, "sort_by", "sortField");
+  const normalizedSortBy =
+    sortBy === "updated_at"
+      ? "updatedAt"
+      : sortBy === "due_at"
+        ? "dueAt"
+        : sortBy === "progress_percent"
+          ? "progressPercent"
+          : sortBy;
+  const sortField = parseSortField(
+    normalizedSortBy,
+    ["updatedAt", "dueAt", "progressPercent", "status"],
+    "updatedAt",
+  );
+  const sortDirection = getParam(searchParams, "sort_order", "sortDirection") === "asc" ? "asc" : "desc";
+  const filtered = filterTasks(searchParams, accountId);
+  const sorted = sortRows(filtered, sortField, sortDirection);
+  return paginatePointsTasks(sorted, searchParams);
 }
 
 function filterInstruments(searchParams: URLSearchParams): InstrumentDto[] {
@@ -1585,6 +2010,83 @@ export function createMockTransport(): Transport {
 
       if (request.method === "GET" && pathname === "/pay/subscriptions") {
         return success(mockSubscriptions as T);
+      }
+
+      const accountId = searchParams.get("account_id")?.trim() ?? "";
+      const needsAccountScope =
+        pathname === pointsTasksRouteMap.listPointEntries ||
+        pathname === pointsTasksRouteMap.getPointSummary ||
+        pathname === pointsTasksRouteMap.getPointsOverview ||
+        pathname === pointsTasksRouteMap.listTasks ||
+        pathname === pointsTasksRouteMap.getTaskSummary ||
+        pathname === pointsTasksRouteMap.getTasksOverview;
+
+      if (needsAccountScope && accountId.length === 0) {
+        return errorBadRequest<T>(
+          "mock_missing_account_scope",
+          "account_id is required for account-scoped points/tasks endpoints",
+          { pathname, query: searchParams.toString() },
+        );
+      }
+
+      if (request.method === "GET" && pathname === pointsTasksRouteMap.listPointEntries) {
+        return success(listPointEntries(searchParams, accountId) as T);
+      }
+
+      if (request.method === "GET" && pathname === pointsTasksRouteMap.getPointSummary) {
+        return success(buildPointSummary(filterPointEntries(searchParams, accountId), accountId) as T);
+      }
+
+      if (request.method === "GET" && pathname === pointsTasksRouteMap.getPointsOverview) {
+        return success(buildPointsOverview(accountId) as T);
+      }
+
+      if (request.method === "GET" && pathname === pointsTasksRouteMap.listTasks) {
+        return success(listTasks(searchParams, accountId) as T);
+      }
+
+      if (request.method === "GET" && pathname === pointsTasksRouteMap.getTaskSummary) {
+        return success(buildTaskSummary(filterTasks(searchParams, accountId), accountId) as T);
+      }
+
+      if (request.method === "GET" && pathname === pointsTasksRouteMap.getTasksOverview) {
+        return success(buildTasksOverview(accountId) as T);
+      }
+
+      if (request.method === "GET" && pathname === pointsTasksRouteMap.status) {
+        return success(
+          {
+            status: "ok",
+            mode: "mock",
+            service: "points-tasks",
+            timestamp: new Date().toISOString(),
+            checks: [
+              {
+                name: "mock-transport",
+                status: "pass",
+                latency_ms: 1,
+              },
+            ],
+          } as T,
+        );
+      }
+
+      if (request.method === "GET" && pathname === pointsTasksRouteMap.getParityDiagnostics) {
+        return success(
+          {
+            mode: "mock",
+            baseUrl: "mock://api",
+            parityCheckMarker: POINTS_TASKS_PARITY_CHECK_MARKER,
+            compatibilityVersion: POINTS_TASKS_PROTOCOL_COMPATIBILITY_VERSION,
+            sourceOfTruth: [
+              `${POINTS_TASKS_PROTOCOL_SOURCE}/${POINTS_TASKS_CONTRACTS_EVENTS_PATH}`,
+              `${POINTS_TASKS_PROTOCOL_SOURCE}/${POINTS_TASKS_CONTRACTS_IDS_PATH}`,
+              `${POINTS_TASKS_PROTOCOL_SOURCE}/contracts/src/version.ts`,
+            ],
+            openApiAvailable: POINTS_TASKS_API_OPENAPI_AVAILABLE,
+            contractSchemaVersion: POINTS_TASKS_CONTRACT_SCHEMA_VERSION,
+          } as T,
+        );
       }
 
       if (request.method === "GET" && pathname === "/points-tasks/eligibility") {
