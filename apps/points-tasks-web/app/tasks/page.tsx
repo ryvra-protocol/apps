@@ -1,19 +1,20 @@
-import type { TaskFilters, TasksAccountScopedListRequest } from "@ryvra/domain-tasks";
+import type { TaskFilters, TasksAccountScopedListRequest, TasksAccountScopedRequest } from "@ryvra/domain-tasks";
 import { Card, Section, themeTokens } from "@ryvra/ui";
 import { EmptyState, ErrorState, UnauthorizedState } from "../components/page-states";
 import { TasksTableClient } from "../components/tasks-table-client";
 import { ModeBadge } from "../components/mode-badge";
 import {
-  getFirstParam,
   parseAccountId,
   parseCursor,
-  parseDateRange,
   parseLimit,
   parsePage,
-  parseSortDirection,
-  parseTaskOwner,
+  parseTaskDateRange,
+  parseTaskProgressState,
+  parseTaskSort,
   parseTaskStatus,
   parseTaskType,
+  parseUserId,
+  parseWorkspaceId,
   type RouteSearchParams,
 } from "../lib/search-params";
 import { capturePointsTasksPageError, createPointsTasksRuntimeContext } from "../lib/runtime";
@@ -28,26 +29,27 @@ function buildTaskRequest(
   searchParams: RouteSearchParams,
   defaultAccountId: string | undefined,
 ): TasksAccountScopedListRequest<TaskFilters> {
-  const status = parseTaskStatus(searchParams);
-  const type = parseTaskType(searchParams);
-  const ownerId = parseTaskOwner(searchParams);
-  const search = getFirstParam(searchParams, "search")?.trim();
-  const dateRange = parseDateRange(searchParams);
-  const sortField = getFirstParam(searchParams, "sortBy") ?? getFirstParam(searchParams, "sortField") ?? "updated_at";
+  const taskStatus = parseTaskStatus(searchParams);
+  const taskType = parseTaskType(searchParams);
+  const progressState = parseTaskProgressState(searchParams);
+  const dateRange = parseTaskDateRange(searchParams);
   const cursor = parseCursor(searchParams);
   const deprecatedPage = parsePage(searchParams);
   const accountId = parseAccountId(searchParams) ?? defaultAccountId ?? "";
+  const userId = parseUserId(searchParams);
+  const workspaceId = parseWorkspaceId(searchParams);
 
   const filters: TaskFilters = {
-    ...(status ? { status } : {}),
-    ...(type ? { type } : {}),
-    ...(ownerId ? { ownerId } : {}),
-    ...(search ? { search } : {}),
+    ...(taskStatus ? { taskStatus } : {}),
+    ...(taskType ? { taskType } : {}),
+    ...(progressState ? { progressState } : {}),
     ...(dateRange ? { dateRange } : {}),
   };
 
   return {
     accountId,
+    ...(userId ? { userId } : {}),
+    ...(workspaceId ? { workspaceId } : {}),
     ...(Object.keys(filters).length > 0 ? { filters } : {}),
     pagination: {
       limit: parseLimit(searchParams, 50),
@@ -55,8 +57,7 @@ function buildTaskRequest(
       ...(typeof deprecatedPage === "number" ? { page: deprecatedPage } : {}),
     },
     sort: {
-      field: sortField,
-      direction: parseSortDirection(searchParams),
+      value: parseTaskSort(searchParams),
     },
   };
 }
@@ -67,7 +68,7 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
   if (!runtime.authDecision.allowed) {
     return (
       <section style={{ display: "grid", gap: themeTokens.spacing.lg }}>
-        <Section title="Tasks" description="Typed tasks queue with parity filters and cursor pagination.">
+        <Section title="Tasks" description="Canonical tasks view with scope and cursor pagination.">
           <UnauthorizedState />
         </Section>
       </section>
@@ -80,7 +81,7 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
     if (!request.accountId) {
       return (
         <section style={{ display: "grid", gap: themeTokens.spacing.lg }}>
-          <Section title="Tasks" description="Typed tasks queue with parity filters and cursor pagination.">
+          <Section title="Tasks" description="Canonical tasks view with scope and cursor pagination.">
             <ErrorState
               title="Account scope is required"
               message="Set account_id in the URL or configure RYVRA_POINTS_TASKS_ACCOUNT_ID before requesting task data."
@@ -93,25 +94,28 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
       );
     }
 
+    const summaryRequest: TasksAccountScopedRequest = {
+      accountId: request.accountId,
+      ...(request.userId ? { userId: request.userId } : {}),
+      ...(request.workspaceId ? { workspaceId: request.workspaceId } : {}),
+    };
+
     const [taskList, summary] = await Promise.all([
       runtime.pointsTasksClient.listTasks(request),
-      runtime.pointsTasksClient.getTaskSummary({
-        accountId: request.accountId,
-        ...(request.filters ? { filters: request.filters } : {}),
-      }),
+      runtime.pointsTasksClient.getTaskSummary(summaryRequest),
     ]);
 
     runtime.logger.info("Loaded tasks queue data", {
       mode: runtime.config.mode,
       accountId: request.accountId,
       taskCount: taskList.items.length,
-      open: summary.open,
-      inProgress: summary.inProgress,
+      totalTasks: summary.totalTasks,
+      completedTasks: summary.completedTasks,
     });
 
     return (
       <section style={{ display: "grid", gap: themeTokens.spacing.lg }}>
-        <Section title="Tasks" description="Typed tasks queue with parity filters and cursor pagination.">
+        <Section title="Tasks" description="Canonical tasks view with scope and cursor pagination.">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: themeTokens.spacing.sm }}>
             <ModeBadge mode={runtime.config.mode} />
             <span style={{ color: themeTokens.color.textMuted, fontSize: themeTokens.typography.size.sm }}>
@@ -120,20 +124,17 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
           </div>
 
           <div style={{ display: "grid", gap: themeTokens.spacing.md, gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))" }}>
-            <Card title="Total">
-              <p style={{ margin: 0 }}>{summary.total}</p>
+            <Card title="Total tasks">
+              <p style={{ margin: 0 }}>{summary.totalTasks}</p>
             </Card>
-            <Card title="Open">
-              <p style={{ margin: 0 }}>{summary.open}</p>
+            <Card title="Completed tasks">
+              <p style={{ margin: 0 }}>{summary.completedTasks}</p>
             </Card>
-            <Card title="In progress">
-              <p style={{ margin: 0 }}>{summary.inProgress}</p>
+            <Card title="In progress tasks">
+              <p style={{ margin: 0 }}>{summary.inProgressTasks}</p>
             </Card>
-            <Card title="Done">
-              <p style={{ margin: 0 }}>{summary.done}</p>
-            </Card>
-            <Card title="Failed">
-              <p style={{ margin: 0 }}>{summary.failed}</p>
+            <Card title="Overdue tasks">
+              <p style={{ margin: 0 }}>{summary.overdueTasks}</p>
             </Card>
           </div>
 
@@ -154,7 +155,7 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
 
     return (
       <section style={{ display: "grid", gap: themeTokens.spacing.lg }}>
-        <Section title="Tasks" description="Typed tasks queue with parity filters and cursor pagination.">
+        <Section title="Tasks" description="Canonical tasks view with scope and cursor pagination.">
           <ErrorState
             title="Unable to load tasks"
             message={uiError.message}

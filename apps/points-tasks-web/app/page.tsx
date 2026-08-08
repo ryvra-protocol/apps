@@ -1,7 +1,14 @@
 import { Section, themeTokens } from "@ryvra/ui";
 import { ErrorState, UnauthorizedState } from "./components/page-states";
 import { PointsTasksOverviewContent } from "./components/points-tasks-overview-content";
-import { parseAccountId, type RouteSearchParams } from "./lib/search-params";
+import {
+  parseAccountId,
+  parsePointsWindow,
+  parseTasksWindow,
+  parseUserId,
+  parseWorkspaceId,
+  type RouteSearchParams,
+} from "./lib/search-params";
 import { capturePointsTasksPageError, createPointsTasksRuntimeContext } from "./lib/runtime";
 
 interface PointsTasksDashboardPageProps {
@@ -46,15 +53,25 @@ export default async function PointsTasksDashboardPage({ searchParams }: PointsT
 
   try {
     const [pointsOverview, tasksOverview] = await Promise.all([
-      runtime.pointsTasksClient.getPointsOverview({ accountId }),
-      runtime.pointsTasksClient.getTasksOverview({ accountId }),
+      runtime.pointsTasksClient.getPointsOverview({
+        accountId,
+        ...(parseUserId(searchParams) ? { userId: parseUserId(searchParams) } : {}),
+        ...(parseWorkspaceId(searchParams) ? { workspaceId: parseWorkspaceId(searchParams) } : {}),
+        ...(parsePointsWindow(searchParams) ? { window: parsePointsWindow(searchParams) } : {}),
+      }),
+      runtime.pointsTasksClient.getTasksOverview({
+        accountId,
+        ...(parseUserId(searchParams) ? { userId: parseUserId(searchParams) } : {}),
+        ...(parseWorkspaceId(searchParams) ? { workspaceId: parseWorkspaceId(searchParams) } : {}),
+        ...(parseTasksWindow(searchParams) ? { window: parseTasksWindow(searchParams) } : {}),
+      }),
     ]);
 
     runtime.logger.info("Loaded points/tasks dashboard overview", {
       mode: runtime.config.mode,
       accountId,
-      totalPoints: pointsOverview.summary.totalPoints,
-      totalTasks: tasksOverview.summary.total,
+      currentBalance: pointsOverview.currentBalance,
+      tasksCreated: tasksOverview.tasksCreated,
     });
 
     return (

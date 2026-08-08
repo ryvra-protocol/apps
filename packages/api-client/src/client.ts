@@ -18,14 +18,14 @@ import type {
 import type {
   PointEntryFilters,
   PointsAccountScopedListRequest,
-  PointsAccountScopedRequest,
-  PointsAccountScopedSummaryRequest,
+  PointsOverviewRequest,
+  PointsSummaryRequest,
 } from "@ryvra/domain-points";
 import type {
   TaskFilters,
   TasksAccountScopedListRequest,
   TasksAccountScopedRequest,
-  TasksAccountScopedSummaryRequest,
+  TasksOverviewRequest,
 } from "@ryvra/domain-tasks";
 import { ApiClientError } from "./errors";
 import { createMockTransport } from "./mock-transport";
@@ -77,19 +77,17 @@ import {
 } from "./pay-parity";
 import {
   POINTS_TASKS_API_OPENAPI_AVAILABLE,
-  POINTS_TASKS_CONTRACT_SCHEMA_VERSION,
-  POINTS_TASKS_CONTRACTS_EVENTS_PATH,
-  POINTS_TASKS_CONTRACTS_IDS_PATH,
-  POINTS_TASKS_DEPRECATED_FIELD_REMOVAL_NOT_BEFORE,
+  POINTS_TASKS_CANONICAL_API_VERSION,
   POINTS_TASKS_DEPRECATED_PAGE_REMOVAL_NOT_BEFORE,
   POINTS_TASKS_PARITY_CHECK_MARKER,
-  POINTS_TASKS_POLICY_DOC_PATH,
-  POINTS_TASKS_POLICY_SOURCE,
+  POINTS_TASKS_PROTOCOL_CHANGELOG_PATH,
   POINTS_TASKS_PROTOCOL_COMPATIBILITY_VERSION,
-  POINTS_TASKS_PROTOCOL_DOC_PATH,
-  POINTS_TASKS_PROTOCOL_FAQ_PATH,
+  POINTS_TASKS_PROTOCOL_OPENAPI_COMMIT,
+  POINTS_TASKS_PROTOCOL_OPENAPI_PATH,
+  POINTS_TASKS_PROTOCOL_OPENAPI_SHA,
   POINTS_TASKS_PROTOCOL_SOURCE,
   pointsTasksAccountScopedRoutes,
+  pointsTasksAuthOptionalRoutes,
   pointsTasksRouteMap,
 } from "./points-tasks-parity";
 import { createFetchTransport } from "./transport";
@@ -407,63 +405,101 @@ function buildMarketsOverviewQuery(request: MarketsAccountScopedRequest): string
   return toQueryString(params);
 }
 
+interface PointsTasksListRequestLike<TFilters extends object> {
+  filters?: TFilters;
+  pagination?: {
+    limit?: number;
+    cursor?: string;
+    page?: number;
+  };
+  sort?: {
+    value?: string;
+  };
+}
+
+function setPointsTasksScope(
+  params: URLSearchParams,
+  request: {
+    accountId: string;
+    userId?: string;
+    workspaceId?: string;
+  },
+): void {
+  setIfPresent(params, "account_id", request.accountId);
+  setIfPresent(params, "user_id", request.userId);
+  setIfPresent(params, "workspace_id", request.workspaceId);
+}
+
+function setPointsTasksPaginationAndSort<TFilters extends object>(
+  params: URLSearchParams,
+  request: PointsTasksListRequestLike<TFilters> | undefined,
+): void {
+  if (!request) {
+    return;
+  }
+
+  setIfPresent(params, "limit", request.pagination?.limit);
+  const cursor = request.pagination?.cursor?.trim();
+  if (cursor) {
+    params.set("cursor", cursor);
+  } else {
+    // Deprecated compatibility shim per canonical contract deprecation window (no earlier than 2027-02-04).
+    setIfPresent(params, "page", request.pagination?.page);
+  }
+
+  setIfPresent(params, "sort", request.sort?.value);
+}
+
 function buildPointEntriesQuery(request: PointsAccountScopedListRequest<PointEntryFilters>): string {
   const params = new URLSearchParams();
-  setMarketsPaginationAndSort(params, request);
-  setIfPresent(params, "account_id", request.accountId);
-  setIfPresent(params, "type", request.filters?.type ?? request.filters?.entryType);
-  setIfPresent(params, "status", request.filters?.status);
-  setIfPresent(params, "source", request.filters?.source);
-  setIfPresent(params, "search", request.filters?.search);
-  setDateRange(params, request.filters?.dateRange);
+  setPointsTasksPaginationAndSort(params, request);
+  setPointsTasksScope(params, request);
+  setIfPresent(params, "entry_type", request.filters?.entryType);
+  setIfPresent(params, "entry_status", request.filters?.entryStatus);
+  setIfPresent(params, "entry_source", request.filters?.entrySource);
+  setIfPresent(params, "occurred_from", request.filters?.dateRange?.occurredFrom);
+  setIfPresent(params, "occurred_to", request.filters?.dateRange?.occurredTo);
   return toQueryString(params);
 }
 
-function buildPointSummaryQuery(request: PointsAccountScopedSummaryRequest<PointEntryFilters>): string {
+function buildPointSummaryQuery(request: PointsSummaryRequest): string {
   const params = new URLSearchParams();
-  setIfPresent(params, "account_id", request.accountId);
-  setIfPresent(params, "type", request.filters?.type ?? request.filters?.entryType);
-  setIfPresent(params, "status", request.filters?.status);
-  setIfPresent(params, "source", request.filters?.source);
-  setIfPresent(params, "search", request.filters?.search);
-  setDateRange(params, request.filters?.dateRange);
+  setPointsTasksScope(params, request);
+  setIfPresent(params, "window", request.window);
+  setIfPresent(params, "occurred_from", request.dateRange?.occurredFrom);
+  setIfPresent(params, "occurred_to", request.dateRange?.occurredTo);
   return toQueryString(params);
 }
 
-function buildPointsOverviewQuery(request: PointsAccountScopedRequest): string {
+function buildPointsOverviewQuery(request: PointsOverviewRequest): string {
   const params = new URLSearchParams();
-  setIfPresent(params, "account_id", request.accountId);
+  setPointsTasksScope(params, request);
+  setIfPresent(params, "window", request.window);
   return toQueryString(params);
 }
 
 function buildTasksListQuery(request: TasksAccountScopedListRequest<TaskFilters>): string {
   const params = new URLSearchParams();
-  setMarketsPaginationAndSort(params, request);
-  setIfPresent(params, "account_id", request.accountId);
-  setIfPresent(params, "status", request.filters?.status);
-  setIfPresent(params, "type", request.filters?.type);
-  setIfPresent(params, "owner_id", request.filters?.ownerId ?? request.filters?.owner);
-  setIfPresent(params, "search", request.filters?.search);
-  setIfPresent(params, "due_from", request.filters?.dateRange?.from);
-  setIfPresent(params, "due_to", request.filters?.dateRange?.to);
+  setPointsTasksPaginationAndSort(params, request);
+  setPointsTasksScope(params, request);
+  setIfPresent(params, "task_status", request.filters?.taskStatus);
+  setIfPresent(params, "task_type", request.filters?.taskType);
+  setIfPresent(params, "progress_state", request.filters?.progressState);
+  setIfPresent(params, "due_after", request.filters?.dateRange?.dueAfter);
+  setIfPresent(params, "due_before", request.filters?.dateRange?.dueBefore);
   return toQueryString(params);
 }
 
-function buildTaskSummaryQuery(request: TasksAccountScopedSummaryRequest<TaskFilters>): string {
+function buildTaskSummaryQuery(request: TasksAccountScopedRequest): string {
   const params = new URLSearchParams();
-  setIfPresent(params, "account_id", request.accountId);
-  setIfPresent(params, "status", request.filters?.status);
-  setIfPresent(params, "type", request.filters?.type);
-  setIfPresent(params, "owner_id", request.filters?.ownerId ?? request.filters?.owner);
-  setIfPresent(params, "search", request.filters?.search);
-  setIfPresent(params, "due_from", request.filters?.dateRange?.from);
-  setIfPresent(params, "due_to", request.filters?.dateRange?.to);
+  setPointsTasksScope(params, request);
   return toQueryString(params);
 }
 
-function buildTasksOverviewQuery(request: TasksAccountScopedRequest): string {
+function buildTasksOverviewQuery(request: TasksOverviewRequest): string {
   const params = new URLSearchParams();
-  setIfPresent(params, "account_id", request.accountId);
+  setPointsTasksScope(params, request);
+  setIfPresent(params, "window", request.window);
   return toQueryString(params);
 }
 
@@ -705,15 +741,15 @@ function enforcePointsTasksHttpGuards(
   }
 
   const pathname = extractPathname(request.path);
-  const isHealthOrStatusRoute =
-    pathname === "/health" || pathname === pointsTasksRouteMap.status || pathname === pointsTasksRouteMap.getParityDiagnostics;
+  const isAuthOptionalRoute =
+    pathname === "/health" || pointsTasksAuthOptionalRoutes.includes(pathname as (typeof pointsTasksAuthOptionalRoutes)[number]);
 
-  if (!isHealthOrStatusRoute) {
+  if (!isAuthOptionalRoute) {
     const authorization = headers.authorization?.trim();
     if (!authorization || !authorization.startsWith("Bearer ")) {
       throw createPointsTasksValidationError(
         "unauthorized",
-        "bearer token is required for non-health Points/Tasks routes",
+        "bearer token is required for this Points/Tasks route",
         {
           path: request.path,
           method: request.method,
@@ -1366,45 +1402,36 @@ function buildPointsTasksClient(transport: Transport, options: CreateApiClientOp
 
   const buildParityDiagnostics = (
     connectivity: ConnectivityCheckResult,
-    authRequiredForDataRoutes: boolean,
     hasAuthorization: boolean,
   ) => ({
     mode,
     baseUrl,
     compatibilityVersion,
     sourceOfTruth: POINTS_TASKS_PROTOCOL_SOURCE,
-    sourcePolicy: POINTS_TASKS_POLICY_SOURCE,
-    sourceProtocolDocPath: POINTS_TASKS_PROTOCOL_DOC_PATH,
-    sourceProtocolFaqPath: POINTS_TASKS_PROTOCOL_FAQ_PATH,
-    sourceContractsEventsPath: POINTS_TASKS_CONTRACTS_EVENTS_PATH,
-    sourceContractsIdsPath: POINTS_TASKS_CONTRACTS_IDS_PATH,
-    sourcePolicyDocPath: POINTS_TASKS_POLICY_DOC_PATH,
-    sourceContractSchemaVersion: POINTS_TASKS_CONTRACT_SCHEMA_VERSION,
+    sourceOpenApiPath: POINTS_TASKS_PROTOCOL_OPENAPI_PATH,
+    sourceChangelogPath: POINTS_TASKS_PROTOCOL_CHANGELOG_PATH,
+    sourceOpenApiSha: POINTS_TASKS_PROTOCOL_OPENAPI_SHA,
+    sourceOpenApiCommit: POINTS_TASKS_PROTOCOL_OPENAPI_COMMIT,
+    canonicalApiVersion: POINTS_TASKS_CANONICAL_API_VERSION,
     sourceOpenApiPublished: POINTS_TASKS_API_OPENAPI_AVAILABLE,
     parityCheckMarker,
     auth: {
-      requiredForPointsTasksRoutes: authRequiredForDataRoutes,
-      statusRouteAuthOptional: true,
+      bearerRequiredByDefault: mode === "http",
+      authOptionalRoutes: pointsTasksAuthOptionalRoutes,
       hasAuthorization,
       requestIdHeader: "x-request-id",
       correlationIdHeader: "x-correlation-id",
     },
-    accountScope: {
+    scope: {
       ...(defaultAccountId ? { defaultAccountId } : {}),
       requiredField: "account_id" as const,
+      optionalFields: ["user_id", "workspace_id"] as const,
       requiredEndpoints: pointsTasksAccountScopedRoutes,
     },
     paginationPolicy: {
       preferredMode: "cursor" as const,
       deprecatedParam: "page" as const,
       deprecatedRemovalNotBefore: POINTS_TASKS_DEPRECATED_PAGE_REMOVAL_NOT_BEFORE,
-    },
-    deprecatedFieldFallback: {
-      pointsCanonicalField: "running_balance" as const,
-      pointsFallbackField: "balance_after" as const,
-      tasksCanonicalField: "progress_percent" as const,
-      tasksFallbackField: "progress" as const,
-      fallbackRemovalNotBefore: POINTS_TASKS_DEPRECATED_FIELD_REMOVAL_NOT_BEFORE,
     },
     connectivity,
   });
@@ -1424,7 +1451,7 @@ function buildPointsTasksClient(transport: Transport, options: CreateApiClientOp
       );
     },
     getPointSummary(request) {
-      const scopedRequest: PointsAccountScopedSummaryRequest<PointEntryFilters> = {
+      const scopedRequest: PointsSummaryRequest = {
         ...request,
         accountId: resolveRequiredAccountId(request.accountId, pointsTasksRouteMap.getPointSummary),
       };
@@ -1437,7 +1464,8 @@ function buildPointsTasksClient(transport: Transport, options: CreateApiClientOp
       );
     },
     getPointsOverview(request) {
-      const scopedRequest: PointsAccountScopedRequest = {
+      const scopedRequest: PointsOverviewRequest = {
+        ...request,
         accountId: resolveRequiredAccountId(request.accountId, pointsTasksRouteMap.getPointsOverview),
       };
       return executePointsTasks(
@@ -1462,7 +1490,7 @@ function buildPointsTasksClient(transport: Transport, options: CreateApiClientOp
       );
     },
     getTaskSummary(request) {
-      const scopedRequest: TasksAccountScopedSummaryRequest<TaskFilters> = {
+      const scopedRequest: TasksAccountScopedRequest = {
         ...request,
         accountId: resolveRequiredAccountId(request.accountId, pointsTasksRouteMap.getTaskSummary),
       };
@@ -1475,7 +1503,8 @@ function buildPointsTasksClient(transport: Transport, options: CreateApiClientOp
       );
     },
     getTasksOverview(request) {
-      const scopedRequest: TasksAccountScopedRequest = {
+      const scopedRequest: TasksOverviewRequest = {
+        ...request,
         accountId: resolveRequiredAccountId(request.accountId, pointsTasksRouteMap.getTasksOverview),
       };
       return executePointsTasks(
@@ -1488,6 +1517,7 @@ function buildPointsTasksClient(transport: Transport, options: CreateApiClientOp
     },
     async getParityDiagnostics() {
       const authHeader = resolveAuthorizationValue(pointsTasksOptions, undefined);
+      const hasAuthorization = Boolean(authHeader?.startsWith("Bearer "));
 
       if (mode === "mock") {
         return buildParityDiagnostics(
@@ -1498,25 +1528,22 @@ function buildPointsTasksClient(transport: Transport, options: CreateApiClientOp
             source: "mock",
             message: "Mock mode active; live connectivity probe skipped",
           },
-          false,
-          Boolean(authHeader?.startsWith("Bearer ")),
+          hasAuthorization,
         );
       }
 
       const primaryPath = pointsTasksOptions?.connectivityPath ?? pointsTasksRouteMap.status;
       const primaryProbe = await probePointsTasksConnectivity(primaryPath);
-      if (primaryProbe.ok || primaryPath === pointsTasksRouteMap.getParityDiagnostics) {
-        return buildParityDiagnostics(primaryProbe, true, Boolean(authHeader?.startsWith("Bearer ")));
+      if (primaryProbe.ok) {
+        return buildParityDiagnostics(primaryProbe, hasAuthorization);
       }
 
-      const fallbackAccountId = resolveAccountId(undefined);
-      if (!fallbackAccountId) {
-        return buildParityDiagnostics(primaryProbe, true, Boolean(authHeader?.startsWith("Bearer ")));
+      const fallbackPath = pointsTasksRouteMap.health;
+      if (extractPathname(primaryPath) === fallbackPath) {
+        return buildParityDiagnostics(primaryProbe, hasAuthorization);
       }
 
-      const fallbackProbe = await probePointsTasksConnectivity(
-        `${pointsTasksRouteMap.getPointsOverview}?account_id=${encodeURIComponent(fallbackAccountId)}`,
-      );
+      const fallbackProbe = await probePointsTasksConnectivity(fallbackPath);
 
       return buildParityDiagnostics(
         fallbackProbe.ok
@@ -1525,8 +1552,7 @@ function buildPointsTasksClient(transport: Transport, options: CreateApiClientOp
               message: `Primary probe failed (${primaryProbe.message}); fallback probe succeeded`,
             }
           : primaryProbe,
-        true,
-        Boolean(authHeader?.startsWith("Bearer ")),
+        hasAuthorization,
       );
     },
   };

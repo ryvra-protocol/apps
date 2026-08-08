@@ -24,21 +24,28 @@ interface RecentActivityItem {
 }
 
 function buildRecentActivity(pointsOverview: PointsOverviewDto, tasksOverview: TasksOverviewDto): RecentActivityItem[] {
-  const fromPoints: RecentActivityItem[] = pointsOverview.recentEntries.map((entry) => ({
-    id: `point-${entry.id}`,
-    happenedAt: entry.timestamp,
-    label: `Point ${entry.type}: ${formatSignedPoints(entry.amount)} (${entry.source})`,
-    status: entry.status,
+  const fromPoints: RecentActivityItem[] = pointsOverview.trend.map((bucket) => ({
+    id: `point-${bucket.bucketStart}`,
+    happenedAt: bucket.bucketEnd,
+    label: `Points earned ${formatSignedPoints(bucket.pointsEarned)} across ${formatNumber(bucket.entries, 0)} entries`,
+    status: bucket.pointsEarned > 0 ? "confirmed" : "pending",
   }));
 
-  const fromTasks: RecentActivityItem[] = tasksOverview.recentTasks.map((task) => ({
-    id: `task-${task.id}`,
-    happenedAt: task.completedAt ?? task.updatedAt,
-    label: `Task ${task.title} (${task.type}) • ${formatNumber(task.progressPercent, 0)}%`,
-    status: task.status,
+  const fromCompletedTasks: RecentActivityItem[] = tasksOverview.recentlyCompleted.map((task) => ({
+    id: `task-completed-${task.taskId}`,
+    happenedAt: tasksOverview.windowEnd,
+    label: `Completed task ${task.taskId} (${task.taskType}) • ${formatNumber(task.progressPercent, 0)}%`,
+    status: task.taskStatus,
   }));
 
-  return [...fromPoints, ...fromTasks]
+  const fromAtRiskTasks: RecentActivityItem[] = tasksOverview.atRisk.map((task) => ({
+    id: `task-risk-${task.taskId}`,
+    happenedAt: tasksOverview.windowEnd,
+    label: `At-risk task ${task.taskId} (${task.taskType}) • ${formatNumber(task.progressPercent, 0)}%`,
+    status: task.progressState,
+  }));
+
+  return [...fromPoints, ...fromCompletedTasks, ...fromAtRiskTasks]
     .sort((left, right) => (left.happenedAt < right.happenedAt ? 1 : -1))
     .slice(0, 10);
 }
@@ -63,29 +70,29 @@ export function PointsTasksOverviewContent({
         </div>
 
         <div style={{ display: "grid", gap: themeTokens.spacing.md, gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))" }}>
-          <Card title="Total points">
-            <p style={{ margin: 0 }}>{formatNumber(pointsOverview.summary.totalPoints)}</p>
+          <Card title="Current points balance">
+            <p style={{ margin: 0 }}>{formatNumber(pointsOverview.currentBalance)}</p>
           </Card>
-          <Card title="Earned points">
-            <p style={{ margin: 0 }}>{formatNumber(pointsOverview.summary.earnedPoints)}</p>
+          <Card title="Lifetime points">
+            <p style={{ margin: 0 }}>{formatNumber(pointsOverview.lifetimePoints)}</p>
           </Card>
-          <Card title="Pending points">
-            <p style={{ margin: 0 }}>{formatNumber(pointsOverview.summary.pendingPoints)}</p>
+          <Card title="Entries (24h)">
+            <p style={{ margin: 0 }}>{formatNumber(pointsOverview.entriesLast24h, 0)}</p>
           </Card>
-          <Card title="Adjusted points">
-            <p style={{ margin: 0 }}>{formatNumber(pointsOverview.summary.adjustedPoints)}</p>
+          <Card title="Points earned (24h)">
+            <p style={{ margin: 0 }}>{formatSignedPoints(pointsOverview.pointsLast24h)}</p>
           </Card>
-          <Card title="Open tasks">
-            <p style={{ margin: 0 }}>{tasksOverview.summary.open}</p>
+          <Card title="Completion rate">
+            <p style={{ margin: 0 }}>{formatNumber(tasksOverview.completionRate, 2)}%</p>
           </Card>
-          <Card title="In-progress tasks">
-            <p style={{ margin: 0 }}>{tasksOverview.summary.inProgress}</p>
+          <Card title="Tasks created">
+            <p style={{ margin: 0 }}>{formatNumber(tasksOverview.tasksCreated, 0)}</p>
           </Card>
-          <Card title="Done tasks">
-            <p style={{ margin: 0 }}>{tasksOverview.summary.done}</p>
+          <Card title="Tasks completed">
+            <p style={{ margin: 0 }}>{formatNumber(tasksOverview.tasksCompleted, 0)}</p>
           </Card>
-          <Card title="Failed tasks">
-            <p style={{ margin: 0 }}>{tasksOverview.summary.failed}</p>
+          <Card title="At-risk tasks">
+            <p style={{ margin: 0 }}>{formatNumber(tasksOverview.atRisk.length, 0)}</p>
           </Card>
         </div>
 
@@ -93,8 +100,10 @@ export function PointsTasksOverviewContent({
           <p style={{ marginTop: 0, marginBottom: themeTokens.spacing.xs }}>
             Account: <strong>{accountId}</strong>
           </p>
-          <p style={{ margin: 0 }}>Points as-of: {formatDateTime(pointsOverview.asOf)}</p>
-          <p style={{ marginTop: themeTokens.spacing.xs, marginBottom: 0 }}>Tasks as-of: {formatDateTime(tasksOverview.asOf)}</p>
+          <p style={{ margin: 0 }}>Points window: {formatDateTime(pointsOverview.windowStart)} → {formatDateTime(pointsOverview.windowEnd)}</p>
+          <p style={{ marginTop: themeTokens.spacing.xs, marginBottom: 0 }}>
+            Tasks window: {formatDateTime(tasksOverview.windowStart)} → {formatDateTime(tasksOverview.windowEnd)}
+          </p>
         </Card>
 
         <Card title="Recent activity">

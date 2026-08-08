@@ -38,13 +38,8 @@ import type {
 import type { ConversionPreviewDto, EligibilityResult } from "@ryvra/domain-tokenomics";
 import { payCanonicalPaymentIntentStates } from "./pay-parity";
 import {
-  POINTS_TASKS_API_OPENAPI_AVAILABLE,
-  POINTS_TASKS_CONTRACTS_EVENTS_PATH,
-  POINTS_TASKS_CONTRACTS_IDS_PATH,
-  POINTS_TASKS_CONTRACT_SCHEMA_VERSION,
-  POINTS_TASKS_PARITY_CHECK_MARKER,
-  POINTS_TASKS_PROTOCOL_COMPATIBILITY_VERSION,
-  POINTS_TASKS_PROTOCOL_SOURCE,
+  POINTS_TASKS_CANONICAL_API_VERSION,
+  POINTS_TASKS_DEPRECATED_PAGE_REMOVAL_NOT_BEFORE,
   pointsTasksRouteMap,
 } from "./points-tasks-parity";
 import type { ApiRequest, ApiResult, Transport } from "./types";
@@ -610,182 +605,236 @@ const mockSubscriptions: SubscriptionDto[] = [
 
 const mockPointEntries: PointEntryDto[] = [
   {
-    id: "pt-1001",
+    entryId: "pt-1001",
     accountId: "acct-core-1",
-    type: "award",
-    source: "task",
-    amount: 120,
-    balance: 1_120,
-    status: "posted",
-    timestamp: "2026-08-07T08:00:00.000Z",
-    referenceId: "ref-task-501",
+    userId: "user-core-1",
+    workspaceId: "workspace-core-1",
     taskId: "task-501",
-    description: "Referral milestone completion",
+    ledgerEventId: "ledger-evt-1001",
+    referenceId: "ref-task-501",
+    entryType: "task_completion_bonus",
+    entryStatus: "confirmed",
+    entrySource: "tasks_engine",
+    pointsDelta: 120,
+    pointsBalanceAfter: 1_120,
+    occurredAt: "2026-08-07T08:00:00.000Z",
+    createdAt: "2026-08-07T08:00:00.000Z",
+    metadata: { campaign: "referral-milestone" },
   },
   {
-    id: "pt-1002",
+    entryId: "pt-1002",
     accountId: "acct-core-1",
-    type: "spend",
-    source: "ledger",
-    amount: -50,
-    balance: 1_070,
-    status: "posted",
-    timestamp: "2026-08-06T14:10:00.000Z",
+    userId: "user-core-1",
+    workspaceId: "workspace-core-1",
+    ledgerEventId: "ledger-evt-1002",
     referenceId: "ref-redemption-11",
-    description: "Marketplace coupon redemption",
+    entryType: "transaction_reward",
+    entryStatus: "confirmed",
+    entrySource: "ledger_settlement",
+    pointsDelta: 80,
+    pointsBalanceAfter: 1_200,
+    occurredAt: "2026-08-06T14:10:00.000Z",
+    createdAt: "2026-08-06T14:10:00.000Z",
   },
   {
-    id: "pt-1003",
+    entryId: "pt-1003",
     accountId: "acct-core-1",
-    type: "adjustment",
-    source: "manual",
-    amount: 30,
-    balance: 1_100,
-    status: "pending",
-    timestamp: "2026-08-06T11:30:00.000Z",
+    userId: "user-core-1",
+    workspaceId: "workspace-core-1",
     referenceId: "ref-review-18",
-    description: "Manual anti-abuse review pending",
+    entryType: "manual_adjustment",
+    entryStatus: "pending",
+    entrySource: "admin_console",
+    pointsDelta: 30,
+    pointsBalanceAfter: 1_230,
+    occurredAt: "2026-08-06T11:30:00.000Z",
+    createdAt: "2026-08-06T11:30:00.000Z",
+    metadata: { reviewer: "ops-admin" },
   },
   {
-    id: "pt-1004",
+    entryId: "pt-1004",
     accountId: "acct-core-1",
-    type: "award",
-    source: "ledger",
-    amount: 80,
-    balance: 1_180,
-    status: "posted",
-    timestamp: "2026-08-05T09:45:00.000Z",
+    userId: "user-core-1",
+    workspaceId: "workspace-core-1",
+    ledgerEventId: "ledger-evt-1004",
     referenceId: "ref-order-303",
-    description: "Net eligible contribution",
+    entryType: "penalty",
+    entryStatus: "rejected",
+    entrySource: "policy_risk",
+    pointsDelta: -25,
+    pointsBalanceAfter: 1_205,
+    occurredAt: "2026-08-05T09:45:00.000Z",
+    createdAt: "2026-08-05T09:45:00.000Z",
+    metadata: { reason_code: "policy_review_required" },
   },
   {
-    id: "pt-1005",
+    entryId: "pt-1005",
     accountId: "acct-core-1",
-    type: "reversal",
-    source: "manual",
-    amount: -20,
-    balance: 1_160,
-    status: "reversed",
-    timestamp: "2026-08-04T16:22:00.000Z",
+    userId: "user-core-1",
+    workspaceId: "workspace-core-1",
     referenceId: "ref-dispute-77",
-    description: "Retroactive adjustment after dispute",
+    entryType: "reversal",
+    entryStatus: "reversed",
+    entrySource: "admin_console",
+    pointsDelta: -15,
+    pointsBalanceAfter: 1_190,
+    occurredAt: "2026-08-04T16:22:00.000Z",
+    createdAt: "2026-08-04T16:22:00.000Z",
   },
   {
-    id: "pt-1006",
+    entryId: "pt-1006",
     accountId: "acct-core-1",
-    type: "award",
-    source: "bonus",
-    amount: 45,
-    balance: 1_205,
-    status: "posted",
-    timestamp: "2026-08-03T07:01:00.000Z",
+    userId: "user-core-1",
+    workspaceId: "workspace-core-1",
     referenceId: "ref-bonus-10",
+    entryType: "referral_bonus",
+    entryStatus: "expired",
+    entrySource: "system_migration",
+    pointsDelta: 45,
+    pointsBalanceAfter: 1_235,
+    occurredAt: "2026-08-03T07:01:00.000Z",
+    createdAt: "2026-08-03T07:01:00.000Z",
   },
   {
-    id: "pt-1007",
+    entryId: "pt-1007",
     accountId: "acct-core-2",
-    type: "award",
-    source: "task",
-    amount: 65,
-    balance: 860,
-    status: "posted",
-    timestamp: "2026-08-06T10:00:00.000Z",
-    referenceId: "ref-task-700",
+    userId: "user-core-2",
+    workspaceId: "workspace-core-2",
     taskId: "task-700",
+    ledgerEventId: "ledger-evt-2001",
+    referenceId: "ref-task-700",
+    entryType: "transaction_reward",
+    entryStatus: "confirmed",
+    entrySource: "ledger_settlement",
+    pointsDelta: 65,
+    pointsBalanceAfter: 860,
+    occurredAt: "2026-08-06T10:00:00.000Z",
+    createdAt: "2026-08-06T10:00:00.000Z",
   },
   {
-    id: "pt-1008",
+    entryId: "pt-1008",
     accountId: "acct-core-2",
-    type: "adjustment",
-    source: "manual",
-    amount: -15,
-    balance: 845,
-    status: "failed",
-    timestamp: "2026-08-05T10:30:00.000Z",
+    userId: "user-core-2",
+    workspaceId: "workspace-core-2",
     referenceId: "ref-review-88",
+    entryType: "manual_adjustment",
+    entryStatus: "pending",
+    entrySource: "admin_console",
+    pointsDelta: -10,
+    pointsBalanceAfter: 850,
+    occurredAt: "2026-08-05T10:30:00.000Z",
+    createdAt: "2026-08-05T10:30:00.000Z",
+    metadata: { reason_code: "manual_review_pending" },
   },
 ];
 
 const mockTasks: TaskDto[] = [
   {
-    id: "task-501",
+    taskId: "task-501",
     accountId: "acct-core-1",
+    userId: "user-core-1",
+    workspaceId: "workspace-core-1",
     title: "Verify referral proof",
-    type: "verification",
-    ownerId: "analyst-a",
-    status: "done",
+    taskType: "referral",
+    taskStatus: "completed",
+    progressState: "done",
     progressPercent: 100,
+    pointsReward: 120,
+    startedAt: "2026-08-05T09:00:00.000Z",
     createdAt: "2026-08-05T08:30:00.000Z",
     updatedAt: "2026-08-07T08:00:00.000Z",
     completedAt: "2026-08-07T08:00:00.000Z",
   },
   {
-    id: "task-502",
+    taskId: "task-502",
     accountId: "acct-core-1",
+    userId: "user-core-1",
+    workspaceId: "workspace-core-1",
     title: "Review anti-abuse signal spike",
-    type: "review",
-    ownerId: "risk-ops",
-    status: "in_progress",
+    taskType: "security",
+    taskStatus: "in_progress",
+    progressState: "active",
     progressPercent: 60,
+    pointsReward: 80,
+    startedAt: "2026-08-06T10:10:00.000Z",
     createdAt: "2026-08-06T10:00:00.000Z",
     updatedAt: "2026-08-07T09:15:00.000Z",
     dueAt: "2026-08-09T00:00:00.000Z",
   },
   {
-    id: "task-503",
+    taskId: "task-503",
     accountId: "acct-core-1",
+    userId: "user-core-1",
+    workspaceId: "workspace-core-1",
     title: "Issue bonus campaign award batch",
-    type: "reward",
-    ownerId: "growth-ops",
-    status: "open",
+    taskType: "ecosystem",
+    taskStatus: "eligible",
+    progressState: "queued",
     progressPercent: 0,
+    pointsReward: 45,
     createdAt: "2026-08-07T05:10:00.000Z",
     updatedAt: "2026-08-07T05:10:00.000Z",
     dueAt: "2026-08-10T00:00:00.000Z",
   },
   {
-    id: "task-504",
+    taskId: "task-504",
     accountId: "acct-core-1",
+    userId: "user-core-1",
+    workspaceId: "workspace-core-1",
     title: "Backfill settlement references",
-    type: "operations",
-    ownerId: "ops-core",
-    status: "failed",
+    taskType: "governance",
+    taskStatus: "failed",
+    progressState: "blocked",
     progressPercent: 25,
+    pointsReward: 60,
+    startedAt: "2026-08-04T13:30:00.000Z",
     createdAt: "2026-08-04T13:00:00.000Z",
     updatedAt: "2026-08-05T11:20:00.000Z",
     dueAt: "2026-08-06T00:00:00.000Z",
   },
   {
-    id: "task-505",
+    taskId: "task-505",
     accountId: "acct-core-1",
+    userId: "user-core-1",
+    workspaceId: "workspace-core-1",
     title: "Escalate blocked contribution review",
-    type: "review",
-    ownerId: "risk-ops",
-    status: "blocked",
+    taskType: "transaction_volume",
+    taskStatus: "expired",
+    progressState: "blocked",
     progressPercent: 40,
+    pointsReward: 30,
+    startedAt: "2026-08-03T10:00:00.000Z",
     createdAt: "2026-08-03T09:40:00.000Z",
     updatedAt: "2026-08-06T07:30:00.000Z",
     dueAt: "2026-08-08T00:00:00.000Z",
   },
   {
-    id: "task-506",
+    taskId: "task-506",
     accountId: "acct-core-1",
+    userId: "user-core-1",
+    workspaceId: "workspace-core-1",
     title: "Cancel stale reward migration",
-    type: "operations",
-    ownerId: "ops-core",
-    status: "canceled",
+    taskType: "custom",
+    taskStatus: "canceled",
+    progressState: "under_review",
     progressPercent: 10,
+    pointsReward: 20,
+    description: "Superseded by canonical migration runbook",
     createdAt: "2026-08-01T09:40:00.000Z",
     updatedAt: "2026-08-02T07:30:00.000Z",
   },
   {
-    id: "task-700",
+    taskId: "task-700",
     accountId: "acct-core-2",
+    userId: "user-core-2",
+    workspaceId: "workspace-core-2",
     title: "Verify retained loyalty activity",
-    type: "verification",
-    ownerId: "analyst-b",
-    status: "done",
+    taskType: "onboarding",
+    taskStatus: "completed",
+    progressState: "done",
     progressPercent: 100,
+    pointsReward: 65,
+    startedAt: "2026-08-05T09:00:00.000Z",
     createdAt: "2026-08-05T08:30:00.000Z",
     updatedAt: "2026-08-06T10:00:00.000Z",
     completedAt: "2026-08-06T10:00:00.000Z",
@@ -1218,22 +1267,56 @@ function paginateMarkets<T>(items: T[], searchParams: URLSearchParams): MarketsL
   };
 }
 
-function paginatePointsTasks<T>(items: T[], searchParams: URLSearchParams): {
-  asOf: string;
+function resolveScope(searchParams: URLSearchParams, accountId: string): {
+  accountId: string;
+  userId?: string;
+  workspaceId?: string;
+} {
+  const userId = searchParams.get("user_id")?.trim();
+  const workspaceId = searchParams.get("workspace_id")?.trim();
+
+  return {
+    accountId,
+    ...(userId ? { userId } : {}),
+    ...(workspaceId ? { workspaceId } : {}),
+  };
+}
+
+function buildPointsTasksMeta(
+  searchParams: URLSearchParams,
+  accountId: string,
+  deprecatedPage?:
+    | {
+        page: number;
+        translatedToCursor: string;
+        removalNotBefore: string;
+      }
+    | undefined,
+): PointsListResponse<PointEntryDto>["meta"] {
+  return {
+    apiVersion: POINTS_TASKS_CANONICAL_API_VERSION,
+    generatedAt: new Date().toISOString(),
+    scope: resolveScope(searchParams, accountId),
+    ...(typeof deprecatedPage === "undefined" ? {} : { deprecatedPage }),
+  };
+}
+
+function paginatePointsTasks<T>(
+  items: T[],
+  searchParams: URLSearchParams,
+  accountId: string,
+): {
   items: T[];
   pagination: {
     limit: number;
     hasMore: boolean;
     nextCursor?: string;
-    page?: number;
   };
+  meta: PointsListResponse<PointEntryDto>["meta"];
 } {
-  const parsedLimit = Number.parseInt(
-    getParam(searchParams, "limit", "page_size") ?? searchParams.get("pageSize") ?? "50",
-    10,
-  );
+  const parsedLimit = Number.parseInt(searchParams.get("limit") ?? "50", 10);
   const limit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(parsedLimit, 200) : 50;
-  const cursor = searchParams.get("cursor");
+  const cursor = searchParams.get("cursor")?.trim();
   const deprecatedPage = !cursor ? parseLegacyPage(searchParams) : undefined;
   const startOffset = cursor ? parseCursorOffset(cursor) : ((deprecatedPage ?? 1) - 1) * limit;
   const boundedOffset = Math.max(0, Math.min(startOffset, items.length));
@@ -1241,200 +1324,569 @@ function paginatePointsTasks<T>(items: T[], searchParams: URLSearchParams): {
   const hasMore = end < items.length;
 
   return {
-    asOf: new Date().toISOString(),
     items: items.slice(boundedOffset, end),
     pagination: {
       limit,
       hasMore,
       ...(hasMore ? { nextCursor: encodeCursorOffset(end) } : {}),
-      ...(typeof deprecatedPage === "number" ? { page: deprecatedPage } : {}),
     },
+    meta: buildPointsTasksMeta(
+      searchParams,
+      accountId,
+      typeof deprecatedPage === "number"
+        ? {
+            page: deprecatedPage,
+            translatedToCursor: encodeCursorOffset(boundedOffset),
+            removalNotBefore: POINTS_TASKS_DEPRECATED_PAGE_REMOVAL_NOT_BEFORE,
+          }
+        : undefined,
+    ),
   };
 }
 
 function buildPointSummary(items: PointEntryDto[], accountId: string): PointSummaryDto {
-  const byStatus: Record<string, number> = {};
+  const nowIso = new Date().toISOString();
+  const sortedByOccurred = [...items].sort((left, right) => (left.occurredAt < right.occurredAt ? -1 : 1));
+  const latestBalance = [...items].sort((left, right) => (left.occurredAt < right.occurredAt ? 1 : -1))[0]?.pointsBalanceAfter ?? 0;
+
+  const byType = new Map<PointEntryDto["entryType"], { entries: number; pointsTotal: number }>();
+  const byStatus = new Map<PointEntryDto["entryStatus"], { entries: number; pointsTotal: number }>();
+  const bySource = new Map<PointEntryDto["entrySource"], { entries: number; pointsTotal: number }>();
+
   for (const item of items) {
-    byStatus[item.status] = (byStatus[item.status] ?? 0) + 1;
+    const typeEntry = byType.get(item.entryType) ?? { entries: 0, pointsTotal: 0 };
+    typeEntry.entries += 1;
+    typeEntry.pointsTotal += item.pointsDelta;
+    byType.set(item.entryType, typeEntry);
+
+    const statusEntry = byStatus.get(item.entryStatus) ?? { entries: 0, pointsTotal: 0 };
+    statusEntry.entries += 1;
+    statusEntry.pointsTotal += item.pointsDelta;
+    byStatus.set(item.entryStatus, statusEntry);
+
+    const sourceEntry = bySource.get(item.entrySource) ?? { entries: 0, pointsTotal: 0 };
+    sourceEntry.entries += 1;
+    sourceEntry.pointsTotal += item.pointsDelta;
+    bySource.set(item.entrySource, sourceEntry);
   }
 
-  const latestBalance = [...items].sort((left, right) => (left.timestamp < right.timestamp ? 1 : -1))[0]?.balance ?? 0;
-
   return {
-    asOf: new Date().toISOString(),
     accountId,
+    windowStart: sortedByOccurred[0]?.occurredAt ?? nowIso,
+    windowEnd: sortedByOccurred[sortedByOccurred.length - 1]?.occurredAt ?? nowIso,
     totalPoints: latestBalance,
-    earnedPoints: items
-      .filter((item) => item.amount > 0 && item.status === "posted")
-      .reduce((sum, item) => sum + item.amount, 0),
-    spentPoints: Math.abs(
+    availablePoints: items
+      .filter((item) => item.entryStatus === "confirmed")
+      .reduce((sum, item) => sum + item.pointsDelta, 0),
+    pendingPoints: items
+      .filter((item) => item.entryStatus === "pending")
+      .reduce((sum, item) => sum + item.pointsDelta, 0),
+    reversedPoints: Math.abs(
       items
-        .filter((item) => item.amount < 0 && (item.status === "posted" || item.status === "reversed"))
-        .reduce((sum, item) => sum + item.amount, 0),
+        .filter((item) => item.entryStatus === "reversed")
+        .reduce((sum, item) => sum + item.pointsDelta, 0),
     ),
-    adjustedPoints: items
-      .filter((item) => item.type === "adjustment" || item.type === "reversal")
-      .reduce((sum, item) => sum + item.amount, 0),
-    pendingPoints: items.filter((item) => item.status === "pending").reduce((sum, item) => sum + item.amount, 0),
-    byStatus,
+    entryCount: items.length,
+    byType: [...byType.entries()].map(([entryType, aggregate]) => ({
+      entryType,
+      entries: aggregate.entries,
+      pointsTotal: aggregate.pointsTotal,
+    })),
+    byStatus: [...byStatus.entries()].map(([entryStatus, aggregate]) => ({
+      entryStatus,
+      entries: aggregate.entries,
+      pointsTotal: aggregate.pointsTotal,
+    })),
+    bySource: [...bySource.entries()].map(([entrySource, aggregate]) => ({
+      entrySource,
+      entries: aggregate.entries,
+      pointsTotal: aggregate.pointsTotal,
+    })),
   };
 }
 
 function buildTaskSummary(items: TaskDto[], accountId: string): TaskSummaryDto {
-  const byStatus: Record<string, number> = {};
+  const now = Date.now();
+  const byStatus = new Map<TaskDto["taskStatus"], number>();
+  const byProgressState = new Map<TaskDto["progressState"], number>();
+
   for (const item of items) {
-    byStatus[item.status] = (byStatus[item.status] ?? 0) + 1;
+    byStatus.set(item.taskStatus, (byStatus.get(item.taskStatus) ?? 0) + 1);
+    byProgressState.set(item.progressState, (byProgressState.get(item.progressState) ?? 0) + 1);
   }
 
   return {
-    asOf: new Date().toISOString(),
     accountId,
-    total: items.length,
-    open: items.filter((item) => item.status === "open").length,
-    inProgress: items.filter((item) => item.status === "in_progress").length,
-    done: items.filter((item) => item.status === "done").length,
-    failed: items.filter((item) => item.status === "failed").length,
-    byStatus,
+    totalTasks: items.length,
+    completedTasks: items.filter((item) => item.taskStatus === "completed").length,
+    inProgressTasks: items.filter((item) => item.taskStatus === "in_progress").length,
+    overdueTasks: items.filter((item) => {
+      if (!item.dueAt) {
+        return false;
+      }
+
+      const dueAt = Date.parse(item.dueAt);
+      if (Number.isNaN(dueAt)) {
+        return false;
+      }
+
+      return (
+        dueAt < now &&
+        item.taskStatus !== "completed" &&
+        item.taskStatus !== "failed" &&
+        item.taskStatus !== "expired" &&
+        item.taskStatus !== "canceled"
+      );
+    }).length,
+    byStatus: [...byStatus.entries()].map(([taskStatus, count]) => ({ taskStatus, count })),
+    byProgressState: [...byProgressState.entries()].map(([progressState, count]) => ({ progressState, count })),
   };
 }
 
-function buildPointsOverview(accountId: string): PointsOverviewDto {
-  const scopedEntries = mockPointEntries.filter((item) => item.accountId === accountId);
-  const sortedEntries = [...scopedEntries].sort((left, right) => (left.timestamp < right.timestamp ? 1 : -1));
+function buildPointsOverview(accountId: string, searchParams: URLSearchParams): PointsOverviewDto {
+  const scopedEntries = filterPointEntries(searchParams, accountId);
+  const now = Date.now();
+  const nowIso = new Date(now).toISOString();
+  const sortedByOccurred = [...scopedEntries].sort((left, right) => (left.occurredAt < right.occurredAt ? 1 : -1));
+  const oldestOccurred = [...scopedEntries].sort((left, right) => (left.occurredAt < right.occurredAt ? -1 : 1))[0]?.occurredAt;
+
+  const trendBuckets = new Map<string, { bucketStart: string; bucketEnd: string; pointsEarned: number; entries: number }>();
+  for (const entry of scopedEntries) {
+    const day = entry.occurredAt.slice(0, 10);
+    const bucketStart = `${day}T00:00:00.000Z`;
+    const bucketEnd = `${day}T23:59:59.999Z`;
+    const aggregate = trendBuckets.get(day) ?? { bucketStart, bucketEnd, pointsEarned: 0, entries: 0 };
+    aggregate.entries += 1;
+    aggregate.pointsEarned += Math.max(entry.pointsDelta, 0);
+    trendBuckets.set(day, aggregate);
+  }
+
+  const last24h = scopedEntries.filter((entry) => {
+    const occurred = Date.parse(entry.occurredAt);
+    return !Number.isNaN(occurred) && occurred >= now - 24 * 60 * 60 * 1000;
+  });
 
   return {
-    asOf: new Date().toISOString(),
     accountId,
-    summary: buildPointSummary(scopedEntries, accountId),
-    recentEntries: sortedEntries.slice(0, 10),
+    windowStart: oldestOccurred ?? nowIso,
+    windowEnd: sortedByOccurred[0]?.occurredAt ?? nowIso,
+    currentBalance: sortedByOccurred[0]?.pointsBalanceAfter ?? 0,
+    lifetimePoints: scopedEntries.reduce((sum, entry) => sum + Math.max(entry.pointsDelta, 0), 0),
+    entriesLast24h: last24h.length,
+    pointsLast24h: last24h.reduce((sum, entry) => sum + Math.max(entry.pointsDelta, 0), 0),
+    trend: [...trendBuckets.values()].sort((left, right) => (left.bucketStart < right.bucketStart ? -1 : 1)),
   };
 }
 
-function buildTasksOverview(accountId: string): TasksOverviewDto {
-  const scopedTasks = mockTasks.filter((item) => item.accountId === accountId);
-  const sortedTasks = [...scopedTasks].sort((left, right) => (left.updatedAt < right.updatedAt ? 1 : -1));
+function toTaskOverviewItem(task: TaskDto): TasksOverviewDto["recentlyCompleted"][number] {
+  return {
+    taskId: task.taskId,
+    taskType: task.taskType,
+    taskStatus: task.taskStatus,
+    progressState: task.progressState,
+    progressPercent: task.progressPercent,
+  };
+}
+
+function buildTasksOverview(accountId: string, searchParams: URLSearchParams): TasksOverviewDto {
+  const scopedTasks = filterTasks(searchParams, accountId);
+  const now = Date.now();
+  const sortedByCreated = [...scopedTasks].sort((left, right) => (left.createdAt < right.createdAt ? -1 : 1));
+  const sortedByUpdated = [...scopedTasks].sort((left, right) => (left.updatedAt < right.updatedAt ? 1 : -1));
+  const completedTasks = scopedTasks.filter((task) => task.taskStatus === "completed");
+
+  const atRisk = scopedTasks
+    .filter((task) => {
+      if (!task.dueAt) {
+        return false;
+      }
+
+      const dueAt = Date.parse(task.dueAt);
+      if (Number.isNaN(dueAt)) {
+        return false;
+      }
+
+      return (
+        dueAt <= now + 48 * 60 * 60 * 1000 &&
+        task.taskStatus !== "completed" &&
+        task.taskStatus !== "failed" &&
+        task.taskStatus !== "expired" &&
+        task.taskStatus !== "canceled"
+      );
+    })
+    .sort((left, right) => (String(left.dueAt) < String(right.dueAt) ? -1 : 1))
+    .slice(0, 10)
+    .map((task) => toTaskOverviewItem(task));
+
+  const recentlyCompleted = [...completedTasks]
+    .sort((left, right) => {
+      const leftTimestamp = left.completedAt ?? left.updatedAt;
+      const rightTimestamp = right.completedAt ?? right.updatedAt;
+      return leftTimestamp < rightTimestamp ? 1 : -1;
+    })
+    .slice(0, 10)
+    .map((task) => toTaskOverviewItem(task));
 
   return {
-    asOf: new Date().toISOString(),
     accountId,
-    summary: buildTaskSummary(scopedTasks, accountId),
-    recentTasks: sortedTasks.slice(0, 10),
+    windowStart: sortedByCreated[0]?.createdAt ?? new Date().toISOString(),
+    windowEnd: sortedByUpdated[0]?.updatedAt ?? new Date().toISOString(),
+    completionRate: scopedTasks.length > 0 ? (completedTasks.length / scopedTasks.length) * 100 : 0,
+    tasksCreated: scopedTasks.length,
+    tasksCompleted: completedTasks.length,
+    recentlyCompleted,
+    atRisk,
   };
 }
 
 function filterPointEntries(searchParams: URLSearchParams, accountId: string): PointEntryDto[] {
-  const typeFilter = (searchParams.get("type") ?? searchParams.get("entry_type"))?.trim().toLowerCase();
-  const statusFilter = searchParams.get("status")?.trim().toLowerCase();
-  const sourceFilter = searchParams.get("source")?.trim().toLowerCase();
-  const searchFilter = searchParams.get("search")?.trim().toLowerCase();
-  const from = normalizeDateInput(searchParams.get("from"));
-  const to = normalizeDateInput(searchParams.get("to"));
+  const typeFilter = searchParams.get("entry_type")?.trim().toLowerCase();
+  const statusFilter = searchParams.get("entry_status")?.trim().toLowerCase();
+  const sourceFilter = searchParams.get("entry_source")?.trim().toLowerCase();
+  const userIdFilter = searchParams.get("user_id")?.trim();
+  const workspaceIdFilter = searchParams.get("workspace_id")?.trim();
+  const from = normalizeDateInput(searchParams.get("occurred_from"));
+  const to = normalizeDateInput(searchParams.get("occurred_to"));
 
   return mockPointEntries.filter((item) => {
     if (item.accountId !== accountId) {
       return false;
     }
 
-    if (typeFilter && item.type !== typeFilter) {
+    if (userIdFilter && item.userId !== userIdFilter) {
       return false;
     }
 
-    if (statusFilter && item.status !== statusFilter) {
+    if (workspaceIdFilter && item.workspaceId !== workspaceIdFilter) {
       return false;
     }
 
-    if (sourceFilter && item.source !== sourceFilter) {
+    if (typeFilter && item.entryType !== typeFilter) {
       return false;
     }
 
-    if (searchFilter) {
-      const searchTarget =
-        `${item.id} ${item.referenceId ?? ""} ${item.taskId ?? ""} ${item.description ?? ""} ${item.source}`.toLowerCase();
-      if (!searchTarget.includes(searchFilter)) {
-        return false;
-      }
+    if (statusFilter && item.entryStatus !== statusFilter) {
+      return false;
     }
 
-    return inDateRange(item.timestamp, from, to);
+    if (sourceFilter && item.entrySource !== sourceFilter) {
+      return false;
+    }
+
+    return inDateRange(item.occurredAt, from, to);
   });
 }
 
 function listPointEntries(searchParams: URLSearchParams, accountId: string): PointsListResponse<PointEntryDto> {
-  const sortBy = getParam(searchParams, "sort_by", "sortField");
-  const normalizedSortBy =
-    sortBy === "occurred_at" || sortBy === "timestamp"
-      ? "timestamp"
-      : sortBy === "amount_points"
-        ? "amount"
-        : sortBy === "running_balance"
-          ? "balance"
-          : sortBy;
-  const sortField = parseSortField(
-    normalizedSortBy,
-    ["timestamp", "amount", "balance", "status"],
-    "timestamp",
-  );
-  const sortDirection = getParam(searchParams, "sort_order", "sortDirection") === "asc" ? "asc" : "desc";
+  const sortValue = (searchParams.get("sort") ?? "occurred_at:desc").trim().toLowerCase();
+  const [sortFieldRaw, sortDirectionRaw] = sortValue.split(":");
+  const normalizedSortBy = sortFieldRaw === "created_at" ? "createdAt" : "occurredAt";
+  const sortField = parseSortField(normalizedSortBy, ["occurredAt", "createdAt"], "occurredAt");
+  const sortDirection = sortDirectionRaw === "asc" ? "asc" : "desc";
   const filtered = filterPointEntries(searchParams, accountId);
   const sorted = sortRows(filtered, sortField, sortDirection);
-  return paginatePointsTasks(sorted, searchParams);
+  return paginatePointsTasks(sorted, searchParams, accountId);
 }
 
 function filterTasks(searchParams: URLSearchParams, accountId: string): TaskDto[] {
-  const statusFilter = searchParams.get("status")?.trim().toLowerCase();
-  const typeFilter = searchParams.get("type")?.trim().toLowerCase();
-  const ownerFilter = (searchParams.get("owner_id") ?? searchParams.get("owner"))?.trim().toLowerCase();
-  const searchFilter = searchParams.get("search")?.trim().toLowerCase();
-  const dueFrom = normalizeDateInput(searchParams.get("due_from") ?? searchParams.get("from"));
-  const dueTo = normalizeDateInput(searchParams.get("due_to") ?? searchParams.get("to"));
+  const statusFilter = searchParams.get("task_status")?.trim().toLowerCase();
+  const typeFilter = searchParams.get("task_type")?.trim().toLowerCase();
+  const progressStateFilter = searchParams.get("progress_state")?.trim().toLowerCase();
+  const userIdFilter = searchParams.get("user_id")?.trim();
+  const workspaceIdFilter = searchParams.get("workspace_id")?.trim();
+  const dueAfter = normalizeDateInput(searchParams.get("due_after"));
+  const dueBefore = normalizeDateInput(searchParams.get("due_before"));
 
   return mockTasks.filter((item) => {
     if (item.accountId !== accountId) {
       return false;
     }
 
-    if (statusFilter && item.status !== statusFilter) {
+    if (userIdFilter && item.userId !== userIdFilter) {
       return false;
     }
 
-    if (typeFilter && item.type !== typeFilter) {
+    if (workspaceIdFilter && item.workspaceId !== workspaceIdFilter) {
       return false;
     }
 
-    if (ownerFilter && item.ownerId.toLowerCase() !== ownerFilter) {
+    if (statusFilter && item.taskStatus !== statusFilter) {
       return false;
     }
 
-    if (searchFilter) {
-      const searchTarget = `${item.id} ${item.title} ${item.ownerId} ${item.description ?? ""}`.toLowerCase();
-      if (!searchTarget.includes(searchFilter)) {
-        return false;
-      }
+    if (typeFilter && item.taskType !== typeFilter) {
+      return false;
     }
 
-    return inDateRange(item.dueAt ?? item.updatedAt, dueFrom, dueTo);
+    if (progressStateFilter && item.progressState !== progressStateFilter) {
+      return false;
+    }
+
+    return inDateRange(item.dueAt ?? item.updatedAt, dueAfter, dueBefore);
   });
 }
 
 function listTasks(searchParams: URLSearchParams, accountId: string): TasksListResponse<TaskDto> {
-  const sortBy = getParam(searchParams, "sort_by", "sortField");
+  const sortValue = (searchParams.get("sort") ?? "updated_at:desc").trim().toLowerCase();
+  const [sortFieldRaw, sortDirectionRaw] = sortValue.split(":");
   const normalizedSortBy =
-    sortBy === "updated_at"
-      ? "updatedAt"
-      : sortBy === "due_at"
-        ? "dueAt"
-        : sortBy === "progress_percent"
-          ? "progressPercent"
-          : sortBy;
-  const sortField = parseSortField(
-    normalizedSortBy,
-    ["updatedAt", "dueAt", "progressPercent", "status"],
-    "updatedAt",
-  );
-  const sortDirection = getParam(searchParams, "sort_order", "sortDirection") === "asc" ? "asc" : "desc";
+    sortFieldRaw === "created_at" ? "createdAt" : sortFieldRaw === "due_at" ? "dueAt" : "updatedAt";
+  const sortField = parseSortField(normalizedSortBy, ["updatedAt", "createdAt", "dueAt"], "updatedAt");
+  const sortDirection = sortDirectionRaw === "asc" ? "asc" : "desc";
   const filtered = filterTasks(searchParams, accountId);
   const sorted = sortRows(filtered, sortField, sortDirection);
-  return paginatePointsTasks(sorted, searchParams);
+  return paginatePointsTasks(sorted, searchParams, accountId) as TasksListResponse<TaskDto>;
+}
+
+function toCanonicalMeta(meta: PointsListResponse<PointEntryDto>["meta"] | TasksListResponse<TaskDto>["meta"]): {
+  api_version: string;
+  generated_at: string;
+  scope: {
+    account_id: string;
+    user_id?: string | null;
+    workspace_id?: string | null;
+  };
+  deprecated_page?:
+    | {
+        page: number;
+        translated_to_cursor: string;
+        removal_not_before: string;
+      }
+    | null;
+} {
+  return {
+    api_version: meta.apiVersion,
+    generated_at: meta.generatedAt,
+    scope: {
+      account_id: meta.scope.accountId,
+      ...(typeof meta.scope.userId === "undefined" ? {} : { user_id: meta.scope.userId }),
+      ...(typeof meta.scope.workspaceId === "undefined" ? {} : { workspace_id: meta.scope.workspaceId }),
+    },
+    ...(typeof meta.deprecatedPage === "undefined"
+      ? {}
+      : {
+          deprecated_page: meta.deprecatedPage
+            ? {
+                page: meta.deprecatedPage.page,
+                translated_to_cursor: meta.deprecatedPage.translatedToCursor,
+                removal_not_before: meta.deprecatedPage.removalNotBefore,
+              }
+            : null,
+        }),
+  };
+}
+
+function toCanonicalPointEntry(entry: PointEntryDto): {
+  entry_id: string;
+  account_id: string;
+  user_id?: string | null;
+  workspace_id?: string | null;
+  task_id?: string | null;
+  ledger_event_id?: string | null;
+  reference_id?: string | null;
+  entry_type: PointEntryDto["entryType"];
+  entry_status: PointEntryDto["entryStatus"];
+  entry_source: PointEntryDto["entrySource"];
+  points_delta: number;
+  points_balance_after?: number | null;
+  occurred_at: string;
+  created_at: string;
+  metadata?: Record<string, unknown> | null;
+} {
+  return {
+    entry_id: entry.entryId,
+    account_id: entry.accountId,
+    ...(typeof entry.userId === "undefined" ? {} : { user_id: entry.userId }),
+    ...(typeof entry.workspaceId === "undefined" ? {} : { workspace_id: entry.workspaceId }),
+    ...(typeof entry.taskId === "undefined" ? {} : { task_id: entry.taskId }),
+    ...(typeof entry.ledgerEventId === "undefined" ? {} : { ledger_event_id: entry.ledgerEventId }),
+    ...(typeof entry.referenceId === "undefined" ? {} : { reference_id: entry.referenceId }),
+    entry_type: entry.entryType,
+    entry_status: entry.entryStatus,
+    entry_source: entry.entrySource,
+    points_delta: entry.pointsDelta,
+    ...(typeof entry.pointsBalanceAfter === "undefined" ? {} : { points_balance_after: entry.pointsBalanceAfter }),
+    occurred_at: entry.occurredAt,
+    created_at: entry.createdAt,
+    ...(typeof entry.metadata === "undefined" ? {} : { metadata: entry.metadata }),
+  };
+}
+
+function toCanonicalPointSummary(summary: PointSummaryDto): {
+  account_id: string;
+  window_start: string;
+  window_end: string;
+  total_points: number;
+  available_points: number;
+  pending_points: number;
+  reversed_points: number;
+  entry_count: number;
+  by_type: Array<{ entry_type: PointEntryDto["entryType"]; entries: number; points_total: number }>;
+  by_status: Array<{ entry_status: PointEntryDto["entryStatus"]; entries: number; points_total: number }>;
+  by_source: Array<{ entry_source: PointEntryDto["entrySource"]; entries: number; points_total: number }>;
+} {
+  return {
+    account_id: summary.accountId,
+    window_start: summary.windowStart,
+    window_end: summary.windowEnd,
+    total_points: summary.totalPoints,
+    available_points: summary.availablePoints,
+    pending_points: summary.pendingPoints,
+    reversed_points: summary.reversedPoints,
+    entry_count: summary.entryCount,
+    by_type: summary.byType.map((item) => ({
+      entry_type: item.entryType,
+      entries: item.entries,
+      points_total: item.pointsTotal,
+    })),
+    by_status: summary.byStatus.map((item) => ({
+      entry_status: item.entryStatus,
+      entries: item.entries,
+      points_total: item.pointsTotal,
+    })),
+    by_source: summary.bySource.map((item) => ({
+      entry_source: item.entrySource,
+      entries: item.entries,
+      points_total: item.pointsTotal,
+    })),
+  };
+}
+
+function toCanonicalPointsOverview(overview: PointsOverviewDto): {
+  account_id: string;
+  window_start: string;
+  window_end: string;
+  current_balance: number;
+  lifetime_points: number;
+  entries_last_24h: number;
+  points_last_24h: number;
+  trend: Array<{ bucket_start: string; bucket_end: string; points_earned: number; entries: number }>;
+} {
+  return {
+    account_id: overview.accountId,
+    window_start: overview.windowStart,
+    window_end: overview.windowEnd,
+    current_balance: overview.currentBalance,
+    lifetime_points: overview.lifetimePoints,
+    entries_last_24h: overview.entriesLast24h,
+    points_last_24h: overview.pointsLast24h,
+    trend: overview.trend.map((item) => ({
+      bucket_start: item.bucketStart,
+      bucket_end: item.bucketEnd,
+      points_earned: item.pointsEarned,
+      entries: item.entries,
+    })),
+  };
+}
+
+function toCanonicalTask(task: TaskDto): {
+  task_id: string;
+  account_id: string;
+  user_id?: string | null;
+  workspace_id?: string | null;
+  task_type: TaskDto["taskType"];
+  task_status: TaskDto["taskStatus"];
+  progress_state: TaskDto["progressState"];
+  title: string;
+  description?: string | null;
+  progress_percent: number;
+  points_reward: number;
+  due_at?: string | null;
+  started_at?: string | null;
+  completed_at?: string | null;
+  created_at: string;
+  updated_at: string;
+} {
+  return {
+    task_id: task.taskId,
+    account_id: task.accountId,
+    ...(typeof task.userId === "undefined" ? {} : { user_id: task.userId }),
+    ...(typeof task.workspaceId === "undefined" ? {} : { workspace_id: task.workspaceId }),
+    task_type: task.taskType,
+    task_status: task.taskStatus,
+    progress_state: task.progressState,
+    title: task.title,
+    ...(typeof task.description === "undefined" ? {} : { description: task.description }),
+    progress_percent: task.progressPercent,
+    points_reward: task.pointsReward,
+    ...(typeof task.dueAt === "undefined" ? {} : { due_at: task.dueAt }),
+    ...(typeof task.startedAt === "undefined" ? {} : { started_at: task.startedAt }),
+    ...(typeof task.completedAt === "undefined" ? {} : { completed_at: task.completedAt }),
+    created_at: task.createdAt,
+    updated_at: task.updatedAt,
+  };
+}
+
+function toCanonicalTaskSummary(summary: TaskSummaryDto): {
+  account_id: string;
+  total_tasks: number;
+  completed_tasks: number;
+  in_progress_tasks: number;
+  overdue_tasks: number;
+  by_status: Array<{ task_status: TaskDto["taskStatus"]; count: number }>;
+  by_progress_state: Array<{ progress_state: TaskDto["progressState"]; count: number }>;
+} {
+  return {
+    account_id: summary.accountId,
+    total_tasks: summary.totalTasks,
+    completed_tasks: summary.completedTasks,
+    in_progress_tasks: summary.inProgressTasks,
+    overdue_tasks: summary.overdueTasks,
+    by_status: summary.byStatus.map((item) => ({
+      task_status: item.taskStatus,
+      count: item.count,
+    })),
+    by_progress_state: summary.byProgressState.map((item) => ({
+      progress_state: item.progressState,
+      count: item.count,
+    })),
+  };
+}
+
+function toCanonicalTasksOverview(overview: TasksOverviewDto): {
+  account_id: string;
+  window_start: string;
+  window_end: string;
+  completion_rate: number;
+  tasks_created: number;
+  tasks_completed: number;
+  recently_completed: Array<{
+    task_id: string;
+    task_type: TaskDto["taskType"];
+    task_status: TaskDto["taskStatus"];
+    progress_state: TaskDto["progressState"];
+    progress_percent: number;
+  }>;
+  at_risk: Array<{
+    task_id: string;
+    task_type: TaskDto["taskType"];
+    task_status: TaskDto["taskStatus"];
+    progress_state: TaskDto["progressState"];
+    progress_percent: number;
+  }>;
+} {
+  return {
+    account_id: overview.accountId,
+    window_start: overview.windowStart,
+    window_end: overview.windowEnd,
+    completion_rate: overview.completionRate,
+    tasks_created: overview.tasksCreated,
+    tasks_completed: overview.tasksCompleted,
+    recently_completed: overview.recentlyCompleted.map((item) => ({
+      task_id: item.taskId,
+      task_type: item.taskType,
+      task_status: item.taskStatus,
+      progress_state: item.progressState,
+      progress_percent: item.progressPercent,
+    })),
+    at_risk: overview.atRisk.map((item) => ({
+      task_id: item.taskId,
+      task_type: item.taskType,
+      task_status: item.taskStatus,
+      progress_state: item.progressState,
+      progress_percent: item.progressPercent,
+    })),
+  };
 }
 
 function filterInstruments(searchParams: URLSearchParams): InstrumentDto[] {
@@ -2030,40 +2482,88 @@ export function createMockTransport(): Transport {
       }
 
       if (request.method === "GET" && pathname === pointsTasksRouteMap.listPointEntries) {
-        return success(listPointEntries(searchParams, accountId) as T);
+        const response = listPointEntries(searchParams, accountId);
+        return success(
+          {
+            data: response.items.map((item) => toCanonicalPointEntry(item)),
+            page: {
+              limit: response.pagination.limit,
+              has_more: response.pagination.hasMore,
+              ...(response.pagination.nextCursor ? { next_cursor: response.pagination.nextCursor } : { next_cursor: null }),
+            },
+            meta: toCanonicalMeta(response.meta),
+          } as T,
+        );
       }
 
       if (request.method === "GET" && pathname === pointsTasksRouteMap.getPointSummary) {
-        return success(buildPointSummary(filterPointEntries(searchParams, accountId), accountId) as T);
+        const summary = buildPointSummary(filterPointEntries(searchParams, accountId), accountId);
+        return success(
+          {
+            summary: toCanonicalPointSummary(summary),
+            meta: toCanonicalMeta(buildPointsTasksMeta(searchParams, accountId)),
+          } as T,
+        );
       }
 
       if (request.method === "GET" && pathname === pointsTasksRouteMap.getPointsOverview) {
-        return success(buildPointsOverview(accountId) as T);
+        const overview = buildPointsOverview(accountId, searchParams);
+        return success(
+          {
+            overview: toCanonicalPointsOverview(overview),
+            meta: toCanonicalMeta(buildPointsTasksMeta(searchParams, accountId)),
+          } as T,
+        );
       }
 
       if (request.method === "GET" && pathname === pointsTasksRouteMap.listTasks) {
-        return success(listTasks(searchParams, accountId) as T);
+        const response = listTasks(searchParams, accountId);
+        return success(
+          {
+            data: response.items.map((item) => toCanonicalTask(item)),
+            page: {
+              limit: response.pagination.limit,
+              has_more: response.pagination.hasMore,
+              ...(response.pagination.nextCursor ? { next_cursor: response.pagination.nextCursor } : { next_cursor: null }),
+            },
+            meta: toCanonicalMeta(response.meta),
+          } as T,
+        );
       }
 
       if (request.method === "GET" && pathname === pointsTasksRouteMap.getTaskSummary) {
-        return success(buildTaskSummary(filterTasks(searchParams, accountId), accountId) as T);
+        const summary = buildTaskSummary(filterTasks(searchParams, accountId), accountId);
+        return success(
+          {
+            summary: toCanonicalTaskSummary(summary),
+            meta: toCanonicalMeta(buildPointsTasksMeta(searchParams, accountId)),
+          } as T,
+        );
       }
 
       if (request.method === "GET" && pathname === pointsTasksRouteMap.getTasksOverview) {
-        return success(buildTasksOverview(accountId) as T);
+        const overview = buildTasksOverview(accountId, searchParams);
+        return success(
+          {
+            overview: toCanonicalTasksOverview(overview),
+            meta: toCanonicalMeta(buildPointsTasksMeta(searchParams, accountId)),
+          } as T,
+        );
       }
 
       if (request.method === "GET" && pathname === pointsTasksRouteMap.status) {
         return success(
           {
-            status: "ok",
-            mode: "mock",
             service: "points-tasks",
+            status: "ok",
             timestamp: new Date().toISOString(),
-            checks: [
+            api_version: POINTS_TASKS_CANONICAL_API_VERSION,
+            auth_required: true,
+            components: [
               {
                 name: "mock-transport",
-                status: "pass",
+                status: "ok",
+                checked_at: new Date().toISOString(),
                 latency_ms: 1,
               },
             ],
@@ -2071,20 +2571,22 @@ export function createMockTransport(): Transport {
         );
       }
 
-      if (request.method === "GET" && pathname === pointsTasksRouteMap.getParityDiagnostics) {
+      if (request.method === "GET" && pathname === pointsTasksRouteMap.health) {
         return success(
           {
-            mode: "mock",
-            baseUrl: "mock://api",
-            parityCheckMarker: POINTS_TASKS_PARITY_CHECK_MARKER,
-            compatibilityVersion: POINTS_TASKS_PROTOCOL_COMPATIBILITY_VERSION,
-            sourceOfTruth: [
-              `${POINTS_TASKS_PROTOCOL_SOURCE}/${POINTS_TASKS_CONTRACTS_EVENTS_PATH}`,
-              `${POINTS_TASKS_PROTOCOL_SOURCE}/${POINTS_TASKS_CONTRACTS_IDS_PATH}`,
-              `${POINTS_TASKS_PROTOCOL_SOURCE}/contracts/src/version.ts`,
+            service: "points-tasks",
+            status: "ok",
+            timestamp: new Date().toISOString(),
+            api_version: POINTS_TASKS_CANONICAL_API_VERSION,
+            uptime_seconds: 86400,
+            checks: [
+              {
+                name: "mock-transport",
+                status: "ok",
+                checked_at: new Date().toISOString(),
+                latency_ms: 1,
+              },
             ],
-            openApiAvailable: POINTS_TASKS_API_OPENAPI_AVAILABLE,
-            contractSchemaVersion: POINTS_TASKS_CONTRACT_SCHEMA_VERSION,
           } as T,
         );
       }

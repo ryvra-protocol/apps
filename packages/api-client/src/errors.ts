@@ -320,10 +320,16 @@ function normalizeCanonicalMarketsEnvelope(
         marketsShape.source === "http" ||
         marketsShape.source === "runtime" ||
         marketsShape.source === "unknown" ||
-      marketsShape.source === "points-tasks-api" ||
-      marketsShape.source === "markets-api" ||
-      marketsShape.source === "policy-risk" ||
-      marketsShape.source === "asset-registry" ||
+        marketsShape.source === "points_tasks_api" ||
+        marketsShape.source === "tasks_engine" ||
+        marketsShape.source === "policy_risk" ||
+        marketsShape.source === "ledger_settlement" ||
+        marketsShape.source === "pay" ||
+        marketsShape.source === "governance" ||
+        marketsShape.source === "points-tasks-api" ||
+        marketsShape.source === "markets-api" ||
+        marketsShape.source === "policy-risk" ||
+        marketsShape.source === "asset-registry" ||
         marketsShape.source === "execution-router" ||
         marketsShape.source === "ledger-settlement" ||
         marketsShape.source === "accounts-runtime")

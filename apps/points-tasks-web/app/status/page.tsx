@@ -1,8 +1,16 @@
 import {
-  POINTS_TASKS_CONTRACT_SCHEMA_VERSION,
+  POINTS_TASKS_API_OPENAPI_AVAILABLE,
+  POINTS_TASKS_CANONICAL_API_VERSION,
+  POINTS_TASKS_DEPRECATED_PAGE_REMOVAL_NOT_BEFORE,
   POINTS_TASKS_PARITY_CHECK_MARKER,
+  POINTS_TASKS_PROTOCOL_CHANGELOG_PATH,
   POINTS_TASKS_PROTOCOL_COMPATIBILITY_VERSION,
+  POINTS_TASKS_PROTOCOL_OPENAPI_COMMIT,
+  POINTS_TASKS_PROTOCOL_OPENAPI_PATH,
+  POINTS_TASKS_PROTOCOL_OPENAPI_SHA,
+  POINTS_TASKS_PROTOCOL_SOURCE,
   pointsTasksAccountScopedRoutes,
+  pointsTasksAuthOptionalRoutes,
 } from "@ryvra/api-client";
 import { Card, Section, themeTokens } from "@ryvra/ui";
 import { ModeBadge } from "../components/mode-badge";
@@ -38,43 +46,35 @@ export default async function PointsTasksStatusPage() {
       mode: runtime.config.mode,
       baseUrl: runtime.config.apiBaseUrl,
       compatibilityVersion: POINTS_TASKS_PROTOCOL_COMPATIBILITY_VERSION,
-      sourceOfTruth: "ryvra-protocol/protocol-core",
-      sourcePolicy: "ryvra-protocol/policy-risk",
-      sourceProtocolDocPath: "docs/tokenomics-proof-of-transaction.md",
-      sourceProtocolFaqPath: "docs/tokenomics-faq.md",
-      sourceContractsEventsPath: "contracts/src/events.ts",
-      sourceContractsIdsPath: "contracts/src/ids.ts",
-      sourcePolicyDocPath: "docs/anti-abuse-policy.md",
-      sourceContractSchemaVersion: POINTS_TASKS_CONTRACT_SCHEMA_VERSION,
-      sourceOpenApiPublished: false as const,
+      sourceOfTruth: POINTS_TASKS_PROTOCOL_SOURCE,
+      sourceOpenApiPath: POINTS_TASKS_PROTOCOL_OPENAPI_PATH,
+      sourceChangelogPath: POINTS_TASKS_PROTOCOL_CHANGELOG_PATH,
+      sourceOpenApiSha: POINTS_TASKS_PROTOCOL_OPENAPI_SHA,
+      sourceOpenApiCommit: POINTS_TASKS_PROTOCOL_OPENAPI_COMMIT,
+      canonicalApiVersion: POINTS_TASKS_CANONICAL_API_VERSION,
+      sourceOpenApiPublished: POINTS_TASKS_API_OPENAPI_AVAILABLE,
       parityCheckMarker: POINTS_TASKS_PARITY_CHECK_MARKER,
       auth: {
-        requiredForPointsTasksRoutes: runtime.config.mode === "http",
-        statusRouteAuthOptional: true,
+        bearerRequiredByDefault: runtime.config.mode === "http",
+        authOptionalRoutes: pointsTasksAuthOptionalRoutes,
         hasAuthorization: false,
         requestIdHeader: "x-request-id",
         correlationIdHeader: "x-correlation-id",
       },
-      accountScope: {
+      scope: {
         ...(runtime.defaultAccountId ? { defaultAccountId: runtime.defaultAccountId } : {}),
         requiredField: "account_id" as const,
+        optionalFields: ["user_id", "workspace_id"] as const,
         requiredEndpoints: pointsTasksAccountScopedRoutes,
       },
       paginationPolicy: {
         preferredMode: "cursor" as const,
         deprecatedParam: "page" as const,
-        deprecatedRemovalNotBefore: "2027-06-30" as const,
-      },
-      deprecatedFieldFallback: {
-        pointsCanonicalField: "running_balance" as const,
-        pointsFallbackField: "balance_after" as const,
-        tasksCanonicalField: "progress_percent" as const,
-        tasksFallbackField: "progress" as const,
-        fallbackRemovalNotBefore: "2027-06-30" as const,
+        deprecatedRemovalNotBefore: POINTS_TASKS_DEPRECATED_PAGE_REMOVAL_NOT_BEFORE,
       },
       connectivity: {
         checkedAt: new Date().toISOString(),
-        path: runtime.config.connectivityPath ?? "/points-tasks/status/health",
+        path: runtime.config.connectivityPath ?? "/points-tasks/status",
         ok: false,
         source: "runtime" as const,
         message: error instanceof Error ? error.message : "Unknown parity diagnostics error",
@@ -83,11 +83,8 @@ export default async function PointsTasksStatusPage() {
   });
 
   const contractSourcePaths = [
-    `${diagnostics.sourceOfTruth}/${diagnostics.sourceProtocolDocPath}`,
-    `${diagnostics.sourceOfTruth}/${diagnostics.sourceProtocolFaqPath}`,
-    `${diagnostics.sourceOfTruth}/${diagnostics.sourceContractsEventsPath}`,
-    `${diagnostics.sourceOfTruth}/${diagnostics.sourceContractsIdsPath}`,
-    `${diagnostics.sourcePolicy}/${diagnostics.sourcePolicyDocPath}`,
+    `${diagnostics.sourceOfTruth}/${diagnostics.sourceOpenApiPath}`,
+    `${diagnostics.sourceOfTruth}/${diagnostics.sourceChangelogPath}`,
   ];
 
   return (
@@ -110,19 +107,20 @@ export default async function PointsTasksStatusPage() {
                 configuredAccountId: runtime.defaultAccountId ?? null,
                 parity: {
                   compatibilityVersion: diagnostics.compatibilityVersion,
+                  canonicalApiVersion: diagnostics.canonicalApiVersion,
                   parityCheckMarker: diagnostics.parityCheckMarker,
-                  contractSchemaVersion: diagnostics.sourceContractSchemaVersion,
                   openApiPublished: diagnostics.sourceOpenApiPublished,
+                  openApiSha: diagnostics.sourceOpenApiSha,
+                  openApiCommit: diagnostics.sourceOpenApiCommit,
                 },
                 contractSourcePaths,
                 authHeaderPolicy: {
                   ...diagnostics.auth,
-                  idempotencyPolicy: "No write/transition endpoints in Phase 10 MVP surface.",
+                  idempotencyPolicy: "No write/transition endpoints in canonical v1 surface.",
                   note: "No token values are exposed; only policy and presence flags.",
                 },
-                accountScopePolicy: diagnostics.accountScope,
+                scopePolicy: diagnostics.scope,
                 paginationPolicy: diagnostics.paginationPolicy,
-                deprecatedFieldFallback: diagnostics.deprecatedFieldFallback,
                 connectivity: diagnostics.connectivity,
                 renderedAt: new Date().toISOString(),
               },
