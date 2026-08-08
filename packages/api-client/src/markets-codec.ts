@@ -359,6 +359,18 @@ function decodeInstrumentSummary(value: unknown): InstrumentSummaryDto {
     };
   }
 
+  if (typeof payload.totalInstruments !== "undefined") {
+    return {
+      asOf: ensureString(payload.asOf, "instrumentSummary.asOf"),
+      totalInstruments: ensureNumber(payload.totalInstruments, "instrumentSummary.totalInstruments"),
+      tradableInstruments: ensureNumber(payload.tradableInstruments, "instrumentSummary.tradableInstruments"),
+      haltedInstruments: ensureNumber(payload.haltedInstruments, "instrumentSummary.haltedInstruments"),
+      byAssetClass: ensureRecordOfNumbers(payload.byAssetClass, "instrumentSummary.byAssetClass"),
+      byStatus: ensureRecordOfNumbers(payload.byStatus, "instrumentSummary.byStatus"),
+      byAvailability: ensureRecordOfNumbers(payload.byAvailability, "instrumentSummary.byAvailability"),
+    };
+  }
+
   return {
     asOf: ensureString(firstPresent(payload, ["asOf"]) ?? new Date(0).toISOString(), "instrumentSummary.asOf"),
     totalInstruments: ensureNumber(payload.totalCount, "instrumentSummary.totalCount"),
@@ -384,6 +396,20 @@ function decodeOrderSummary(value: unknown): OrderSummaryDto {
       blockedOrders: ensureNumber(payload.blocked_orders, "orderSummary.blocked_orders"),
       byStatus: ensureRecordOfNumbers(payload.by_status, "orderSummary.by_status"),
       bySide: ensureRecordOfNumbers(payload.by_side, "orderSummary.by_side"),
+    };
+  }
+
+  if (typeof payload.totalOrders !== "undefined") {
+    return {
+      asOf: ensureString(payload.asOf, "orderSummary.asOf"),
+      accountId: ensureString(payload.accountId, "orderSummary.accountId"),
+      totalOrders: ensureNumber(payload.totalOrders, "orderSummary.totalOrders"),
+      openOrders: ensureNumber(payload.openOrders, "orderSummary.openOrders"),
+      terminalOrders: ensureNumber(payload.terminalOrders, "orderSummary.terminalOrders"),
+      reviewRequiredOrders: ensureNumber(payload.reviewRequiredOrders, "orderSummary.reviewRequiredOrders"),
+      blockedOrders: ensureNumber(payload.blockedOrders, "orderSummary.blockedOrders"),
+      byStatus: ensureRecordOfNumbers(payload.byStatus, "orderSummary.byStatus"),
+      bySide: ensureRecordOfNumbers(payload.bySide, "orderSummary.bySide"),
     };
   }
 
@@ -426,6 +452,23 @@ function decodePositionSummary(value: unknown): PositionSummaryDto {
     };
   }
 
+  if (typeof payload.totalPositions !== "undefined") {
+    return {
+      asOf: ensureString(payload.asOf, "positionSummary.asOf"),
+      accountId: ensureString(payload.accountId, "positionSummary.accountId"),
+      totalPositions: ensureNumber(payload.totalPositions, "positionSummary.totalPositions"),
+      openPositions: ensureNumber(payload.openPositions, "positionSummary.openPositions"),
+      byState: ensureRecordOfNumbers(payload.byState, "positionSummary.byState"),
+      bySide: ensureRecordOfNumbers(payload.bySide, "positionSummary.bySide"),
+      netExposureQuoteAsset: ensureString(payload.netExposureQuoteAsset, "positionSummary.netExposureQuoteAsset"),
+      netExposureValue: ensureString(payload.netExposureValue, "positionSummary.netExposureValue"),
+      netExposureBand: decodeNetExposureBand(payload, "positionSummary"),
+      riskFlags: ensureArray(payload.riskFlags, "positionSummary.riskFlags").map((entry, index) =>
+        assertEnum(ensureString(entry, `positionSummary.riskFlags[${index}]`), riskFlagSet, `positionSummary.riskFlags[${index}]`),
+      ) as PositionSummaryDto["riskFlags"],
+    };
+  }
+
   return {
     asOf: ensureString(firstPresent(payload, ["asOf"]) ?? new Date(0).toISOString(), "positionSummary.asOf"),
     accountId: ensureString(firstPresent(payload, ["accountId"]) ?? "legacy-account", "positionSummary.accountId"),
@@ -457,17 +500,17 @@ export { decodeInstrumentSummary, decodeOrderSummary, decodePositionSummary };
 export function decodeMarketsOverview(value: unknown): MarketsOverviewDto {
   const payload = ensureObject(value, "markets overview");
 
-  if (typeof payload.api_version !== "undefined") {
+  if (typeof payload.api_version !== "undefined" || typeof payload.apiVersion !== "undefined") {
     const healthStatus = assertEnum(
-      ensureString(payload.health_status, "marketsOverview.health_status"),
+      ensureString(firstPresent(payload, ["health_status", "healthStatus"]), "marketsOverview.health_status"),
       overviewHealthStatusSet,
       "marketsOverview.health_status",
     ) as MarketsOverviewDto["healthStatus"];
 
     return {
-      asOf: ensureString(payload.as_of, "marketsOverview.as_of"),
-      apiVersion: ensureString(payload.api_version, "marketsOverview.api_version"),
-      accountId: ensureString(payload.account_id, "marketsOverview.account_id"),
+      asOf: ensureString(firstPresent(payload, ["as_of", "asOf"]), "marketsOverview.as_of"),
+      apiVersion: ensureString(firstPresent(payload, ["api_version", "apiVersion"]), "marketsOverview.api_version"),
+      accountId: ensureString(firstPresent(payload, ["account_id", "accountId"]), "marketsOverview.account_id"),
       healthStatus,
       instruments: decodeInstrumentSummary(payload.instruments),
       orders: decodeOrderSummary(payload.orders),
