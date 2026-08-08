@@ -52,18 +52,23 @@ export default async function PointsOverviewPage({ searchParams }: PointsTasksOv
   }
 
   try {
+    const userId = parseUserId(searchParams);
+    const workspaceId = parseWorkspaceId(searchParams);
+    const pointsWindow = parsePointsWindow(searchParams);
+    const tasksWindow = parseTasksWindow(searchParams);
+
     const [pointsOverview, tasksOverview] = await Promise.all([
       runtime.pointsTasksClient.getPointsOverview({
         accountId,
-        ...(parseUserId(searchParams) ? { userId: parseUserId(searchParams) } : {}),
-        ...(parseWorkspaceId(searchParams) ? { workspaceId: parseWorkspaceId(searchParams) } : {}),
-        ...(parsePointsWindow(searchParams) ? { window: parsePointsWindow(searchParams) } : {}),
+        ...(userId ? { userId } : {}),
+        ...(workspaceId ? { workspaceId } : {}),
+        ...(pointsWindow ? { window: pointsWindow } : {}),
       }),
       runtime.pointsTasksClient.getTasksOverview({
         accountId,
-        ...(parseUserId(searchParams) ? { userId: parseUserId(searchParams) } : {}),
-        ...(parseWorkspaceId(searchParams) ? { workspaceId: parseWorkspaceId(searchParams) } : {}),
-        ...(parseTasksWindow(searchParams) ? { window: parseTasksWindow(searchParams) } : {}),
+        ...(userId ? { userId } : {}),
+        ...(workspaceId ? { workspaceId } : {}),
+        ...(tasksWindow ? { window: tasksWindow } : {}),
       }),
     ]);
 

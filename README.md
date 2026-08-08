@@ -96,12 +96,18 @@ pnpm --filter @ryvra/markets-web build
 pnpm --filter @ryvra/api-client test:parity
 ```
 
-## Points/Tasks parity development (Phase 10)
+## Points/Tasks parity development (Phase 10.5)
 
 `apps/points-tasks-web` now supports strict typed Points/Tasks parity wiring with preserved dual mode transport:
 
 - `mock` for deterministic local development
 - `http` for live integration parity checks
+
+Canonical source of truth (`ryvra-protocol/protocol-core`, default branch):
+
+- `openapi/points-tasks.openapi.yaml`
+- `docs/api-contract-changelog.md`
+- version marker: `2026-08-08.v1`
 
 ### Environment variables
 
@@ -112,12 +118,12 @@ Core mode/base URL:
 
 Points/Tasks parity/auth/header controls:
 
-- `RYVRA_POINTS_TASKS_AUTH_TOKEN` (required in `http` mode for non-status/non-health routes)
+- `RYVRA_POINTS_TASKS_AUTH_TOKEN` (required in `http` mode for all canonical routes except `/points-tasks/status/health`)
 - `RYVRA_POINTS_TASKS_AUTH_SCHEME` (default: `Bearer`)
 - `RYVRA_POINTS_TASKS_REQUEST_ID_HEADER` (default: `x-request-id`)
 - `RYVRA_POINTS_TASKS_CORRELATION_ID_HEADER` (default: `x-correlation-id`)
 - `RYVRA_POINTS_TASKS_ACCOUNT_ID` (required in `http` mode for account-scoped endpoints)
-- `RYVRA_POINTS_TASKS_CONNECTIVITY_PATH` (default probe: `/points-tasks/status/health`, fallback `/points-tasks/points/overview?account_id=...`)
+- `RYVRA_POINTS_TASKS_CONNECTIVITY_PATH` (default probe: `/points-tasks/status`, fallback `/points-tasks/status/health`)
 - `RYVRA_POINTS_TASKS_COMPATIBILITY_VERSION` (optional override)
 - `RYVRA_POINTS_TASKS_PARITY_CHECK_MARKER` (optional override)
 
@@ -125,7 +131,9 @@ Contract behavior notes:
 
 - account-scoped routes require `account_id` (`points/*`, `tasks/*`, overview/summary)
 - pagination is cursor-first (`limit`, `cursor`); `page` is deprecated compatibility only
-- decoder normalizes deprecated `balance_after` to `running_balance` and `progress` to `progress_percent`
+- canonical filters/sort use OpenAPI keys (`entry_*`, `task_*`, `occurred_*`, `due_*`, `sort`)
+- Points/Tasks HTTP errors are normalized to canonical envelope (`code`, `message`, `retryable`, `source`, optional `details`)
+- deprecated payload aliases are accepted only where canonical compatibility allows
 
 Optional smoke-test guard:
 

@@ -65,42 +65,42 @@
   - `src/service/state-machine.ts`
   - `docs/rfc-0006-pay-rails-and-payment-intents.md`
 
-## Points/Tasks integration map (Phase 10 strict parity MVP wiring)
+## Points/Tasks integration map (Phase 10.5 strict canonical parity)
 
 - `apps/points-tasks-web` runtime (`app/lib/runtime.ts`) loads mode/API config and constructs `createApiClient(...).pointsTasks`.
 - `@ryvra/domain-points` and `@ryvra/domain-tasks` now export:
-  - canonical Points/Tasks enum surfaces and DTO/request contracts
-  - account-scoped request contracts for points/tasks list/summary/overview
-  - cursor-first pagination contracts with deprecated page compatibility
-- `@ryvra/api-client` pointsTasks surface now includes:
+  - canonical OpenAPI-aligned enum/DTO/request contracts
+  - account-scoped request contracts with optional `user_id`/`workspace_id`
+  - cursor-first pagination with canonical deprecated `page` compatibility only
+- `@ryvra/api-client` pointsTasks surface includes:
   - `listPointEntries`, `getPointSummary`, `getPointsOverview`
   - `listTasks`, `getTaskSummary`, `getTasksOverview`
   - `getParityDiagnostics`
   - hard HTTP guards:
-    - required bearer auth on non-status/non-health routes
+    - bearer required by default
+    - auth optional only for `/points-tasks/status/health`
     - required `account_id` on scoped endpoints
     - required request/correlation ids
-  - canonical error-envelope normalization (`code`, `message`, `retryable`, `source`, optional `details`)
-  - deprecated response-field normalization (`balance_after` -> `running_balance`, `progress` -> `progress_percent`)
-- query/filter parity in HTTP mode uses canonical snake_case keys.
-- `/status` displays mode, base URL, protocol/policy source refs, compatibility marker, parity marker, and connectivity probe result.
+  - canonical Points/Tasks error-envelope normalization (`code`, `message`, `retryable`, `source`, optional `details`)
+- query/filter parity now uses canonical Points/Tasks keys (`entry_*`, `task_*`, `occurred_*`, `due_*`, `sort`).
+- `/status` displays canonical OpenAPI/changelog linkage, compatibility marker, parity marker, and connectivity probe result.
 
-## Points/Tasks source-of-truth linkage (`ryvra-protocol/protocol-core`, `ryvra-protocol/policy-risk`)
+## Points/Tasks source-of-truth linkage (`ryvra-protocol/protocol-core`)
 
-- Canonical source files currently define protocol/policy contracts (no published Points/Tasks HTTP OpenAPI yet):
-  - `contracts/src/events.ts`
-  - `contracts/src/ids.ts`
-  - `contracts/src/version.ts`
-  - `docs/tokenomics-proof-of-transaction.md`
-  - `docs/tokenomics-faq.md`
-  - `ryvra-protocol/policy-risk/docs/anti-abuse-policy.md`
+- Canonical merged contract references:
+  - `openapi/points-tasks.openapi.yaml`
+  - `docs/api-contract-changelog.md`
+- Current Apps marker linkage:
+  - `POINTS_TASKS_API_VERSION=2026-08-08.v1`
+  - OpenAPI SHA `89e790e859984892fcfbbe7e0b3e7dd2f159b2e7`
+  - OpenAPI commit `b3abbc4fce3ee4024ba39049623a870747a521f7`
 
 ## External Ryvra touchpoints (future integration targets)
 
 - **Ryvra Identity/Auth services:** concrete session validation and role claims.
 - **Ryvra Markets services:** canonical `/markets/*` contract now published and enforced in apps parity wiring.
 - **Ryvra Pay services:** canonical HTTP/API publication still pending.
-- **Ryvra Points/Tasks services:** published endpoint-level OpenAPI/router contracts (pending upstream publication).
+- **Ryvra Points/Tasks services:** canonical endpoint-level OpenAPI is now published and wired in apps parity contracts.
 - **Ryvra observability stack:** structured logs, tracing, and alerting pipeline.
 
 ## Placement guidance for future business logic
