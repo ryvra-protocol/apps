@@ -125,15 +125,12 @@ importers:
       '@ryvra/config':
         specifier: workspace:*
         version: link:../../packages/config
-      '@ryvra/domain-markets':
+      '@ryvra/domain-points':
         specifier: workspace:*
-        version: link:../../packages/domain-markets
-      '@ryvra/domain-payments':
+        version: link:../../packages/domain-points
+      '@ryvra/domain-tasks':
         specifier: workspace:*
-        version: link:../../packages/domain-payments
-      '@ryvra/domain-tokenomics':
-        specifier: workspace:*
-        version: link:../../packages/domain-tokenomics
+        version: link:../../packages/domain-tasks
       '@ryvra/observability':
         specifier: workspace:*
         version: link:../../packages/observability
@@ -158,6 +155,12 @@ importers:
       '@ryvra/domain-payments':
         specifier: workspace:*
         version: link:../domain-payments
+      '@ryvra/domain-points':
+        specifier: workspace:*
+        version: link:../domain-points
+      '@ryvra/domain-tasks':
+        specifier: workspace:*
+        version: link:../domain-tasks
       '@ryvra/domain-tokenomics':
         specifier: workspace:*
         version: link:../domain-tokenomics
@@ -177,6 +180,10 @@ importers:
   packages/domain-markets: {}
 
   packages/domain-payments: {}
+
+  packages/domain-points: {}
+
+  packages/domain-tasks: {}
 
   packages/domain-tokenomics: {}
 

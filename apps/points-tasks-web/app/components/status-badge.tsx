@@ -13,7 +13,7 @@ function resolveStyles(status: string): { color: string; background: string; bor
   if (goodStatuses.has(normalized)) {
     return {
       color: themeTokens.color.success,
-      background: themeTokens.color.successSurface,
+      background: themeTokens.color.surfaceMuted,
       border: themeTokens.color.success,
     };
   }
@@ -21,7 +21,7 @@ function resolveStyles(status: string): { color: string; background: string; bor
   if (warningStatuses.has(normalized)) {
     return {
       color: themeTokens.color.warning,
-      background: themeTokens.color.warningSurface,
+      background: themeTokens.color.surfaceMuted,
       border: themeTokens.color.warning,
     };
   }
@@ -29,7 +29,7 @@ function resolveStyles(status: string): { color: string; background: string; bor
   if (badStatuses.has(normalized)) {
     return {
       color: themeTokens.color.danger,
-      background: themeTokens.color.dangerSurface,
+      background: themeTokens.color.surfaceMuted,
       border: themeTokens.color.danger,
     };
   }
