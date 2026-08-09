@@ -72,6 +72,304 @@ export const shellStyles = `
   gap: ${themeTokens.spacing.sm};
 }
 
+.ryvra-notification-center {
+  position: relative;
+}
+
+.ryvra-notification-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: ${themeTokens.spacing.xs};
+  border-color: ${themeTokens.color.border};
+  background: ${themeTokens.color.surface};
+}
+
+.ryvra-notification-trigger-label {
+  font-weight: ${themeTokens.typography.weight.medium};
+}
+
+.ryvra-notification-badge {
+  min-width: 1.25rem;
+  height: 1.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: ${themeTokens.radius.pill};
+  background: ${themeTokens.color.primary};
+  color: ${themeTokens.color.textInverse};
+  font-size: ${themeTokens.typography.size.xs};
+  font-weight: ${themeTokens.typography.weight.semibold};
+  padding: 0 ${themeTokens.spacing.xs};
+}
+
+.ryvra-notification-panel {
+  position: absolute;
+  right: 0;
+  margin-top: ${themeTokens.spacing.sm};
+  width: min(560px, calc(100vw - ${themeTokens.spacing["2xl"]}));
+  max-height: min(80vh, 760px);
+  overflow: auto;
+  border-radius: ${themeTokens.radius.lg};
+  border: 1px solid ${themeTokens.color.borderStrong};
+  background: ${themeTokens.color.surface};
+  box-shadow: ${themeTokens.shadow.lg};
+  z-index: 70;
+  padding: ${themeTokens.spacing.lg};
+  display: grid;
+  gap: ${themeTokens.spacing.md};
+}
+
+.ryvra-notification-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${themeTokens.spacing.md};
+}
+
+.ryvra-notification-mode-note {
+  margin: 0;
+  color: ${themeTokens.color.textMuted};
+  font-size: ${themeTokens.typography.size.sm};
+}
+
+.ryvra-notification-toolbar {
+  display: grid;
+  gap: ${themeTokens.spacing.sm};
+}
+
+.ryvra-notification-tablist {
+  display: flex;
+  align-items: center;
+  gap: ${themeTokens.spacing.xs};
+  flex-wrap: wrap;
+}
+
+.ryvra-notification-tab {
+  border: 1px solid ${themeTokens.color.borderStrong};
+  border-radius: ${themeTokens.radius.pill};
+  background: ${themeTokens.color.surface};
+  color: ${themeTokens.color.text};
+  font-size: ${themeTokens.typography.size.sm};
+  font-weight: ${themeTokens.typography.weight.medium};
+  padding: ${themeTokens.spacing.xs} ${themeTokens.spacing.sm};
+  cursor: pointer;
+  transition: ${motion};
+}
+
+.ryvra-notification-tab[aria-selected="true"] {
+  background: ${themeTokens.color.surfaceStrong};
+  border-color: ${themeTokens.color.primary};
+  color: ${themeTokens.color.primaryActive};
+}
+
+.ryvra-notification-tab:focus-visible,
+.ryvra-notification-inline-button:focus-visible,
+.ryvra-notification-select:focus-visible,
+.ryvra-notification-input:focus-visible {
+  outline: ${themeTokens.focusRing.width} solid ${themeTokens.color.focusRing};
+  outline-offset: ${themeTokens.focusRing.offset};
+}
+
+.ryvra-notification-sort-label {
+  display: inline-flex;
+  align-items: center;
+  gap: ${themeTokens.spacing.xs};
+  color: ${themeTokens.color.textMuted};
+  font-size: ${themeTokens.typography.size.sm};
+}
+
+.ryvra-notification-select,
+.ryvra-notification-input {
+  border: 1px solid ${themeTokens.color.borderStrong};
+  border-radius: ${themeTokens.radius.md};
+  background: ${themeTokens.color.surface};
+  color: ${themeTokens.color.text};
+  min-height: 2rem;
+  padding: 0 ${themeTokens.spacing.sm};
+}
+
+.ryvra-notification-list-shell {
+  display: grid;
+  gap: ${themeTokens.spacing.sm};
+}
+
+.ryvra-notification-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: ${themeTokens.spacing.sm};
+}
+
+.ryvra-notification-item {
+  border: 1px solid ${themeTokens.color.border};
+  border-radius: ${themeTokens.radius.md};
+  background: ${themeTokens.color.surfaceMuted};
+  padding: ${themeTokens.spacing.md};
+  display: grid;
+  gap: ${themeTokens.spacing.xs};
+}
+
+.ryvra-notification-item--unread {
+  border-color: ${themeTokens.color.primary};
+  background: ${themeTokens.color.surfaceStrong};
+}
+
+.ryvra-notification-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${themeTokens.spacing.sm};
+}
+
+.ryvra-notification-unread-pill {
+  border-radius: ${themeTokens.radius.pill};
+  background: ${themeTokens.color.primary};
+  color: ${themeTokens.color.textInverse};
+  font-size: ${themeTokens.typography.size.xs};
+  font-weight: ${themeTokens.typography.weight.semibold};
+  padding: ${themeTokens.spacing.xxs} ${themeTokens.spacing.sm};
+}
+
+.ryvra-notification-severity {
+  border-radius: ${themeTokens.radius.pill};
+  border: 1px solid transparent;
+  font-size: ${themeTokens.typography.size.xs};
+  font-weight: ${themeTokens.typography.weight.semibold};
+  padding: ${themeTokens.spacing.xxs} ${themeTokens.spacing.sm};
+}
+
+.ryvra-notification-severity--info {
+  border-color: ${themeTokens.color.borderStrong};
+  background: ${themeTokens.color.surface};
+  color: ${themeTokens.color.text};
+}
+
+.ryvra-notification-severity--success {
+  border-color: ${themeTokens.color.success};
+  background: ${themeTokens.color.successSurface};
+  color: ${themeTokens.color.success};
+}
+
+.ryvra-notification-severity--warn {
+  border-color: ${themeTokens.color.warning};
+  background: ${themeTokens.color.warningSurface};
+  color: ${themeTokens.color.warning};
+}
+
+.ryvra-notification-severity--error {
+  border-color: ${themeTokens.color.danger};
+  background: ${themeTokens.color.dangerSurface};
+  color: ${themeTokens.color.danger};
+}
+
+.ryvra-notification-message {
+  margin: 0;
+  color: ${themeTokens.color.text};
+  font-size: ${themeTokens.typography.size.sm};
+}
+
+.ryvra-notification-meta {
+  margin: 0;
+  color: ${themeTokens.color.textMuted};
+  font-size: ${themeTokens.typography.size.xs};
+}
+
+.ryvra-notification-actions {
+  display: flex;
+  align-items: center;
+  gap: ${themeTokens.spacing.md};
+  flex-wrap: wrap;
+}
+
+.ryvra-notification-inline-button,
+.ryvra-notification-link {
+  border: 1px solid ${themeTokens.color.borderStrong};
+  border-radius: ${themeTokens.radius.md};
+  background: ${themeTokens.color.surface};
+  color: ${themeTokens.color.text};
+  font-size: ${themeTokens.typography.size.sm};
+  font-weight: ${themeTokens.typography.weight.medium};
+  padding: ${themeTokens.spacing.xs} ${themeTokens.spacing.sm};
+  text-decoration: none;
+  cursor: pointer;
+  transition: ${motion};
+}
+
+.ryvra-notification-inline-button:hover,
+.ryvra-notification-link:hover {
+  background: ${themeTokens.color.surfaceStrong};
+  border-color: ${themeTokens.color.primary};
+}
+
+.ryvra-notification-inline-button:disabled {
+  cursor: not-allowed;
+  color: ${themeTokens.color.disabledText};
+  background: ${themeTokens.color.disabledBackground};
+  border-color: transparent;
+}
+
+.ryvra-notification-muted {
+  color: ${themeTokens.color.textMuted};
+  font-size: ${themeTokens.typography.size.sm};
+}
+
+.ryvra-notification-state {
+  margin: 0;
+  color: ${themeTokens.color.textMuted};
+  display: grid;
+  gap: ${themeTokens.spacing.sm};
+}
+
+.ryvra-notification-preferences {
+  border-top: 1px solid ${themeTokens.color.border};
+  padding-top: ${themeTokens.spacing.md};
+  display: grid;
+  gap: ${themeTokens.spacing.md};
+}
+
+.ryvra-notification-fieldset {
+  border: 1px solid ${themeTokens.color.border};
+  border-radius: ${themeTokens.radius.md};
+  padding: ${themeTokens.spacing.md};
+  display: grid;
+  gap: ${themeTokens.spacing.sm};
+}
+
+.ryvra-notification-fieldset > legend {
+  padding: 0 ${themeTokens.spacing.xs};
+  color: ${themeTokens.color.textMuted};
+  font-size: ${themeTokens.typography.size.sm};
+  font-weight: ${themeTokens.typography.weight.semibold};
+}
+
+.ryvra-notification-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: ${themeTokens.spacing.sm};
+  color: ${themeTokens.color.text};
+  font-size: ${themeTokens.typography.size.sm};
+}
+
+.ryvra-notification-grid {
+  display: grid;
+  gap: ${themeTokens.spacing.xs};
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+
+.ryvra-notification-input-row {
+  display: grid;
+  gap: ${themeTokens.spacing.xs};
+  color: ${themeTokens.color.text};
+  font-size: ${themeTokens.typography.size.sm};
+}
+
+.ryvra-notification-input-error {
+  margin: 0;
+  color: ${themeTokens.color.danger};
+  font-size: ${themeTokens.typography.size.sm};
+}
+
 .ryvra-shell-layout {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -512,6 +810,12 @@ export const shellStyles = `
 
   .ryvra-bottom-dock {
     max-width: calc(100vw - ${themeTokens.spacing.lg});
+  }
+
+  .ryvra-notification-panel {
+    right: auto;
+    left: 0;
+    width: min(560px, calc(100vw - ${themeTokens.spacing.lg}));
   }
 }
 

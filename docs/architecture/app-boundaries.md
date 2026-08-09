@@ -14,6 +14,7 @@ Define clear responsibility boundaries between the three frontend apps and share
 - Surfaces actionable runtime errors (including diagnostics/status failures) without bypassing shared guardrails.
 - Uses shared Unified Balance Card UX, while sourcing account-scoped asset rows via read-only `marketsClient.listPositions`.
 - Owns user-facing order trust timeline/evidence composition while consuming shared trust primitives from `@ryvra/ui`.
+- Consumes shared in-app notification center + communication preference surfaces from `@ryvra/ui` without introducing product-specific notification persistence contracts.
 - Owns Markets-specific portfolio insight KPI composition while using shared insight primitives and existing read-only markets data.
 - Must keep Unified Balance in the top-priority dashboard/overview zone ahead of secondary analytics.
 
@@ -28,6 +29,7 @@ Define clear responsibility boundaries between the three frontend apps and share
 - Must surface account-scope issues for unified balance explicitly (non-silent).
 - Owns claim/payout trust disclosures, receipt rendering, and evidence wiring without introducing new backend contract fields.
 - Owns payout-claim client orchestration while enforcing timeout/offline-safe UX and deterministic post-success revalidation.
+- Owns claim/payout notification producer mappings for Phase 14 while keeping persistence/deep-link shell behavior inside shared UI primitives.
 - Owns Pay-specific portfolio/operational trend KPI composition while keeping Unified Balance in the top-priority zone.
 
 ### `apps/points-tasks-web`
@@ -39,6 +41,7 @@ Define clear responsibility boundaries between the three frontend apps and share
 - Owns points balance and daily-claim status surfaces, including guarded fallback UX when the daily-claim status endpoint is provisional/unavailable.
 - Owns task/daily-claim trust timeline composition and explicit unavailable-state messaging for missing operation references.
 - Owns retry-safe daily-claim client retry/resume behavior (including retained `intentId` between retry attempts).
+- Owns task + daily-claim notification producer mappings for Phase 14 while consuming shared notification center/preference UX from `@ryvra/ui`.
 - Must keep points balance + daily-claim surfaces in top-priority zones on both `/points` and `/tasks`.
 - Owns points/tasks portfolio insight composition using canonical overview reads and explicit history-window fallback messaging.
 
@@ -53,6 +56,7 @@ Define clear responsibility boundaries between the three frontend apps and share
 - Exposes hot-path timing diagnostics through transport error metadata and optional metric hooks.
 - Exposes parity diagnostics metadata for status pages.
 - Hosts shared unified-balance aggregation/format helpers and provisional daily-claim read-status decoding used across apps.
+- Does not yet expose notification feed or communication-preference endpoints; apps must surface explicit local-preview/deferred messaging until contracts are published.
 
 ### `@ryvra/domain-*`
 
@@ -70,12 +74,14 @@ Define clear responsibility boundaries between the three frontend apps and share
 - No backend integration or product-specific business decisions.
 - Owns unified nav iconography and interaction styling semantics across products.
 - Owns reusable trust/compliance presentation primitives (timelines, disclosures, evidence panels, receipts, policy links, standardized error transparency copy).
+- Owns the reusable in-app notification center, scoped notification state provider, read/unread interactions, category/sort controls, and communication preference surfaces (email/webhook UI-first mode labeling).
 - Owns reusable portfolio/insight presentation primitives (window controls, module state rendering, compact trend visuals, and shared formatting helpers).
 - Enforces Phase 12.5A navigation policy across Markets, Pay, and Points/Tasks:
   - sidebar is collapsed by default on first load and expands only by user action
   - sidebar preference persists via client storage after user interaction
   - icon-only controls always retain accessible labels, tooltips, and `aria-current` semantics
   - top product navigation is rendered as a centered bottom icon dock with safe-area-aware spacing
+  - notification center trigger and panel controls preserve keyboard/ARIA/focus semantics across shells
 
 ### `@ryvra/auth`
 

@@ -6,6 +6,7 @@ import { shellStyles } from "./shell-styles";
 import { GlobalHeader } from "./GlobalHeader";
 import { GlobalSidebar } from "./GlobalSidebar";
 import { BottomIconDock } from "./BottomIconDock";
+import { NotificationCenterProvider } from "./NotificationCenterProvider";
 import {
   readSidebarCollapsedPreference,
   toggleSidebarCollapsed,
@@ -25,6 +26,7 @@ export interface AppShellProps {
   footer?: ReactNode;
   userMenuItems?: UserMenuItem[];
   commandTriggerLabel?: string;
+  notificationScopeKey?: string;
 }
 
 export function AppShell({
@@ -40,8 +42,12 @@ export function AppShell({
   footer,
   userMenuItems = [],
   commandTriggerLabel = "Command Palette",
+  notificationScopeKey,
 }: AppShellProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+  const resolvedNotificationScopeKey = notificationScopeKey && notificationScopeKey.trim().length > 0
+    ? notificationScopeKey
+    : appName.toLowerCase().replace(/\s+/g, "-");
 
   useEffect(() => {
     const preference = readSidebarCollapsedPreference(typeof window !== "undefined" ? window.localStorage : null);
@@ -64,28 +70,30 @@ export function AppShell({
       <a className="ryvra-skip-link" href="#app-main-content">
         Skip to content
       </a>
-      <GlobalHeader
-        appName={appName}
-        breadcrumbs={breadcrumbs}
-        userMenuItems={userMenuItems}
-        commandTriggerLabel={commandTriggerLabel}
-      />
-      <div className="ryvra-shell-layout">
-        <GlobalSidebar
-          globalNavItems={globalNavItems}
-          localNavItems={localNavItems}
-          localNavTitle={localNavTitle}
-          localNavAriaLabel={localNavAriaLabel}
-          currentPath={currentPath}
-          collapsed={sidebarCollapsed}
-          onToggleCollapsed={handleSidebarToggle}
+      <NotificationCenterProvider scopeKey={resolvedNotificationScopeKey}>
+        <GlobalHeader
+          appName={appName}
+          breadcrumbs={breadcrumbs}
+          userMenuItems={userMenuItems}
+          commandTriggerLabel={commandTriggerLabel}
         />
-        <main id="app-main-content" className="ryvra-shell-main" tabIndex={-1}>
-          <div className="ryvra-content-frame">{children}</div>
-        </main>
-      </div>
-      <BottomIconDock items={productSwitcherItems} />
-      {footer ? <footer className="ryvra-shell-footer">{footer}</footer> : null}
+        <div className="ryvra-shell-layout">
+          <GlobalSidebar
+            globalNavItems={globalNavItems}
+            localNavItems={localNavItems}
+            localNavTitle={localNavTitle}
+            localNavAriaLabel={localNavAriaLabel}
+            currentPath={currentPath}
+            collapsed={sidebarCollapsed}
+            onToggleCollapsed={handleSidebarToggle}
+          />
+          <main id="app-main-content" className="ryvra-shell-main" tabIndex={-1}>
+            <div className="ryvra-content-frame">{children}</div>
+          </main>
+        </div>
+        <BottomIconDock items={productSwitcherItems} />
+        {footer ? <footer className="ryvra-shell-footer">{footer}</footer> : null}
+      </NotificationCenterProvider>
     </div>
   );
 }

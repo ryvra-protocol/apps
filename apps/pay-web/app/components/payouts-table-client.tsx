@@ -6,9 +6,10 @@ import {
   type PayPaginationMeta,
   type PayoutDto,
 } from "@ryvra/domain-payments";
-import { Button, Card, DataTable, themeTokens } from "@ryvra/ui";
-import { useDeferredValue } from "react";
+import { Button, Card, DataTable, useNotificationCenter, themeTokens } from "@ryvra/ui";
+import { useDeferredValue, useEffect } from "react";
 import { formatCurrencyMinor, formatDateTime } from "../lib/format";
+import { buildPayoutStatusNotification } from "../lib/notification-comms";
 import { StatusBadge } from "./status-badge";
 import { useQueryFilters } from "./use-query-filters";
 
@@ -22,6 +23,7 @@ const payoutDestinationOptions = ["ALL", ...payoutDestinationTypes] as const;
 
 export function PayoutsTableClient({ items, pagination }: PayoutsTableClientProps) {
   const { searchParams, updateQuery, clearQuery } = useQueryFilters();
+  const { addNotification } = useNotificationCenter();
 
   const statusParam = (searchParams.get("status") ?? "ALL").toUpperCase();
   const destinationTypeParam = (searchParams.get("destinationType") ?? "ALL").toUpperCase();
@@ -37,6 +39,12 @@ export function PayoutsTableClient({ items, pagination }: PayoutsTableClientProp
   const deferredItems = useDeferredValue(items);
   const visibleRows = deferredItems;
   const rowsPending = deferredItems !== items;
+
+  useEffect(() => {
+    for (const payout of items.slice(0, 25)) {
+      addNotification(buildPayoutStatusNotification(payout));
+    }
+  }, [addNotification, items]);
 
   const canGoPrev = pagination.page > 1;
   const canGoNext = pagination.page < pagination.totalPages;

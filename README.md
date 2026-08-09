@@ -39,6 +39,13 @@ This repository hosts the unified-shell baseline with Pay, Markets, and Points/T
 - `/points` and `/tasks` now place points balance + daily-claim surfaces in the top-priority section.
 - Portfolio/insight modules now use shared insight formatting/state primitives and explicit historical-window fallback messaging.
 
+## Phase 14 notifications + communications notes
+
+- Shared in-app notification center is now available in the unified shell across Markets, Pay, and Points/Tasks.
+- Notification categories include Claims, Payouts, Tasks, and System with read/unread controls and deep-link actions.
+- Communication preferences (email + webhook category toggles) are currently **local preview settings** unless remote persistence contracts are explicitly added.
+- Webhook test ping is intentionally disabled with explicit deferred-backend messaging in this phase.
+
 ## Setup
 
 ```bash
@@ -293,4 +300,5 @@ See `docs/architecture/` for boundaries, responsibilities, and integration mappi
 - `docs/architecture/points-tasks-integration-parity.md`
 - `docs/architecture/release-readiness-checklist.md`
 - `docs/architecture/reliability-performance-phase-17.md`
+- `docs/architecture/notifications-and-comms-phase-14.md`
 - `docs/architecture/portfolio-and-insights-phase-15.md`
