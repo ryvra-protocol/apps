@@ -23,8 +23,8 @@ export default async function PayHomePage() {
       loadPayUnifiedBalanceCard({
         marketsClient: runtime.marketsClient,
         logger: runtime.logger,
-        accountId: runtime.marketsAccountId,
         route: "/",
+        ...(runtime.marketsAccountId ? { accountId: runtime.marketsAccountId } : {}),
       }),
     ]);
 

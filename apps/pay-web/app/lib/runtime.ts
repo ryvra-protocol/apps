@@ -47,9 +47,10 @@ export function createPayRuntimeContext(scope: string): PayRuntimeContext {
   const marketsRequestIdHeader = getOptionalEnvValue("RYVRA_MARKETS_REQUEST_ID_HEADER") ?? requestIdHeader;
   const marketsCorrelationIdHeader = getOptionalEnvValue("RYVRA_MARKETS_CORRELATION_ID_HEADER") ?? correlationIdHeader;
   const marketsConnectivityPath = getOptionalEnvValue("RYVRA_MARKETS_CONNECTIVITY_PATH");
+  const configuredMarketsAccountId = getOptionalEnvValue("RYVRA_MARKETS_ACCOUNT_ID");
   const marketsAccountId = resolveUnifiedBalanceAccountId({
-    configuredAccountId: getOptionalEnvValue("RYVRA_MARKETS_ACCOUNT_ID"),
     mode: config.mode,
+    ...(configuredMarketsAccountId ? { configuredAccountId: configuredMarketsAccountId } : {}),
   });
   const session: Session = {
     user: { id: "local-member", roles: [Role.Member] },

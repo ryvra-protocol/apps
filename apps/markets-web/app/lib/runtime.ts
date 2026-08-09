@@ -32,8 +32,8 @@ export function createMarketsRuntimeContext(scope: string): MarketsRuntimeContex
   const requestIdHeader = getOptionalEnvValue("RYVRA_MARKETS_REQUEST_ID_HEADER");
   const correlationIdHeader = getOptionalEnvValue("RYVRA_MARKETS_CORRELATION_ID_HEADER");
   const defaultAccountId = resolveUnifiedBalanceAccountId({
-    configuredAccountId: config.accountId,
     mode: config.mode,
+    ...(config.accountId ? { configuredAccountId: config.accountId } : {}),
   });
   const session: Session = {
     user: { id: "local-member", roles: [Role.Member] },

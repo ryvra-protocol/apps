@@ -232,7 +232,7 @@ export function createUnifiedBalanceDisplayModelFromPositions(input: {
 }): UnifiedBalanceDisplayModel {
   return createUnifiedBalanceDisplayModel(
     aggregateUnifiedBalance({
-      expectedAccountId: input.expectedAccountId,
+      ...(typeof input.expectedAccountId === "string" ? { expectedAccountId: input.expectedAccountId } : {}),
       sources: [
         {
           source: input.source ?? "markets.positions",

@@ -1,6 +1,13 @@
-import type { DailyClaimStateDto } from "@ryvra/domain-tokenomics";
-
 export type DailyClaimUiStatus = "available" | "already_claimed" | "cooldown" | "unavailable";
+
+interface DailyClaimStateDto {
+  accountId: string;
+  eligible: boolean;
+  status?: "available" | "already_claimed" | "cooldown";
+  reasonCode?: string;
+  nextEligibleAt?: string | null;
+  invokeEndpointAvailable: boolean;
+}
 
 export interface DailyClaimViewModel {
   status: DailyClaimUiStatus;
@@ -136,7 +143,7 @@ export function buildDailyClaimViewModel(input: {
       cta: {
         label: "Claim daily points",
         enabled: invokeEndpointAvailable,
-        reason: invokeEndpointAvailable ? undefined : "Claim execution is deferred to Phase 12.5B pay intent wiring.",
+        ...(invokeEndpointAvailable ? {} : { reason: "Claim execution is deferred to Phase 12.5B pay intent wiring." }),
       },
       retryable: false,
     };

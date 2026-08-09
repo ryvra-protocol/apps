@@ -113,30 +113,6 @@ function optionalMetadata(value: unknown, label: string): Record<string, unknown
     return undefined;
   }
 
-  function decodeDailyClaimStatusValue(
-    payload: Record<string, unknown>,
-    eligible: boolean,
-    reasonCode: string | undefined,
-  ): DailyClaimStateDto["status"] {
-    const explicitStatus = optionalNullableString(firstPresent(payload, ["status"]), "dailyClaim.status");
-    if (typeof explicitStatus === "string") {
-      return ensureEnum(explicitStatus, dailyClaimStatuses, "dailyClaim.status");
-    }
-
-    if (eligible) {
-      return "available";
-    }
-
-    if (typeof reasonCode === "string") {
-      const normalizedReason = reasonCode.toLowerCase();
-      if (normalizedReason.includes("cooldown")) {
-        return "cooldown";
-      }
-    }
-
-    return "already_claimed";
-  }
-
   if (value === null) {
     return null;
   }
@@ -146,6 +122,30 @@ function optionalMetadata(value: unknown, label: string): Record<string, unknown
   }
 
   throw new Error(`${label} must be an object or null`);
+}
+
+function decodeDailyClaimStatusValue(
+  payload: Record<string, unknown>,
+  eligible: boolean,
+  reasonCode: string | undefined,
+): NonNullable<DailyClaimStateDto["status"]> {
+  const explicitStatus = optionalNullableString(firstPresent(payload, ["status"]), "dailyClaim.status");
+  if (typeof explicitStatus === "string") {
+    return ensureEnum(explicitStatus, dailyClaimStatuses, "dailyClaim.status") as NonNullable<DailyClaimStateDto["status"]>;
+  }
+
+  if (eligible) {
+    return "available";
+  }
+
+  if (typeof reasonCode === "string") {
+    const normalizedReason = reasonCode.toLowerCase();
+    if (normalizedReason.includes("cooldown")) {
+      return "cooldown";
+    }
+  }
+
+  return "already_claimed";
 }
 
 function decodeDeprecatedPage(value: unknown, label: string): PointsResponseMeta["deprecatedPage"] {
