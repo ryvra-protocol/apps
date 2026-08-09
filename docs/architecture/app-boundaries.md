@@ -13,6 +13,7 @@ Define clear responsibility boundaries between the three frontend apps and share
 - Must not implement protocol-level transport logic directly in pages/components.
 - Surfaces actionable runtime errors (including diagnostics/status failures) without bypassing shared guardrails.
 - Uses shared Unified Balance Card UX, while sourcing account-scoped asset rows via read-only `marketsClient.listPositions`.
+- Owns user-facing order trust timeline/evidence composition while consuming shared trust primitives from `@ryvra/ui`.
 
 ### `apps/pay-web`
 
@@ -23,6 +24,7 @@ Define clear responsibility boundaries between the three frontend apps and share
 - Fingerprint-style claim confirmation remains a UI interaction boundary only; identity/security remains session/token + server-side validation.
 - Uses the same shared Unified Balance Card component/formatting as Markets and consumes read-only Markets positions for cross-app parity.
 - Must surface account-scope issues for unified balance explicitly (non-silent).
+- Owns claim/payout trust disclosures, receipt rendering, and evidence wiring without introducing new backend contract fields.
 
 ### `apps/points-tasks-web`
 
@@ -31,6 +33,7 @@ Define clear responsibility boundaries between the three frontend apps and share
 - Must not bypass shared parity/auth/scope guards with direct fetch calls.
 - Preserves canonical auth optionality: health-only route (`/points-tasks/status/health`) may bypass bearer auth; status/data routes may not.
 - Owns points balance and daily-claim status surfaces, including guarded fallback UX when the daily-claim status endpoint is provisional/unavailable.
+- Owns task/daily-claim trust timeline composition and explicit unavailable-state messaging for missing operation references.
 
 ## Shared packages
 
@@ -57,6 +60,7 @@ Define clear responsibility boundaries between the three frontend apps and share
 - Shared shell, navigation, and reusable presentational components.
 - No backend integration or product-specific business decisions.
 - Owns unified nav iconography and interaction styling semantics across products.
+- Owns reusable trust/compliance presentation primitives (timelines, disclosures, evidence panels, receipts, policy links, standardized error transparency copy).
 - Enforces Phase 12.5A navigation policy across Markets, Pay, and Points/Tasks:
   - sidebar is collapsed by default on first load and expands only by user action
   - sidebar preference persists via client storage after user interaction

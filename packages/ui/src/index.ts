@@ -68,3 +68,30 @@ export type { ShellNavItem, ProductSwitcherItem, BreadcrumbItem, UserMenuItem } 
 
 export { themeTokens } from "./theme";
 export type { ThemeTokens } from "./theme";
+
+export {
+  TRUST_REDACTED_VALUE,
+  TRUST_UNAVAILABLE_VALUE,
+  buildNextStepMessage,
+  buildRetrySafetyMessage,
+  formatTrustTimestamp,
+  sanitizeTrustReferenceValue,
+  ComplianceEvidencePanel,
+  ConfirmationReceiptCard,
+  ErrorTransparencySummary,
+  OperationTimelineCard,
+  PolicyLinksCard,
+  TrustDisclosureCard,
+} from "./TrustCompliance";
+export type {
+  ComplianceEvidencePanelProps,
+  ConfirmationReceiptCardProps,
+  ErrorTransparencySummaryProps,
+  OperationTimelineCardProps,
+  OperationTimelineStage,
+  OperationTimelineState,
+  PolicyLinkItem,
+  PolicyLinksCardProps,
+  TrustDisclosureCardProps,
+  TrustReference,
+} from "./TrustCompliance";

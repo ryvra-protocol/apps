@@ -9,7 +9,7 @@
     "lint": "eslint --max-warnings 0 --ext .ts,.tsx src",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "build": "tsc -p tsconfig.json",
-    "test": "tsx --test src/navigation-shell.test.tsx"
+    "test": "tsx --test src/**/*.test.tsx"
   },
   "peerDependencies": {
     "react": "^18.3.1",

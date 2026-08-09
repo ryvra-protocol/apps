@@ -1,7 +1,15 @@
 "use client";
 
 import type { RuntimeMode } from "@ryvra/config";
-import { Button, Card, themeTokens } from "@ryvra/ui";
+import {
+  Button,
+  Card,
+  ComplianceEvidencePanel,
+  ConfirmationReceiptCard,
+  ErrorTransparencySummary,
+  OperationTimelineCard,
+  themeTokens,
+} from "@ryvra/ui";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   buildClaimRequestContext,
@@ -24,14 +32,25 @@ import { StatusBadge } from "./status-badge";
 interface ClaimResponseData {
   intentId?: string;
   state?: string;
+  idempotencyKey?: string;
   requestId?: string;
   correlationId?: string;
+}
+
+interface ClaimTimelineTimestamps {
+  confirmationStartedAt?: string;
+  submittedAt?: string;
+  resolvedAt?: string;
 }
 
 interface ClaimFingerprintCardClientProps {
   mode: RuntimeMode;
   payout: ClaimPayoutCandidate | null;
   availability: ClaimAvailability;
+}
+
+function createReference(label: string, value?: string | null) {
+  return value && value.trim().length > 0 ? { label, value } : { label };
 }
 
 export function ClaimFingerprintCardClient({ mode, payout, availability }: ClaimFingerprintCardClientProps) {
@@ -41,6 +60,7 @@ export function ClaimFingerprintCardClient({ mode, payout, availability }: Claim
   const [error, setError] = useState<ClaimErrorEnvelope | null>(null);
   const [successData, setSuccessData] = useState<ClaimResponseData | null>(null);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const [timelineTimestamps, setTimelineTimestamps] = useState<ClaimTimelineTimestamps>({});
 
   const lockRef = useRef(createClaimSubmissionLock());
   const confirmationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -92,6 +112,7 @@ export function ClaimFingerprintCardClient({ mode, payout, availability }: Claim
     setUiState("idle");
     setError(null);
     setSuccessData(null);
+    setTimelineTimestamps({});
 
     if (closePanel) {
       setPanelOpen(false);
@@ -117,6 +138,10 @@ export function ClaimFingerprintCardClient({ mode, payout, availability }: Claim
       return;
     }
 
+    setTimelineTimestamps((current) => ({
+      ...current,
+      submittedAt: current.submittedAt ?? new Date().toISOString(),
+    }));
     setUiState((current) => transitionClaimUiState(current, "SUBMIT"));
 
     const requestId = createClientGeneratedId("req");
@@ -142,16 +167,19 @@ export function ClaimFingerprintCardClient({ mode, payout, availability }: Claim
       if (!response.ok) {
         const normalizedError = normalizeClaimErrorEnvelope(payload?.error ?? payload ?? undefined, requestId, correlationId);
         setError(normalizedError);
+        setTimelineTimestamps((current) => ({ ...current, resolvedAt: new Date().toISOString() }));
         setUiState((current) => transitionClaimUiState(current, "FAILURE"));
         return;
       }
 
       setSuccessData(payload?.data ?? {});
+      setTimelineTimestamps((current) => ({ ...current, resolvedAt: new Date().toISOString() }));
       setUiState((current) => transitionClaimUiState(current, "SUCCESS"));
       setError(null);
     } catch (submissionError) {
       const normalizedError = normalizeClaimErrorEnvelope(submissionError, requestId, correlationId);
       setError(normalizedError);
+      setTimelineTimestamps((current) => ({ ...current, resolvedAt: new Date().toISOString() }));
       setUiState((current) => transitionClaimUiState(current, "FAILURE"));
     } finally {
       lockRef.current.release();
@@ -168,6 +196,10 @@ export function ClaimFingerprintCardClient({ mode, payout, availability }: Claim
       confirmationTimerRef.current = null;
     }
 
+    setTimelineTimestamps((current) => ({
+      ...current,
+      confirmationStartedAt: current.confirmationStartedAt ?? new Date().toISOString(),
+    }));
     setUiState((current) => transitionClaimUiState(current, "START_CONFIRM"));
     setError(null);
 
@@ -192,6 +224,43 @@ export function ClaimFingerprintCardClient({ mode, payout, availability }: Claim
           : uiState === "failure"
             ? "Claim failed"
             : "Awaiting confirmation";
+
+  const claimTimelineStages = useMemo(
+    () => [
+      {
+        id: "confirm",
+        label: "Confirmation",
+        status: uiState === "idle" || uiState === "confirming" ? "current" : "completed",
+        ...(timelineTimestamps.confirmationStartedAt ? { timestamp: timelineTimestamps.confirmationStartedAt } : {}),
+        current: uiState === "idle" || uiState === "confirming",
+        references: [{ label: "Idempotency key", value: idempotencyKey }],
+      },
+      {
+        id: "submit",
+        label: "Submission",
+        status: uiState === "submitting" ? "current" : uiState === "success" || uiState === "failure" ? "completed" : "pending",
+        ...(timelineTimestamps.submittedAt ? { timestamp: timelineTimestamps.submittedAt } : {}),
+        current: uiState === "submitting",
+      },
+      {
+        id: "complete",
+        label: "Completed",
+        status: uiState === "success" ? "current" : "pending",
+        ...(uiState === "success" && timelineTimestamps.resolvedAt ? { timestamp: timelineTimestamps.resolvedAt } : {}),
+        current: uiState === "success",
+        references: [createReference("Intent ID", successData?.intentId)],
+      },
+      {
+        id: "failed",
+        label: "Closed with issue",
+        status: uiState === "failure" ? "current" : "pending",
+        ...(uiState === "failure" && timelineTimestamps.resolvedAt ? { timestamp: timelineTimestamps.resolvedAt } : {}),
+        current: uiState === "failure",
+        ...(error?.code ? { note: error.code } : {}),
+      },
+    ],
+    [error?.code, idempotencyKey, successData?.intentId, timelineTimestamps.confirmationStartedAt, timelineTimestamps.resolvedAt, timelineTimestamps.submittedAt, uiState],
+  );
 
   return (
     <Card title="Claim">
@@ -309,6 +378,9 @@ export function ClaimFingerprintCardClient({ mode, payout, availability }: Claim
             <p id="pay-claim-hint" className="pay-claim-meta">
               {confirmationHint}
             </p>
+            <p className="pay-claim-meta">
+              Retry only when the operation is marked retryable. Processing can continue after you close this panel.
+            </p>
 
             <div className="pay-claim-row">
               <button
@@ -332,15 +404,39 @@ export function ClaimFingerprintCardClient({ mode, payout, availability }: Claim
               {stateMessage}
             </p>
 
+            <OperationTimelineCard
+              title="Claim submission timeline"
+              state="success"
+              stages={claimTimelineStages}
+              emptyMessage="Claim timeline is not available."
+            />
+
+            <ComplianceEvidencePanel
+              title="Claim compliance evidence"
+              summaryLabel="Details"
+              sourceSystem={error?.source ?? "pay"}
+              retryable={error ? error.retryable : uiState === "success" ? false : null}
+              references={[
+                createReference("Intent ID", successData?.intentId),
+                createReference("Request ID", successData?.requestId ?? error?.requestId),
+                createReference("Correlation ID", successData?.correlationId ?? error?.correlationId),
+                createReference("Idempotency key", successData?.idempotencyKey ?? idempotencyKey),
+              ]}
+              lastUpdated={timelineTimestamps.resolvedAt ?? timelineTimestamps.submittedAt}
+            />
+
             {uiState === "success" ? (
               <div role="status" aria-live="polite" style={{ display: "grid", gap: themeTokens.spacing.xs }}>
-                <p style={{ margin: 0 }}>Claim submitted.</p>
-                <p className="pay-claim-meta" style={{ margin: 0 }}>
-                  Intent: {successData?.intentId ?? "n/a"} • State: {successData?.state ?? "created"}
-                </p>
-                <p className="pay-claim-meta" style={{ margin: 0 }}>
-                  Request: {successData?.requestId ?? "n/a"} • Correlation: {successData?.correlationId ?? "n/a"}
-                </p>
+                <ConfirmationReceiptCard
+                  operationLabel="Claim submitted"
+                  status={successData?.state ?? "success"}
+                  confirmedAt={timelineTimestamps.resolvedAt}
+                  references={[
+                    createReference("Intent ID", successData?.intentId),
+                    createReference("Request ID", successData?.requestId),
+                    createReference("Correlation ID", successData?.correlationId),
+                  ]}
+                />
                 <Button type="button" variant="secondary" onClick={() => resetFlow(true)}>
                   Close
                 </Button>
@@ -349,13 +445,12 @@ export function ClaimFingerprintCardClient({ mode, payout, availability }: Claim
 
             {uiState === "failure" && error ? (
               <div role="alert" aria-live="assertive" style={{ display: "grid", gap: themeTokens.spacing.xs }}>
-                <p style={{ margin: 0 }}>{error.message}</p>
-                <p className="pay-claim-meta" style={{ margin: 0 }}>
-                  {formatClaimErrorMeta(error)}
-                </p>
-                <p className="pay-claim-meta" style={{ margin: 0 }}>
-                  Request: {error.requestId} • Correlation: {error.correlationId}
-                </p>
+                <ErrorTransparencySummary
+                  message={`${error.message} (${formatClaimErrorMeta(error)})`}
+                  source={error.source}
+                  retryable={error.retryable}
+                  retryActionLabel="Retry claim"
+                />
                 {error.retryable ? (
                   <Button type="button" variant="secondary" onClick={() => void submitClaim()}>
                     Retry claim

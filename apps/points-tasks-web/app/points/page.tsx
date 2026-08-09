@@ -2,7 +2,15 @@ import type {
   PointEntryFilters,
   PointsAccountScopedListRequest,
 } from "@ryvra/domain-points";
-import { Card, Section, themeTokens } from "@ryvra/ui";
+import {
+  Card,
+  ComplianceEvidencePanel,
+  OperationTimelineCard,
+  PolicyLinksCard,
+  Section,
+  TrustDisclosureCard,
+  themeTokens,
+} from "@ryvra/ui";
 import { EmptyState, ErrorState, UnauthorizedState } from "../components/page-states";
 import { PointsTableClient } from "../components/points-table-client";
 import { DailyClaimCard } from "../components/daily-claim-card";
@@ -10,6 +18,7 @@ import { ModeBadge } from "../components/mode-badge";
 import { formatNumber } from "../lib/format";
 import { buildDailyClaimViewModel } from "../lib/daily-claim";
 import { buildPointsSummaryRequest, resolvePointsBalance } from "../lib/points-balance";
+import { buildDailyClaimEvidenceReferences, buildDailyClaimTimelineStages } from "../lib/trust-compliance";
 import {
   parseAccountId,
   parseCursor,
@@ -138,6 +147,8 @@ export default async function PointsPage({ searchParams }: PointsPageProps) {
     ]);
 
     const pointsBalance = resolvePointsBalance(summary);
+    const dailyClaimObservedAt = new Date().toISOString();
+    const dailyClaimTimeline = buildDailyClaimTimelineStages(dailyClaim, dailyClaimObservedAt);
 
     runtime.logger.info("Loaded points ledger data", {
       mode: runtime.config.mode,
@@ -176,6 +187,39 @@ export default async function PointsPage({ searchParams }: PointsPageProps) {
           </div>
 
           <DailyClaimCard model={dailyClaim} />
+
+          <TrustDisclosureCard
+            title="Daily claim trust notice"
+            confirmationText="Claim eligibility shown here is read-only status metadata from the points/tasks API."
+            retryText="Retry only when the claim status module reports retryable guidance."
+            processingText="If references are unavailable, they are explicitly marked as unavailable in this environment."
+          />
+
+          <OperationTimelineCard
+            title="Daily claim operation timeline"
+            state={dailyClaimTimeline.length > 0 ? "success" : "empty"}
+            stages={dailyClaimTimeline}
+            emptyMessage="Daily claim timeline data is unavailable."
+          />
+
+          <ComplianceEvidencePanel
+            title="Daily claim compliance evidence"
+            summaryLabel="Details"
+            sourceSystem="points_tasks_api"
+            retryable={dailyClaim.retryable}
+            references={buildDailyClaimEvidenceReferences(request.accountId)}
+            lastUpdated={dailyClaim.nextEligibleAt ?? dailyClaimObservedAt}
+          />
+
+          <PolicyLinksCard
+            title="Points policy and help"
+            description="Open diagnostics and scope context before retrying claim status checks."
+            links={[
+              { href: "/status", label: "View points/tasks status diagnostics" },
+              { href: "/tasks", label: "Review related task progression" },
+              { href: "/overview", label: "Open points/tasks operational overview" },
+            ]}
+          />
 
           <PointsTableClient items={pointsList.items} pagination={pointsList.pagination} />
 

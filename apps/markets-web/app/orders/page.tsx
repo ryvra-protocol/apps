@@ -1,5 +1,13 @@
 import type { MarketsAccountScopedListRequest, OrderFilters } from "@ryvra/domain-markets";
-import { Card, Section, themeTokens } from "@ryvra/ui";
+import {
+  Card,
+  ComplianceEvidencePanel,
+  OperationTimelineCard,
+  PolicyLinksCard,
+  Section,
+  TrustDisclosureCard,
+  themeTokens,
+} from "@ryvra/ui";
 import { ModeBadge } from "../components/mode-badge";
 import { OrdersTableClient } from "../components/orders-table-client";
 import { EmptyState, ErrorState, UnauthorizedState } from "../components/page-states";
@@ -17,6 +25,7 @@ import {
   parseSortDirection,
   type RouteSearchParams,
 } from "../lib/search-params";
+import { buildOrderEvidenceReferences, buildOrderTimelineStages, resolveOrderRetryable } from "../lib/trust-compliance";
 import { captureMarketsPageError, createMarketsRuntimeContext } from "../lib/runtime";
 
 interface MarketsOrdersPageProps {
@@ -94,6 +103,8 @@ export default async function MarketsOrdersPage({ searchParams }: MarketsOrdersP
         ...(request.filters ? { filters: request.filters } : {}),
       }),
     ]);
+    const leadOrder = orderList.items[0] ?? null;
+    const orderTimelineStages = buildOrderTimelineStages(leadOrder);
 
     runtime.logger.info("Loaded orders data", {
       mode: runtime.config.mode,
@@ -122,6 +133,39 @@ export default async function MarketsOrdersPage({ searchParams }: MarketsOrdersP
               <p style={{ margin: 0 }}>{summary.blockedOrders}</p>
             </Card>
           </div>
+
+          <TrustDisclosureCard
+            title="Order lifecycle trust notice"
+            confirmationText="Order statuses reflect canonical lifecycle stages from create through settlement."
+            retryText="Retry order actions only after checking policy decision and retryability context."
+            processingText="Route and correlation references are surfaced for auditability when available."
+          />
+
+          <OperationTimelineCard
+            title="Latest order operation timeline"
+            state={orderTimelineStages.length > 0 ? "success" : "empty"}
+            stages={orderTimelineStages}
+            emptyMessage="No order timeline is available for the current account scope."
+          />
+
+          <ComplianceEvidencePanel
+            title="Latest order compliance evidence"
+            summaryLabel="Details"
+            sourceSystem="markets-api"
+            retryable={resolveOrderRetryable(leadOrder)}
+            references={buildOrderEvidenceReferences(leadOrder)}
+            lastUpdated={leadOrder?.updatedAt}
+          />
+
+          <PolicyLinksCard
+            title="Markets policy and help"
+            description="Use diagnostics and position context before resubmitting or escalating order issues."
+            links={[
+              { href: "/status", label: "View markets status diagnostics" },
+              { href: "/positions", label: "Review position risk state" },
+              { href: "/overview", label: "Open markets operational overview" },
+            ]}
+          />
 
           <OrdersTableClient items={orderList.items} pagination={orderList.pagination} />
 

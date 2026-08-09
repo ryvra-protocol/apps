@@ -1,4 +1,4 @@
-import { Card, themeTokens } from "@ryvra/ui";
+import { Card, ErrorTransparencySummary, themeTokens } from "@ryvra/ui";
 
 interface RetryLinkProps {
   href: string;
@@ -50,11 +50,8 @@ export function UnauthorizedState() {
 export function ErrorState({ title, message, retryLink, source, retryable }: ErrorStateProps) {
   return (
     <Card title={title}>
-      <div role="alert" aria-live="assertive" style={{ display: "grid", gap: themeTokens.spacing.sm }}>
-        <p style={{ margin: 0 }}>{message}</p>
-        <p style={{ margin: 0, color: themeTokens.color.textMuted, fontSize: themeTokens.typography.size.sm }}>
-          Source: {source ?? "runtime"} • Retryable: {retryable ? "Yes" : "No"}
-        </p>
+      <div style={{ display: "grid", gap: themeTokens.spacing.sm }}>
+        <ErrorTransparencySummary message={message} source={source} retryable={retryable} retryActionLabel={retryLink.label} />
         <ActionLink href={retryLink.href} label={retryLink.label} primary />
       </div>
     </Card>
