@@ -2608,7 +2608,7 @@ export function createMockTransport(): Transport {
             reasonCode: "cooldown_active",
             claimedAt: "2026-08-08T08:00:00.000Z",
             nextEligibleAt: "2026-08-09T08:00:00.000Z",
-            invokeEndpointAvailable: false,
+            invokeEndpointAvailable: true,
           };
         } else if (accountId === "acct-core-2") {
           claimState = {
@@ -2620,7 +2620,7 @@ export function createMockTransport(): Transport {
             reasonCode: "already_claimed_today",
             claimedAt: "2026-08-09T01:10:00.000Z",
             nextEligibleAt: "2026-08-10T00:00:00.000Z",
-            invokeEndpointAvailable: false,
+            invokeEndpointAvailable: true,
           };
         } else {
           claimState = {
@@ -2630,7 +2630,7 @@ export function createMockTransport(): Transport {
             eligible: true,
             status: "available",
             reasonCode: "claim_available",
-            invokeEndpointAvailable: false,
+            invokeEndpointAvailable: true,
           };
         }
 

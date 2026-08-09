@@ -130,6 +130,7 @@ Points/Tasks parity/auth/header controls:
 - `RYVRA_POINTS_TASKS_CONNECTIVITY_PATH` (default probe: `/points-tasks/status`, fallback `/points-tasks/status/health`)
 - `RYVRA_POINTS_TASKS_COMPATIBILITY_VERSION` (optional override)
 - `RYVRA_POINTS_TASKS_PARITY_CHECK_MARKER` (optional override)
+- `RYVRA_PAY_AUTH_TOKEN` (required in `http` mode to execute `/points` daily claim write flow through Pay intents)
 
 Contract behavior notes:
 
@@ -139,7 +140,9 @@ Contract behavior notes:
 - Points/Tasks HTTP errors are normalized to canonical envelope (`code`, `message`, `retryable`, `source`, optional `details`)
 - deprecated payload aliases are accepted only where canonical compatibility allows
 - runtime config now fails fast in `http` mode if `RYVRA_POINTS_TASKS_AUTH_TOKEN` is missing
-- `/points` daily-claim module uses read-only status metadata; if claim execution endpoint is unavailable, CTA stays disabled with explicit reason/retry guidance
+- `/points` daily-claim module loads status from Points/Tasks and executes claims through Pay intent writes (`POST /pay/intents` + transitions) when invoke is available
+- claim writes in `/points` reuse per-attempt idempotency keys on safe retries and always emit request/correlation IDs
+- if claim execution endpoint is unavailable, daily-claim CTA stays disabled with explicit reason/retry guidance
 - `/points` and `/tasks` now surface trust timelines/evidence panels and policy/help links with explicit unavailable-state placeholders for missing references
 
 Optional smoke-test guard:
@@ -272,5 +275,6 @@ See `docs/architecture/` for boundaries, responsibilities, and integration mappi
 - `docs/architecture/points-tasks-mvp-data-flow.md`
 - `docs/architecture/unified-balance-and-daily-claim-phase-12b.md`
 - `docs/architecture/trust-security-compliance-phase-13.md`
+- `docs/architecture/claim-execution-phase-12-5b.md`
 - `docs/architecture/points-tasks-integration-parity.md`
 - `docs/architecture/release-readiness-checklist.md`

@@ -186,7 +186,14 @@ export default async function PointsPage({ searchParams }: PointsPageProps) {
             </Card>
           </div>
 
-          <DailyClaimCard model={dailyClaim} />
+          <DailyClaimCard
+            model={dailyClaim}
+            scope={{
+              accountId: request.accountId,
+              ...(request.userId ? { userId: request.userId } : {}),
+              ...(request.workspaceId ? { workspaceId: request.workspaceId } : {}),
+            }}
+          />
 
           <TrustDisclosureCard
             title="Daily claim trust notice"
