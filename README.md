@@ -35,14 +35,10 @@ This repository hosts the unified-shell baseline with Pay, Markets, and Points/T
 
 ## Phase 14 notifications + communications notes
 
-- All app shells now include a shared in-app notification center in the global header.
-- Notification center currently runs in explicit **local preview** mode (no remote feed contract yet):
-  - read/unread state and notification history are scoped local storage data
-  - claim/payout/task status notifications are produced from existing UI lifecycle/status state
-- Communication preferences (email + webhook) are also explicit local preview settings:
-  - global + per-category toggles
-  - webhook URL validation
-  - test ping UI disabled until remote webhook execution wiring is available
+- Shared in-app notification center is now available in the unified shell across Markets, Pay, and Points/Tasks.
+- Notification categories include Claims, Payouts, Tasks, and System with read/unread controls and deep-link actions.
+- Communication preferences (email + webhook category toggles) are currently **local preview settings** unless remote persistence contracts are explicitly added.
+- Webhook test ping is intentionally disabled with explicit deferred-backend messaging in this phase.
 
 ## Setup
 

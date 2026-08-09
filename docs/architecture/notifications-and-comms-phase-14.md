@@ -1,124 +1,138 @@
-# Notifications & Communications — Phase 14
+# Notifications and Communications (Phase 14)
 
 ## Scope
 
-Phase 14 delivers a UI-first in-app notification center and communication preference surfaces across:
+Phase 14 introduces a shared in-app notification center and communication preference surfaces across:
 
 - `apps/markets-web`
 - `apps/pay-web`
 - `apps/points-tasks-web`
 
-No new backend contracts were introduced in this phase. Where backend persistence/feed wiring is absent, the UX is explicit about local preview behavior.
+Delivery is UI-first. Backend notification feeds and remote preference persistence are explicitly deferred where contracts are not available.
 
 ## Notification center architecture
 
 ### Shared shell integration
 
-- `@ryvra/ui` now provides:
-  - `NotificationCenterProvider`
-  - `NotificationCenterControl`
-  - notification model helpers (filters/sort/read state/mapping functions)
-- `AppShell` mounts `NotificationCenterProvider` and `GlobalHeader` renders the bell trigger with unread badge.
-- All three app `shell-frame.tsx` files pass:
-  - `notificationAppId` (product identity)
-  - `notificationScopeKey` (derived from account/workspace/user query params where present)
-  - `notificationFeedMode="local-preview"`
-  - `notificationPreferenceMode="local-preview"`
+- Notification center is embedded in the shared header action row (`@ryvra/ui`).
+- A scope-aware provider wraps the shell (`NotificationCenterProvider`) and exposes notification state/actions through `useNotificationCenter`.
+- Scope key is derived per app shell from product + account/user/workspace query context to preserve account/tenant isolation in local storage.
 
-### Center capabilities
+### Data model
 
-- Header trigger:
-  - icon-only bell button
-  - unread badge
-  - ARIA labels and expanded/collapsed semantics
-- Panel:
-  - view tabs: notification center + preferences
-  - category filters: `All`, `Claims`, `Payouts`, `Tasks`, `System`
-  - deterministic sort: newest/oldest
-  - read/unread controls
-  - deep-link actions to related app context
-  - loading, empty, error, success list states
-- Explicit preview-state copy:
-  - feed mode label
-  - local preview disclosure when remote feed is not wired
+- Categories: `claims`, `payouts`, `tasks`, `system`
+- Severities: `info`, `success`, `warn`, `error`
+- Notification item fields include:
+  - read/unread state
+  - ISO timestamp
+  - concise message
+  - optional deep-link route
+  - optional reference label/value (sanitized snippet)
+  - optional dedupe key
 
-## Producer/mapping model (claim/payout/task)
+### Panel behavior
 
-### Claim notifications
+- Trigger: bell button with unread badge and ARIA labeling.
+- Views: category tabs (`All`, `Claims`, `Payouts`, `Tasks`, `System`) and sort (`Newest first`, `Oldest first`).
+- States: loading, error (retry action), empty, success.
+- Actions per item:
+  - mark read/unread
+  - open context deep-link (marks read)
+- Ordering is deterministic by timestamp and stable tie-breaker.
 
-- Producers:
-  - `apps/pay-web/app/components/claim-fingerprint-card-client.tsx`
-  - `apps/points-tasks-web/app/components/daily-claim-card.tsx`
-- Lifecycle mapping:
-  - `submitted`
-  - `processing`
-  - `completed`
-  - `failed` (retryable/non-retryable guidance-aware copy)
+## Producer and mapping model
 
-### Payout notifications
+### Claim lifecycle notifications
 
-- Producer:
-  - `apps/pay-web/app/components/payout-status-notification-bridge.tsx`
-- Status mapping:
-  - `SCHEDULED` -> created/queued
-  - `PROCESSING` -> processing
-  - `COMPLETED` -> completed
-  - `FAILED` -> failed/retryable guidance
+Produced from claim submission flows in:
 
-### Task notifications
+- `apps/pay-web/app/components/claim-fingerprint-card-client.tsx`
+- `apps/points-tasks-web/app/components/daily-claim-card.tsx`
 
-- Producer:
-  - `apps/points-tasks-web/app/components/task-status-notification-bridge.tsx`
-- Status mapping:
-  - `eligible` / `not_started` -> assigned/eligible
-  - `in_progress` / active progression -> in-progress update
-  - `completed` / done progression -> completed/reward-ready
-  - terminal non-success states -> closed-with-issue guidance
+Mapped lifecycle stages:
 
-## Preference storage modes
+- submitted
+- processing
+- completed
+- failed (retryable/non-retryable severity)
 
-### Email preferences
+References use intent/request/correlation snippets where available.
 
-- global toggle
-- per-category toggles (`Claims`, `Payouts`, `Tasks`, `System`)
+### Payout status notifications
 
-### Webhook preferences
+Produced from payout list surfaces in:
 
-- global toggle
-- endpoint URL input
-- per-category toggles
-- inline URL validation
-- test ping control disabled with explicit reason until backend support exists
+- `apps/pay-web/app/components/payouts-table-client.tsx`
 
-### Persistence behavior in Phase 14
+Canonical mappings:
 
-- **Notifications:** local storage (scope-keyed)
-- **Preferences:** local storage (scope-keyed)
-- **Remote persistence/feed:** not available in current contracts
-- UI labels this mode as **local preview settings** to prevent deceptive behavior.
+- `SCHEDULED` -> created/queued
+- `PROCESSING` -> processing
+- `COMPLETED` -> completed
+- `FAILED` -> failed/retryable (keyword-based retryability hint)
+
+### Task status notifications
+
+Produced from task list surfaces in:
+
+- `apps/points-tasks-web/app/components/tasks-table-client.tsx`
+
+Canonical/provisional mappings:
+
+- `eligible` / `not_started` -> assigned/eligible
+- `in_progress` / active review states -> in-progress update
+- `completed` / `done` -> completed/reward-ready
+- blocked/terminal states -> warn-level closure/update copy
+
+## Preferences surface architecture
+
+Preferences live in the notification center panel:
+
+- Email:
+  - global toggle
+  - per-category toggles
+- Webhook:
+  - global toggle
+  - endpoint URL input
+  - per-category toggles
+  - basic URL validation with inline error
+  - test ping button disabled with explicit reason when unsupported
+
+## Storage modes and persistence behavior
+
+### Current phase behavior
+
+- Mode: **local preview settings**
+- Notifications + preferences persist in browser local storage by scope key.
+- UI explicitly labels local preview mode and states that remote persistence is not configured.
+
+### Remote mode support
+
+- Provider supports an explicit `remote` mode label for future backend wiring.
+- No remote feed/prefs endpoint is currently integrated in this phase.
 
 ## Privacy and redaction rules
 
-- Notification references are rendered as snippets (truncated identifiers).
-- Secret-like labels (token/secret/password/authorization/api-key) are redacted.
-- No auth tokens or credential values are rendered in notification surfaces.
-- Existing auth guard behavior remains unchanged.
-- Scope isolation is enforced by scope-keyed local storage (app + account/workspace/user context).
+- No secrets/tokens are displayed in notification messages or references.
+- Reference values are sanitized and abbreviated; sensitive patterns are redacted.
+- IDs shown in UI are snippets only when appropriate.
+- No auth token/header values are stored in notifications/preferences.
 
 ## Accessibility and trust UX
 
-- keyboard-operable trigger, tabs, actions, and preference controls
-- ARIA labels for icon controls and unread badge
-- focus handoff on open/close interactions
-- contrast-safe severity/read indicators
-- reduced-motion safe transitions (inherits shell reduced-motion policy)
+- Keyboard-accessible trigger, tabs, action controls, and close behavior.
+- ARIA labels for icon/control surfaces and unread badge announcements.
+- Focus management returns focus to trigger on close and focuses panel heading on open.
+- Read/unread and severity indicators use explicit text and contrast-safe token usage.
+- Reduced-motion behavior inherits shell-wide motion reduction policy.
 
 ## Deferred backend wiring notes
 
-Deferred until canonical API contracts exist:
+The following backend capabilities remain deferred pending published contracts/endpoints:
 
-1. Remote notification feed endpoint(s)
-2. Remote communication preference read/write endpoint(s)
-3. Webhook test ping execution endpoint
+- remote in-app notification feed subscription/history
+- remote read/unread persistence
+- remote email/webhook preference persistence APIs
+- webhook test ping execution endpoint
 
-Current behavior intentionally stays explicit local-preview-only until these backend capabilities are published and integrated through `@ryvra/api-client`.
+Phase 14 keeps these gaps explicit in UI copy and mode labeling to avoid deceptive behavior.

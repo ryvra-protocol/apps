@@ -189,34 +189,29 @@
   - non-critical claim modules are lazy-loaded on `/pay/payouts` and `/points`
   - performance guard command `pnpm perf:guard` validates chunk budgets and critical route build artifacts after builds
 
-## Phase 14 notifications + comms map
+## Phase 14 notifications + communications map
 
-- Shared in-app notification center is implemented in `@ryvra/ui` (`NotificationCenterProvider` + `NotificationCenterControl`) and mounted by every app shell:
-  - entry point: bell icon in global header with unread badge
-  - panel capabilities: category filters (`All`, `Claims`, `Payouts`, `Tasks`, `System`), deterministic sorting, read/unread controls, deep-link actions
-  - explicit local-preview feed labeling when remote notification feed wiring is unavailable
-- Notification producers:
-  - `apps/pay-web/app/components/claim-fingerprint-card-client.tsx`
-    - emits claim lifecycle notifications (`submitted`, `processing`, `completed`, `failed/retryable`)
-  - `apps/pay-web/app/components/payout-status-notification-bridge.tsx`
-    - maps payout statuses to user notifications (`created/queued`, `processing`, `completed`, `failed/retryable`)
-  - `apps/points-tasks-web/app/components/daily-claim-card.tsx`
-    - emits daily-claim lifecycle notifications (`submitted`, `processing`, `completed`, `failed/retryable`)
-  - `apps/points-tasks-web/app/components/task-status-notification-bridge.tsx`
-    - maps task progression statuses (`assigned/eligible`, `in-progress`, `completed/reward-ready`, terminal issue states)
-- Preferences UI:
-  - hosted inside notification center panel
-  - email + webhook global toggles and per-category toggles
-  - webhook URL validation with inline error messaging
-  - test ping intentionally disabled with explicit reason until remote execution support exists
-- Persistence model in Phase 14:
-  - notification history: local storage, scope-keyed by app + account/workspace/user query context
-  - communication preferences: local storage only with explicit `local preview settings` labeling
-  - no silent fake remote persistence
-- Deferred backend wiring:
-  - no canonical notification-feed API surfaced yet in `@ryvra/api-client`
-  - no canonical remote email/webhook preference endpoint surfaced yet in `@ryvra/api-client`
-  - UI exposes explicit preview-state copy until these contracts are available
+- Shared notification center and communication preference surfaces are implemented in `@ryvra/ui` and consumed by all three apps through `AppShell`.
+- `NotificationCenterProvider` stores notification feed + preference state by scope-aware key (`product + account/user/workspace` context) to keep account/tenant views isolated in local preview mode.
+- Shared notification center supports:
+  - category filters (`All`, `Claims`, `Payouts`, `Tasks`, `System`)
+  - deterministic sort order controls
+  - loading/empty/error/success rendering states
+  - per-item read/unread toggles
+  - deep-link actions to related app routes
+- Producer integration points:
+  - `apps/pay-web/app/components/claim-fingerprint-card-client.tsx` -> claim lifecycle notifications
+  - `apps/pay-web/app/components/payouts-table-client.tsx` -> payout status notifications
+  - `apps/points-tasks-web/app/components/daily-claim-card.tsx` -> daily claim lifecycle notifications
+  - `apps/points-tasks-web/app/components/tasks-table-client.tsx` -> task progression notifications
+- Status mapping helpers live in app-boundary modules:
+  - `apps/pay-web/app/lib/notification-comms.ts`
+  - `apps/points-tasks-web/app/lib/notification-comms.ts`
+- Preference surfaces (email + webhook) are UI-first:
+  - explicit **local preview settings** labeling
+  - webhook URL inline validation
+  - disabled test ping control with explicit deferred-backend reason
+- No backend notification feed/preference endpoint is currently wired in Phase 14; remote persistence remains explicitly deferred.
 
 ## Placement guidance for future business logic
 

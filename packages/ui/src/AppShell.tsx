@@ -6,7 +6,7 @@ import { shellStyles } from "./shell-styles";
 import { GlobalHeader } from "./GlobalHeader";
 import { GlobalSidebar } from "./GlobalSidebar";
 import { BottomIconDock } from "./BottomIconDock";
-import { NotificationCenterProvider, type NotificationDeliveryMode } from "./NotificationCenter";
+import { NotificationCenterProvider } from "./NotificationCenterProvider";
 import {
   readSidebarCollapsedPreference,
   toggleSidebarCollapsed,
@@ -26,10 +26,7 @@ export interface AppShellProps {
   footer?: ReactNode;
   userMenuItems?: UserMenuItem[];
   commandTriggerLabel?: string;
-  notificationAppId?: string;
   notificationScopeKey?: string;
-  notificationFeedMode?: NotificationDeliveryMode;
-  notificationPreferenceMode?: NotificationDeliveryMode;
 }
 
 export function AppShell({
@@ -45,12 +42,12 @@ export function AppShell({
   footer,
   userMenuItems = [],
   commandTriggerLabel = "Command Palette",
-  notificationAppId = "shared-shell",
-  notificationScopeKey = "workspace-default",
-  notificationFeedMode = "local-preview",
-  notificationPreferenceMode = "local-preview",
+  notificationScopeKey,
 }: AppShellProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+  const resolvedNotificationScopeKey = notificationScopeKey && notificationScopeKey.trim().length > 0
+    ? notificationScopeKey
+    : appName.toLowerCase().replace(/\s+/g, "-");
 
   useEffect(() => {
     const preference = readSidebarCollapsedPreference(typeof window !== "undefined" ? window.localStorage : null);
@@ -70,15 +67,10 @@ export function AppShell({
   return (
     <div className="ryvra-shell-root">
       <style>{shellStyles}</style>
-      <NotificationCenterProvider
-        appId={notificationAppId}
-        scopeKey={notificationScopeKey}
-        feedMode={notificationFeedMode}
-        preferenceMode={notificationPreferenceMode}
-      >
-        <a className="ryvra-skip-link" href="#app-main-content">
-          Skip to content
-        </a>
+      <a className="ryvra-skip-link" href="#app-main-content">
+        Skip to content
+      </a>
+      <NotificationCenterProvider scopeKey={resolvedNotificationScopeKey}>
         <GlobalHeader
           appName={appName}
           breadcrumbs={breadcrumbs}

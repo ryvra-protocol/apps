@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Card, mapClaimLifecycleNotification, themeTokens, useNotificationCenter } from "@ryvra/ui";
+import { Button, Card, useNotificationCenter, themeTokens } from "@ryvra/ui";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import {
@@ -12,15 +12,15 @@ import {
 } from "../lib/claim-execution";
 import { executeDailyClaimAttempt } from "../lib/claim-execution-client";
 import type { DailyClaimViewModel } from "../lib/daily-claim";
+import {
+  buildDailyClaimLifecycleNotification,
+  resolveDailyClaimLifecycleStageFromIntentState,
+} from "../lib/notification-comms";
 import { StatusBadge } from "./status-badge";
 
 interface DailyClaimCardProps {
   model: DailyClaimViewModel;
   scope: DailyClaimScope;
-}
-
-function toNotificationReference(label: string, value?: string | null) {
-  return value && value.trim().length > 0 ? { label, value } : { label };
 }
 
 export function DailyClaimCard({ model, scope }: DailyClaimCardProps) {
@@ -48,26 +48,20 @@ export function DailyClaimCard({ model, scope }: DailyClaimCardProps) {
     setIsSubmitting(true);
     setWriteError(null);
     setWriteGuidance(null);
-    const startedAt = new Date().toISOString();
     addNotification(
-      mapClaimLifecycleNotification({
+      buildDailyClaimLifecycleNotification({
         stage: "submitted",
-        eventKey: `daily-claim:${nextAttempt.idempotencyKey}:submitted`,
-        timestamp: startedAt,
-        routeHref: `/points?account_id=${encodeURIComponent(scope.accountId)}&ref=notification&entity=claim`,
-        references: [
-          toNotificationReference("Account", scope.accountId),
-          toNotificationReference("Idempotency key", nextAttempt.idempotencyKey),
-        ],
+        accountId: scope.accountId,
+        requestId: nextAttempt.requestId,
+        correlationId: nextAttempt.correlationId,
       }),
     );
     addNotification(
-      mapClaimLifecycleNotification({
+      buildDailyClaimLifecycleNotification({
         stage: "processing",
-        eventKey: `daily-claim:${nextAttempt.idempotencyKey}:processing`,
-        timestamp: startedAt,
-        routeHref: `/points?account_id=${encodeURIComponent(scope.accountId)}&ref=notification&entity=claim`,
-        references: [toNotificationReference("Account", scope.accountId)],
+        accountId: scope.accountId,
+        requestId: nextAttempt.requestId,
+        correlationId: nextAttempt.correlationId,
       }),
     );
 
@@ -80,22 +74,18 @@ export function DailyClaimCard({ model, scope }: DailyClaimCardProps) {
       setAttempt(result.attempt);
 
       if (!result.ok) {
-        addNotification(
-          mapClaimLifecycleNotification({
-            stage: "failed",
-            retryable: result.error.retryable,
-            eventKey: `daily-claim:${nextAttempt.idempotencyKey}:failed:${result.error.code}`,
-            timestamp: new Date().toISOString(),
-            routeHref: `/points?account_id=${encodeURIComponent(scope.accountId)}&ref=notification&entity=claim`,
-            references: [
-              toNotificationReference("Request ID", result.error.requestId),
-              toNotificationReference("Correlation ID", result.error.correlationId),
-            ],
-          }),
-        );
         setDidSucceed(false);
         setWriteError(result.error);
         setWriteGuidance(result.retry.guidance);
+        addNotification(
+          buildDailyClaimLifecycleNotification({
+            stage: "failed",
+            accountId: scope.accountId,
+            requestId: result.error.requestId,
+            correlationId: result.error.correlationId,
+            retryable: result.error.retryable,
+          }),
+        );
         return;
       }
 
@@ -103,16 +93,21 @@ export function DailyClaimCard({ model, scope }: DailyClaimCardProps) {
       setWriteError(null);
       setWriteGuidance("Claim submitted. Refreshing claim status and points balances.");
       addNotification(
-        mapClaimLifecycleNotification({
+        buildDailyClaimLifecycleNotification({
+          stage: resolveDailyClaimLifecycleStageFromIntentState(result.state),
+          accountId: scope.accountId,
+          ...(result.attempt.intentId ? { intentId: result.attempt.intentId } : {}),
+          requestId: result.attempt.requestId,
+          correlationId: result.attempt.correlationId,
+        }),
+      );
+      addNotification(
+        buildDailyClaimLifecycleNotification({
           stage: "completed",
-          eventKey: `daily-claim:${result.attempt.idempotencyKey}:completed:${result.attempt.intentId ?? "intent-unavailable"}`,
-          timestamp: new Date().toISOString(),
-          routeHref: `/points?account_id=${encodeURIComponent(scope.accountId)}&ref=notification&entity=claim`,
-          references: [
-            toNotificationReference("Intent ID", result.attempt.intentId),
-            toNotificationReference("Request ID", result.attempt.requestId),
-            toNotificationReference("Correlation ID", result.attempt.correlationId),
-          ],
+          accountId: scope.accountId,
+          ...(result.attempt.intentId ? { intentId: result.attempt.intentId } : {}),
+          requestId: result.attempt.requestId,
+          correlationId: result.attempt.correlationId,
         }),
       );
       startRefresh(() => {

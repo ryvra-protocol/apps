@@ -88,9 +88,7 @@ export function ShellFrame({ children }: { children: ReactNode }) {
       currentPath={normalizedPathname}
       userMenuItems={userMenuItems}
       commandTriggerLabel="Quick Actions"
-      notificationAppId={productId}
-      notificationFeedMode="local-preview"
-      notificationPreferenceMode="local-preview"
+      notificationScopeKey={productId}
       footer="Ryvra unified shell foundation"
     >
       {children}

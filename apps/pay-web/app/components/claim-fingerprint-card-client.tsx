@@ -7,10 +7,9 @@ import {
   ComplianceEvidencePanel,
   ConfirmationReceiptCard,
   ErrorTransparencySummary,
-  mapClaimLifecycleNotification,
   OperationTimelineCard,
-  themeTokens,
   useNotificationCenter,
+  themeTokens,
 } from "@ryvra/ui";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
@@ -29,6 +28,7 @@ import {
 } from "../lib/claim-ux";
 import { executeClaimSubmission } from "../lib/claim-submission-client";
 import { formatCurrencyMinor } from "../lib/format";
+import { buildClaimLifecycleNotification } from "../lib/notification-comms";
 import { StatusBadge } from "./status-badge";
 
 interface ClaimResponseData {
@@ -52,10 +52,6 @@ interface ClaimFingerprintCardClientProps {
 }
 
 function createReference(label: string, value?: string | null) {
-  return value && value.trim().length > 0 ? { label, value } : { label };
-}
-
-function createNotificationReference(label: string, value?: string | null) {
   return value && value.trim().length > 0 ? { label, value } : { label };
 }
 
@@ -153,33 +149,27 @@ export function ClaimFingerprintCardClient({ mode, payout, availability }: Claim
       ...current,
       submittedAt: current.submittedAt ?? new Date().toISOString(),
     }));
-    const submittedAt = new Date().toISOString();
-    addNotification(
-      mapClaimLifecycleNotification({
-        stage: "submitted",
-        eventKey: `claim:${idempotencyKey}:submitted`,
-        timestamp: submittedAt,
-        routeHref: "/payouts?ref=notification&entity=claim",
-        references: [
-          createNotificationReference("Payout", payout.id),
-          createNotificationReference("Idempotency key", idempotencyKey),
-        ],
-      }),
-    );
-    addNotification(
-      mapClaimLifecycleNotification({
-        stage: "processing",
-        eventKey: `claim:${idempotencyKey}:processing`,
-        timestamp: submittedAt,
-        routeHref: "/payouts?ref=notification&entity=claim",
-        references: [createNotificationReference("Payout", payout.id)],
-      }),
-    );
     setUiState((current) => transitionClaimUiState(current, "SUBMIT"));
     setSubmissionGuidance(null);
 
     const requestId = createClientGeneratedId("req");
     const correlationId = createClientGeneratedId("corr");
+    addNotification(
+      buildClaimLifecycleNotification({
+        stage: "submitted",
+        payoutId: payout.id,
+        requestId,
+        correlationId,
+      }),
+    );
+    addNotification(
+      buildClaimLifecycleNotification({
+        stage: "processing",
+        payoutId: payout.id,
+        requestId,
+        correlationId,
+      }),
+    );
 
     try {
       const result = await executeClaimSubmission({
@@ -190,23 +180,19 @@ export function ClaimFingerprintCardClient({ mode, payout, availability }: Claim
       });
 
       if (!result.ok) {
-        addNotification(
-          mapClaimLifecycleNotification({
-            stage: "failed",
-            retryable: result.error.retryable,
-            eventKey: `claim:${idempotencyKey}:failed:${result.error.code}`,
-            timestamp: new Date().toISOString(),
-            routeHref: "/payouts?ref=notification&entity=claim",
-            references: [
-              createNotificationReference("Request ID", requestId),
-              createNotificationReference("Correlation ID", correlationId),
-            ],
-          }),
-        );
         setError(result.error);
         setSubmissionGuidance(result.retry.guidance);
         setTimelineTimestamps((current) => ({ ...current, resolvedAt: new Date().toISOString() }));
         setUiState((current) => transitionClaimUiState(current, "FAILURE"));
+        addNotification(
+          buildClaimLifecycleNotification({
+            stage: "failed",
+            payoutId: payout.id,
+            requestId: result.error.requestId,
+            correlationId: result.error.correlationId,
+            retryable: result.error.retryable,
+          }),
+        );
         return;
       }
 
@@ -221,16 +207,12 @@ export function ClaimFingerprintCardClient({ mode, payout, availability }: Claim
       setError(null);
       setSubmissionGuidance("Claim submitted. Refreshing payout and status data.");
       addNotification(
-        mapClaimLifecycleNotification({
+        buildClaimLifecycleNotification({
           stage: "completed",
-          eventKey: `claim:${idempotencyKey}:completed:${result.data.intentId ?? "intent-unavailable"}`,
-          timestamp: new Date().toISOString(),
-          routeHref: "/payouts?ref=notification&entity=claim",
-          references: [
-            createNotificationReference("Intent ID", result.data.intentId),
-            createNotificationReference("Request ID", result.data.requestId ?? requestId),
-            createNotificationReference("Correlation ID", result.data.correlationId ?? correlationId),
-          ],
+          payoutId: payout.id,
+          ...(result.data.intentId ? { intentId: result.data.intentId } : {}),
+          requestId: result.data.requestId ?? requestId,
+          correlationId: result.data.correlationId ?? correlationId,
         }),
       );
 

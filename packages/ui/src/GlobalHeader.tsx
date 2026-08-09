@@ -1,7 +1,7 @@
 import type { BreadcrumbItem, UserMenuItem } from "./navigation";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { CommandPaletteTrigger } from "./CommandPaletteTrigger";
-import { NotificationCenterControl } from "./NotificationCenter";
+import { NotificationCenter } from "./NotificationCenter";
 import { UserMenu } from "./UserMenu";
 
 export interface GlobalHeaderProps {
@@ -23,7 +23,7 @@ export function GlobalHeader({
         <h1 className="ryvra-header-title">{appName}</h1>
         <div className="ryvra-header-actions">
           <CommandPaletteTrigger label={commandTriggerLabel} />
-          <NotificationCenterControl />
+          <NotificationCenter />
           <UserMenu items={userMenuItems} />
         </div>
       </div>
