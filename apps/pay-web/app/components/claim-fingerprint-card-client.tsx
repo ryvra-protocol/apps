@@ -7,8 +7,10 @@ import {
   ComplianceEvidencePanel,
   ConfirmationReceiptCard,
   ErrorTransparencySummary,
+  mapClaimLifecycleNotification,
   OperationTimelineCard,
   themeTokens,
+  useNotificationCenter,
 } from "@ryvra/ui";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
@@ -53,8 +55,13 @@ function createReference(label: string, value?: string | null) {
   return value && value.trim().length > 0 ? { label, value } : { label };
 }
 
+function createNotificationReference(label: string, value?: string | null) {
+  return value && value.trim().length > 0 ? { label, value } : { label };
+}
+
 export function ClaimFingerprintCardClient({ mode, payout, availability }: ClaimFingerprintCardClientProps) {
   const router = useRouter();
+  const { addNotification } = useNotificationCenter();
   const [panelOpen, setPanelOpen] = useState(false);
   const [uiState, setUiState] = useState<ClaimUiState>("idle");
   const [idempotencyKey, setIdempotencyKey] = useState(() => (payout ? createClaimIdempotencyKey(payout.id) : ""));
@@ -146,6 +153,28 @@ export function ClaimFingerprintCardClient({ mode, payout, availability }: Claim
       ...current,
       submittedAt: current.submittedAt ?? new Date().toISOString(),
     }));
+    const submittedAt = new Date().toISOString();
+    addNotification(
+      mapClaimLifecycleNotification({
+        stage: "submitted",
+        eventKey: `claim:${idempotencyKey}:submitted`,
+        timestamp: submittedAt,
+        routeHref: "/payouts?ref=notification&entity=claim",
+        references: [
+          createNotificationReference("Payout", payout.id),
+          createNotificationReference("Idempotency key", idempotencyKey),
+        ],
+      }),
+    );
+    addNotification(
+      mapClaimLifecycleNotification({
+        stage: "processing",
+        eventKey: `claim:${idempotencyKey}:processing`,
+        timestamp: submittedAt,
+        routeHref: "/payouts?ref=notification&entity=claim",
+        references: [createNotificationReference("Payout", payout.id)],
+      }),
+    );
     setUiState((current) => transitionClaimUiState(current, "SUBMIT"));
     setSubmissionGuidance(null);
 
@@ -161,6 +190,19 @@ export function ClaimFingerprintCardClient({ mode, payout, availability }: Claim
       });
 
       if (!result.ok) {
+        addNotification(
+          mapClaimLifecycleNotification({
+            stage: "failed",
+            retryable: result.error.retryable,
+            eventKey: `claim:${idempotencyKey}:failed:${result.error.code}`,
+            timestamp: new Date().toISOString(),
+            routeHref: "/payouts?ref=notification&entity=claim",
+            references: [
+              createNotificationReference("Request ID", requestId),
+              createNotificationReference("Correlation ID", correlationId),
+            ],
+          }),
+        );
         setError(result.error);
         setSubmissionGuidance(result.retry.guidance);
         setTimelineTimestamps((current) => ({ ...current, resolvedAt: new Date().toISOString() }));
@@ -178,6 +220,19 @@ export function ClaimFingerprintCardClient({ mode, payout, availability }: Claim
       setUiState((current) => transitionClaimUiState(current, "SUCCESS"));
       setError(null);
       setSubmissionGuidance("Claim submitted. Refreshing payout and status data.");
+      addNotification(
+        mapClaimLifecycleNotification({
+          stage: "completed",
+          eventKey: `claim:${idempotencyKey}:completed:${result.data.intentId ?? "intent-unavailable"}`,
+          timestamp: new Date().toISOString(),
+          routeHref: "/payouts?ref=notification&entity=claim",
+          references: [
+            createNotificationReference("Intent ID", result.data.intentId),
+            createNotificationReference("Request ID", result.data.requestId ?? requestId),
+            createNotificationReference("Correlation ID", result.data.correlationId ?? correlationId),
+          ],
+        }),
+      );
 
       if (result.shouldRefresh) {
         startRefresh(() => {

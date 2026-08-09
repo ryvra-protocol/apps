@@ -26,6 +26,7 @@ Define clear responsibility boundaries between the three frontend apps and share
 - Must surface account-scope issues for unified balance explicitly (non-silent).
 - Owns claim/payout trust disclosures, receipt rendering, and evidence wiring without introducing new backend contract fields.
 - Owns payout-claim client orchestration while enforcing timeout/offline-safe UX and deterministic post-success revalidation.
+- Owns Pay-side notification producers for claim and payout lifecycle updates while consuming shared Notification Center UI/state primitives.
 
 ### `apps/points-tasks-web`
 
@@ -36,6 +37,7 @@ Define clear responsibility boundaries between the three frontend apps and share
 - Owns points balance and daily-claim status surfaces, including guarded fallback UX when the daily-claim status endpoint is provisional/unavailable.
 - Owns task/daily-claim trust timeline composition and explicit unavailable-state messaging for missing operation references.
 - Owns retry-safe daily-claim client retry/resume behavior (including retained `intentId` between retry attempts).
+- Owns Points/Tasks-side notification producers for daily-claim and task lifecycle updates while consuming shared Notification Center UI/state primitives.
 
 ## Shared packages
 
@@ -48,6 +50,7 @@ Define clear responsibility boundaries between the three frontend apps and share
 - Exposes hot-path timing diagnostics through transport error metadata and optional metric hooks.
 - Exposes parity diagnostics metadata for status pages.
 - Hosts shared unified-balance aggregation/format helpers and provisional daily-claim read-status decoding used across apps.
+- Does not yet expose canonical notification-feed or comms-preference persistence endpoints; Phase 14 UI remains explicit local-preview mode until contracts are published.
 
 ### `@ryvra/domain-*`
 
@@ -65,6 +68,7 @@ Define clear responsibility boundaries between the three frontend apps and share
 - No backend integration or product-specific business decisions.
 - Owns unified nav iconography and interaction styling semantics across products.
 - Owns reusable trust/compliance presentation primitives (timelines, disclosures, evidence panels, receipts, policy links, standardized error transparency copy).
+- Owns shared notification center and communication-preference UX/state primitives (including explicit preview-mode labeling, local scoped persistence, and reference redaction snippets).
 - Enforces Phase 12.5A navigation policy across Markets, Pay, and Points/Tasks:
   - sidebar is collapsed by default on first load and expands only by user action
   - sidebar preference persists via client storage after user interaction

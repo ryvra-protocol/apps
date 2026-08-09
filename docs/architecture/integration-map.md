@@ -189,6 +189,35 @@
   - non-critical claim modules are lazy-loaded on `/pay/payouts` and `/points`
   - performance guard command `pnpm perf:guard` validates chunk budgets and critical route build artifacts after builds
 
+## Phase 14 notifications + comms map
+
+- Shared in-app notification center is implemented in `@ryvra/ui` (`NotificationCenterProvider` + `NotificationCenterControl`) and mounted by every app shell:
+  - entry point: bell icon in global header with unread badge
+  - panel capabilities: category filters (`All`, `Claims`, `Payouts`, `Tasks`, `System`), deterministic sorting, read/unread controls, deep-link actions
+  - explicit local-preview feed labeling when remote notification feed wiring is unavailable
+- Notification producers:
+  - `apps/pay-web/app/components/claim-fingerprint-card-client.tsx`
+    - emits claim lifecycle notifications (`submitted`, `processing`, `completed`, `failed/retryable`)
+  - `apps/pay-web/app/components/payout-status-notification-bridge.tsx`
+    - maps payout statuses to user notifications (`created/queued`, `processing`, `completed`, `failed/retryable`)
+  - `apps/points-tasks-web/app/components/daily-claim-card.tsx`
+    - emits daily-claim lifecycle notifications (`submitted`, `processing`, `completed`, `failed/retryable`)
+  - `apps/points-tasks-web/app/components/task-status-notification-bridge.tsx`
+    - maps task progression statuses (`assigned/eligible`, `in-progress`, `completed/reward-ready`, terminal issue states)
+- Preferences UI:
+  - hosted inside notification center panel
+  - email + webhook global toggles and per-category toggles
+  - webhook URL validation with inline error messaging
+  - test ping intentionally disabled with explicit reason until remote execution support exists
+- Persistence model in Phase 14:
+  - notification history: local storage, scope-keyed by app + account/workspace/user query context
+  - communication preferences: local storage only with explicit `local preview settings` labeling
+  - no silent fake remote persistence
+- Deferred backend wiring:
+  - no canonical notification-feed API surfaced yet in `@ryvra/api-client`
+  - no canonical remote email/webhook preference endpoint surfaced yet in `@ryvra/api-client`
+  - UI exposes explicit preview-state copy until these contracts are available
+
 ## Placement guidance for future business logic
 
 - Domain-specific orchestration belongs in app-level features unless shared by multiple apps.

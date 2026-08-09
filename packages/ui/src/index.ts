@@ -37,6 +37,45 @@ export type { BreadcrumbsProps } from "./Breadcrumbs";
 export { CommandPaletteTrigger } from "./CommandPaletteTrigger";
 export type { CommandPaletteTriggerProps } from "./CommandPaletteTrigger";
 
+export {
+  NotificationCenterControl,
+  NotificationCenterProvider,
+  createDefaultNotificationPreferences,
+  filterNotificationsByCategory,
+  getNotificationUnreadCount,
+  mapClaimLifecycleNotification,
+  mapPayoutStatusNotification,
+  mapTaskStatusNotification,
+  resolveFeedModeLabel,
+  resolveNotificationList,
+  resolvePreferenceModeLabel,
+  setEmailCategoryPreference,
+  setEmailPreferenceEnabled,
+  setNotificationReadState,
+  setWebhookCategoryPreference,
+  setWebhookEndpointPreference,
+  setWebhookPreferenceEnabled,
+  sortNotifications,
+  toggleNotificationCenterOpen,
+  useNotificationCenter,
+  validateWebhookUrl,
+} from "./NotificationCenter";
+export type {
+  ClaimLifecycleNotificationInput,
+  NotificationCategory,
+  NotificationCategoryFilter,
+  NotificationDeliveryMode,
+  NotificationDraft,
+  NotificationPreferences,
+  NotificationRecord,
+  NotificationReference,
+  NotificationReferenceInput,
+  NotificationSeverity,
+  NotificationSortOrder,
+  PayoutStatusNotificationInput,
+  TaskStatusNotificationInput,
+} from "./NotificationCenter";
+
 export { ContextualNav } from "./ContextualNav";
 export type { ContextualNavProps } from "./ContextualNav";
 

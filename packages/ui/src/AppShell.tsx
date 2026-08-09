@@ -6,6 +6,7 @@ import { shellStyles } from "./shell-styles";
 import { GlobalHeader } from "./GlobalHeader";
 import { GlobalSidebar } from "./GlobalSidebar";
 import { BottomIconDock } from "./BottomIconDock";
+import { NotificationCenterProvider, type NotificationDeliveryMode } from "./NotificationCenter";
 import {
   readSidebarCollapsedPreference,
   toggleSidebarCollapsed,
@@ -25,6 +26,10 @@ export interface AppShellProps {
   footer?: ReactNode;
   userMenuItems?: UserMenuItem[];
   commandTriggerLabel?: string;
+  notificationAppId?: string;
+  notificationScopeKey?: string;
+  notificationFeedMode?: NotificationDeliveryMode;
+  notificationPreferenceMode?: NotificationDeliveryMode;
 }
 
 export function AppShell({
@@ -40,6 +45,10 @@ export function AppShell({
   footer,
   userMenuItems = [],
   commandTriggerLabel = "Command Palette",
+  notificationAppId = "shared-shell",
+  notificationScopeKey = "workspace-default",
+  notificationFeedMode = "local-preview",
+  notificationPreferenceMode = "local-preview",
 }: AppShellProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
 
@@ -61,31 +70,38 @@ export function AppShell({
   return (
     <div className="ryvra-shell-root">
       <style>{shellStyles}</style>
-      <a className="ryvra-skip-link" href="#app-main-content">
-        Skip to content
-      </a>
-      <GlobalHeader
-        appName={appName}
-        breadcrumbs={breadcrumbs}
-        userMenuItems={userMenuItems}
-        commandTriggerLabel={commandTriggerLabel}
-      />
-      <div className="ryvra-shell-layout">
-        <GlobalSidebar
-          globalNavItems={globalNavItems}
-          localNavItems={localNavItems}
-          localNavTitle={localNavTitle}
-          localNavAriaLabel={localNavAriaLabel}
-          currentPath={currentPath}
-          collapsed={sidebarCollapsed}
-          onToggleCollapsed={handleSidebarToggle}
+      <NotificationCenterProvider
+        appId={notificationAppId}
+        scopeKey={notificationScopeKey}
+        feedMode={notificationFeedMode}
+        preferenceMode={notificationPreferenceMode}
+      >
+        <a className="ryvra-skip-link" href="#app-main-content">
+          Skip to content
+        </a>
+        <GlobalHeader
+          appName={appName}
+          breadcrumbs={breadcrumbs}
+          userMenuItems={userMenuItems}
+          commandTriggerLabel={commandTriggerLabel}
         />
-        <main id="app-main-content" className="ryvra-shell-main" tabIndex={-1}>
-          <div className="ryvra-content-frame">{children}</div>
-        </main>
-      </div>
-      <BottomIconDock items={productSwitcherItems} />
-      {footer ? <footer className="ryvra-shell-footer">{footer}</footer> : null}
+        <div className="ryvra-shell-layout">
+          <GlobalSidebar
+            globalNavItems={globalNavItems}
+            localNavItems={localNavItems}
+            localNavTitle={localNavTitle}
+            localNavAriaLabel={localNavAriaLabel}
+            currentPath={currentPath}
+            collapsed={sidebarCollapsed}
+            onToggleCollapsed={handleSidebarToggle}
+          />
+          <main id="app-main-content" className="ryvra-shell-main" tabIndex={-1}>
+            <div className="ryvra-content-frame">{children}</div>
+          </main>
+        </div>
+        <BottomIconDock items={productSwitcherItems} />
+        {footer ? <footer className="ryvra-shell-footer">{footer}</footer> : null}
+      </NotificationCenterProvider>
     </div>
   );
 }
