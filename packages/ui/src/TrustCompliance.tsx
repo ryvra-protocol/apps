@@ -16,15 +16,15 @@ export type OperationTimelineState = "loading" | "empty" | "error" | "success";
 
 export interface TrustReference {
   label: string;
-  value?: string | null;
+  value?: string | null | undefined;
 }
 
 export interface OperationTimelineStage {
   id: string;
   label: string;
   status: string;
-  timestamp?: string | null;
-  note?: string;
+  timestamp?: string | null | undefined;
+  note?: string | undefined;
   current?: boolean;
   references?: TrustReference[];
 }
@@ -41,10 +41,10 @@ export interface OperationTimelineCardProps {
 export interface ComplianceEvidencePanelProps {
   title?: string;
   summaryLabel?: string;
-  sourceSystem?: string | null;
+  sourceSystem?: string | null | undefined;
   retryable?: boolean | null;
   references?: TrustReference[];
-  lastUpdated?: string | null;
+  lastUpdated?: string | null | undefined;
 }
 
 export interface TrustDisclosureCardProps {
@@ -69,15 +69,15 @@ export interface ConfirmationReceiptCardProps {
   title?: string;
   operationLabel: string;
   status: string;
-  confirmedAt?: string | null;
+  confirmedAt?: string | null | undefined;
   references?: TrustReference[];
 }
 
 export interface ErrorTransparencySummaryProps {
   message: string;
   retryable: boolean;
-  source?: string;
-  retryActionLabel?: string;
+  source?: string | undefined;
+  retryActionLabel?: string | undefined;
 }
 
 function normalizeText(value: string): string {
