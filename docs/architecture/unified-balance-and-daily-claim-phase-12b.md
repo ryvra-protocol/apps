@@ -8,6 +8,12 @@ Phase 12B delivers:
 - points balance surfaces on `/points` and `/tasks` in `points-tasks-web`
 - daily-claim read/status UX on `/points`
 
+Phase 15 placement policy update (superseding baseline placement assumptions):
+
+- Unified Balance in Markets (`/`, `/overview`) and Pay (`/`, `/overview`) is now top-priority and must render before secondary analytics tables/cards.
+- Points balance and Daily Claim are top-priority on both `/points` and `/tasks`.
+- `/tasks` must display Daily Claim with explicit disabled-state reasons when claim execution is unavailable.
+
 Out of scope for this phase baseline:
 
 - pay write-intent wiring for daily claim (`POST /pay/intents`)
@@ -50,6 +56,7 @@ Implemented in `packages/api-client/src/unified-balance.ts`:
 - `/points` uses `getPointSummary` and now surfaces **Points balance** from account-scoped summary data.
 - `/tasks` now also calls `getPointSummary` (same account/user/workspace scope) for a page-level **Points balance** card.
 - Shared request builder (`buildPointsSummaryRequest`) keeps scope handling aligned and avoids per-page drift.
+- Phase 15 requires this balance to appear in the page's first summary zone on both `/points` and `/tasks`.
 
 ### Daily claim (12B baseline + 12.5B extension)
 
@@ -66,6 +73,7 @@ Implemented in `packages/api-client/src/unified-balance.ts`:
   - disabled with concrete reason otherwise
 - claim submit path is idempotent + retry-safe and surfaces request/correlation IDs on failures
 - cooldown/already-claimed states render next-eligible timestamp when provided.
+- Phase 15 extends placement to `/tasks` top section (active CTA or explicit disabled state with reason).
 
 ## Security/parity posture
 

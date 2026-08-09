@@ -21,6 +21,22 @@ export type {
   UnifiedBalanceSourceRow,
 } from "./unified-balance";
 export {
+  derivePortfolioAllocations,
+  evaluatePortfolioWindowCoverage,
+  normalizePortfolioInsightWindow,
+  portfolioInsightWindows,
+  resolvePortfolioInsightState,
+  resolveTrendDirection,
+} from "./portfolio-insights";
+export type {
+  PortfolioAllocationInputRow,
+  PortfolioAllocationRow,
+  PortfolioInsightModuleState,
+  PortfolioInsightWindow,
+  PortfolioWindowCoverage,
+  TrendDirection,
+} from "./portfolio-insights";
+export {
   MARKETS_PARITY_CHECK_MARKER,
   MARKETS_PROTOCOL_CHANGELOG_PATH,
   MARKETS_PROTOCOL_COMPATIBILITY_VERSION,

@@ -1,17 +1,35 @@
 import {
-  createUnifiedBalanceDisplayModelFromPositions,
+  aggregateUnifiedBalance,
+  createUnifiedBalanceDisplayModel,
+  mapPositionsToUnifiedBalanceRows,
   type MarketsClient,
 } from "@ryvra/api-client";
 import type { Logger } from "@ryvra/observability";
 import type { UnifiedBalanceCardProps } from "@ryvra/ui";
 import { captureMarketsPageError } from "./runtime";
 
+export interface UnifiedBalancePortfolioSnapshotRow {
+  id: string;
+  symbol: string;
+  notionalValue: number;
+}
+
+export interface UnifiedBalancePortfolioSnapshot {
+  totalNotionalValue: number;
+  totalQuoteAsset: string;
+  rows: UnifiedBalancePortfolioSnapshotRow[];
+}
+
+export interface MarketsUnifiedBalanceCardModel extends UnifiedBalanceCardProps {
+  portfolioSnapshot?: UnifiedBalancePortfolioSnapshot;
+}
+
 export async function loadMarketsUnifiedBalanceCard(input: {
   marketsClient: MarketsClient;
   logger: Logger;
   accountId: string;
   route: string;
-}): Promise<UnifiedBalanceCardProps> {
+}): Promise<MarketsUnifiedBalanceCardModel> {
   try {
     const positions = await input.marketsClient.listPositions({
       accountId: input.accountId,
@@ -20,11 +38,25 @@ export async function loadMarketsUnifiedBalanceCard(input: {
       },
     });
 
-    const displayModel = createUnifiedBalanceDisplayModelFromPositions({
-      positions: positions.items,
+    const aggregation = aggregateUnifiedBalance({
       expectedAccountId: input.accountId,
-      source: "markets.positions",
+      sources: [
+        {
+          source: "markets.positions",
+          rows: mapPositionsToUnifiedBalanceRows(positions.items),
+        },
+      ],
     });
+    const displayModel = createUnifiedBalanceDisplayModel(aggregation);
+    const portfolioSnapshot: UnifiedBalancePortfolioSnapshot = {
+      totalNotionalValue: aggregation.totalNotionalValue,
+      totalQuoteAsset: aggregation.totalQuoteAsset,
+      rows: aggregation.rows.map((row) => ({
+        id: row.id,
+        symbol: row.symbol,
+        notionalValue: row.notionalValue,
+      })),
+    };
 
     if (displayModel.rows.length === 0) {
       return {
@@ -33,6 +65,7 @@ export async function loadMarketsUnifiedBalanceCard(input: {
         ...(displayModel.scopeMessage ? { statusMessage: displayModel.scopeMessage } : {}),
         retryHref: input.route,
         retryLabel: "Retry unified balance",
+        portfolioSnapshot,
       };
     }
 
@@ -41,6 +74,7 @@ export async function loadMarketsUnifiedBalanceCard(input: {
       totalLabel: displayModel.totalLabel,
       rows: displayModel.rows,
       ...(displayModel.scopeMessage ? { statusMessage: displayModel.scopeMessage } : {}),
+      portfolioSnapshot,
     };
   } catch (error) {
     const uiError = captureMarketsPageError(input.logger, `${input.route}:unified-balance`, error);

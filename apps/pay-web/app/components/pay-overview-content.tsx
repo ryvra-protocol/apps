@@ -1,25 +1,64 @@
 import type { PayOverviewDto } from "@ryvra/domain-payments";
 import type { RuntimeMode } from "@ryvra/config";
-import type { UnifiedBalanceCardProps } from "@ryvra/ui";
-import { Card, DataTable, Section, UnifiedBalanceCard, themeTokens } from "@ryvra/ui";
+import { Card, DataTable, Section, UnifiedBalanceCard, themeTokens, type InsightWindowOption } from "@ryvra/ui";
 import { formatCurrencyMinor, formatDateTime } from "../lib/format";
+import { buildPayPortfolioInsights } from "../lib/portfolio-insights";
+import type { PayUnifiedBalanceCardModel } from "../lib/unified-balance";
 import { ModeBadge } from "./mode-badge";
+import { PayPortfolioInsightsCard } from "./pay-portfolio-insights-card";
 import { StatusBadge } from "./status-badge";
+
+const historyUnavailableReason = "Historical windows are unavailable for pay overview snapshots.";
+const windowOptions: InsightWindowOption[] = [
+  {
+    window: "24h",
+    label: "24h",
+    disabled: true,
+    disabledReason: historyUnavailableReason,
+  },
+  {
+    window: "7d",
+    label: "7d",
+    disabled: true,
+    disabledReason: historyUnavailableReason,
+  },
+  {
+    window: "30d",
+    label: "30d",
+    disabled: true,
+    disabledReason: historyUnavailableReason,
+  },
+];
 
 interface PayOverviewContentProps {
   title: string;
   description: string;
   mode: RuntimeMode;
   overview: PayOverviewDto;
-  unifiedBalanceCard: UnifiedBalanceCardProps;
+  unifiedBalanceCard: PayUnifiedBalanceCardModel;
 }
 
 export function PayOverviewContent({ title, description, mode, overview, unifiedBalanceCard }: PayOverviewContentProps) {
+  const portfolioInsights = buildPayPortfolioInsights({
+    overview,
+    unifiedBalanceCard,
+  });
+
   return (
     <section style={{ display: "grid", gap: themeTokens.spacing.lg }}>
       <Section title={title} description={description}>
         <div style={{ display: "flex", justifyContent: "flex-end" }}>
           <ModeBadge mode={mode} />
+        </div>
+
+        <div
+          data-testid="pay-top-priority-zone"
+          style={{ display: "grid", gap: themeTokens.spacing.md, gridTemplateColumns: "repeat(auto-fit, minmax(270px, 1fr))" }}
+        >
+          <div data-testid="pay-unified-balance-top-card">
+            <UnifiedBalanceCard {...unifiedBalanceCard} />
+          </div>
+          <PayPortfolioInsightsCard model={portfolioInsights} windowOptions={windowOptions} />
         </div>
 
         <div style={{ display: "grid", gap: themeTokens.spacing.md, gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))" }}>
@@ -72,8 +111,6 @@ export function PayOverviewContent({ title, description, mode, overview, unified
             emptyMessage="No recent pay activity available."
           />
         </Card>
-
-        <UnifiedBalanceCard {...unifiedBalanceCard} />
       </Section>
     </section>
   );

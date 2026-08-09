@@ -68,6 +68,24 @@ export type { ShellNavItem, ProductSwitcherItem, BreadcrumbItem, UserMenuItem } 
 
 export { themeTokens } from "./theme";
 export type { ThemeTokens } from "./theme";
+export {
+  formatInsightCurrency,
+  formatInsightNumber,
+  formatInsightPercent,
+  formatInsightTimestamp,
+  InsightModuleCard,
+  InsightTrendBars,
+  InsightWindowSelector,
+} from "./PortfolioInsights";
+export type {
+  InsightModuleCardProps,
+  InsightModuleState,
+  InsightTrendBarsProps,
+  InsightTrendPoint,
+  InsightWindow,
+  InsightWindowOption,
+  InsightWindowSelectorProps,
+} from "./PortfolioInsights";
 
 export {
   TRUST_REDACTED_VALUE,
