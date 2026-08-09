@@ -23,29 +23,33 @@ function getPreferredClaimReference(input: ClaimLifecycleNotificationInput): {
   value?: string;
 } {
   if (input.intentId) {
+    const value = formatNotificationReferenceSnippet(input.intentId);
     return {
       label: "Intent ID",
-      value: formatNotificationReferenceSnippet(input.intentId),
+      ...(value ? { value } : {}),
     };
   }
 
   if (input.requestId) {
+    const value = formatNotificationReferenceSnippet(input.requestId);
     return {
       label: "Request ID",
-      value: formatNotificationReferenceSnippet(input.requestId),
+      ...(value ? { value } : {}),
     };
   }
 
   if (input.correlationId) {
+    const value = formatNotificationReferenceSnippet(input.correlationId);
     return {
       label: "Correlation ID",
-      value: formatNotificationReferenceSnippet(input.correlationId),
+      ...(value ? { value } : {}),
     };
   }
 
+  const value = formatNotificationReferenceSnippet(input.payoutId);
   return {
     label: "Payout",
-    value: formatNotificationReferenceSnippet(input.payoutId),
+    ...(value ? { value } : {}),
   };
 }
 
@@ -80,7 +84,7 @@ export function buildClaimLifecycleNotification(input: ClaimLifecycleNotificatio
         ? `/payouts?ref=claim&entity=payout&id=${encodeURIComponent(input.payoutId)}`
         : "/payouts",
       referenceLabel: preferredReference.label,
-      referenceValue: preferredReference.value,
+      ...(preferredReference.value ? { referenceValue: preferredReference.value } : {}),
       dedupeKey: `claim:submitted:${input.requestId ?? input.payoutId ?? "unknown"}`,
     };
   }
@@ -94,7 +98,7 @@ export function buildClaimLifecycleNotification(input: ClaimLifecycleNotificatio
         ? `/payouts?ref=claim&entity=payout&id=${encodeURIComponent(input.payoutId)}`
         : "/payouts",
       referenceLabel: preferredReference.label,
-      referenceValue: preferredReference.value,
+      ...(preferredReference.value ? { referenceValue: preferredReference.value } : {}),
       dedupeKey: `claim:processing:${input.intentId ?? input.requestId ?? input.payoutId ?? "unknown"}`,
     };
   }
@@ -108,7 +112,7 @@ export function buildClaimLifecycleNotification(input: ClaimLifecycleNotificatio
         ? `/payouts?ref=claim&entity=payout&id=${encodeURIComponent(input.payoutId)}`
         : "/payouts",
       referenceLabel: preferredReference.label,
-      referenceValue: preferredReference.value,
+      ...(preferredReference.value ? { referenceValue: preferredReference.value } : {}),
       dedupeKey: `claim:completed:${input.intentId ?? input.requestId ?? input.payoutId ?? "unknown"}`,
     };
   }
@@ -123,7 +127,7 @@ export function buildClaimLifecycleNotification(input: ClaimLifecycleNotificatio
       ? `/payouts?ref=claim&entity=payout&id=${encodeURIComponent(input.payoutId)}`
       : "/status",
     referenceLabel: preferredReference.label,
-    referenceValue: preferredReference.value,
+    ...(preferredReference.value ? { referenceValue: preferredReference.value } : {}),
     dedupeKey: `claim:failed:${input.requestId ?? input.correlationId ?? input.payoutId ?? "unknown"}`,
   };
 }

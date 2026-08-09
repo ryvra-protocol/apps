@@ -96,7 +96,7 @@ export function DailyClaimCard({ model, scope }: DailyClaimCardProps) {
         buildDailyClaimLifecycleNotification({
           stage: resolveDailyClaimLifecycleStageFromIntentState(result.state),
           accountId: scope.accountId,
-          intentId: result.attempt.intentId,
+          ...(result.attempt.intentId ? { intentId: result.attempt.intentId } : {}),
           requestId: result.attempt.requestId,
           correlationId: result.attempt.correlationId,
         }),
@@ -105,7 +105,7 @@ export function DailyClaimCard({ model, scope }: DailyClaimCardProps) {
         buildDailyClaimLifecycleNotification({
           stage: "completed",
           accountId: scope.accountId,
-          intentId: result.attempt.intentId,
+          ...(result.attempt.intentId ? { intentId: result.attempt.intentId } : {}),
           requestId: result.attempt.requestId,
           correlationId: result.attempt.correlationId,
         }),

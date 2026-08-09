@@ -21,29 +21,33 @@ function getClaimReference(input: DailyClaimLifecycleNotificationInput): {
   value?: string;
 } {
   if (input.intentId) {
+    const value = formatNotificationReferenceSnippet(input.intentId);
     return {
       label: "Intent ID",
-      value: formatNotificationReferenceSnippet(input.intentId),
+      ...(value ? { value } : {}),
     };
   }
 
   if (input.requestId) {
+    const value = formatNotificationReferenceSnippet(input.requestId);
     return {
       label: "Request ID",
-      value: formatNotificationReferenceSnippet(input.requestId),
+      ...(value ? { value } : {}),
     };
   }
 
   if (input.correlationId) {
+    const value = formatNotificationReferenceSnippet(input.correlationId);
     return {
       label: "Correlation ID",
-      value: formatNotificationReferenceSnippet(input.correlationId),
+      ...(value ? { value } : {}),
     };
   }
 
+  const value = formatNotificationReferenceSnippet(input.accountId);
   return {
     label: "Account",
-    value: formatNotificationReferenceSnippet(input.accountId),
+    ...(value ? { value } : {}),
   };
 }
 
@@ -77,7 +81,7 @@ export function buildDailyClaimLifecycleNotification(input: DailyClaimLifecycleN
       message: `Daily claim submitted for account ${accountReference}.`,
       href,
       referenceLabel: preferredReference.label,
-      referenceValue: preferredReference.value,
+      ...(preferredReference.value ? { referenceValue: preferredReference.value } : {}),
       dedupeKey: `daily-claim:submitted:${input.requestId ?? input.accountId}`,
     };
   }
@@ -89,7 +93,7 @@ export function buildDailyClaimLifecycleNotification(input: DailyClaimLifecycleN
       message: `Daily claim is processing for account ${accountReference}.`,
       href,
       referenceLabel: preferredReference.label,
-      referenceValue: preferredReference.value,
+      ...(preferredReference.value ? { referenceValue: preferredReference.value } : {}),
       dedupeKey: `daily-claim:processing:${input.intentId ?? input.requestId ?? input.accountId}`,
     };
   }
@@ -101,7 +105,7 @@ export function buildDailyClaimLifecycleNotification(input: DailyClaimLifecycleN
       message: `Daily claim completed for account ${accountReference}.`,
       href,
       referenceLabel: preferredReference.label,
-      referenceValue: preferredReference.value,
+      ...(preferredReference.value ? { referenceValue: preferredReference.value } : {}),
       dedupeKey: `daily-claim:completed:${input.intentId ?? input.requestId ?? input.accountId}`,
     };
   }
@@ -114,7 +118,7 @@ export function buildDailyClaimLifecycleNotification(input: DailyClaimLifecycleN
       : `Daily claim failed for account ${accountReference}. Review before retrying.`,
     href,
     referenceLabel: preferredReference.label,
-    referenceValue: preferredReference.value,
+    ...(preferredReference.value ? { referenceValue: preferredReference.value } : {}),
     dedupeKey: `daily-claim:failed:${input.requestId ?? input.correlationId ?? input.accountId}`,
   };
 }
@@ -123,6 +127,7 @@ export function buildTaskStatusNotification(
   task: Pick<TaskDto, "taskId" | "taskStatus" | "progressState" | "pointsReward">,
 ): NotificationDraft {
   const taskReference = getTaskReference(task.taskId);
+  const taskStatusLabel = String(task.taskStatus).replace(/_/g, " ");
   const href = `/tasks?ref=task&entity=task&id=${encodeURIComponent(task.taskId)}`;
   const base = {
     category: "tasks" as const,
@@ -168,13 +173,13 @@ export function buildTaskStatusNotification(
     return {
       ...base,
       severity: "warn",
-      message: `Task ${taskReference} closed with status ${task.taskStatus.replace(/_/g, " ")}.`,
+      message: `Task ${taskReference} closed with status ${taskStatusLabel}.`,
     };
   }
 
   return {
     ...base,
     severity: "info",
-    message: `Task ${taskReference} status update: ${task.taskStatus.replace(/_/g, " ")}.`,
+    message: `Task ${taskReference} status update: ${taskStatusLabel}.`,
   };
 }

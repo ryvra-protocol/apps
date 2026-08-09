@@ -210,7 +210,7 @@ export function ClaimFingerprintCardClient({ mode, payout, availability }: Claim
         buildClaimLifecycleNotification({
           stage: "completed",
           payoutId: payout.id,
-          intentId: result.data.intentId,
+          ...(result.data.intentId ? { intentId: result.data.intentId } : {}),
           requestId: result.data.requestId ?? requestId,
           correlationId: result.data.correlationId ?? correlationId,
         }),

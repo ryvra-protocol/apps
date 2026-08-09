@@ -99,6 +99,18 @@ function resolveStorage(storage: NotificationCenterProviderProps["storage"]): Pi
   return window.localStorage;
 }
 
+function resolveRuntimeScopeKey(scopeKey: string): string {
+  if (typeof window === "undefined") {
+    return scopeKey;
+  }
+
+  const searchParams = new URLSearchParams(window.location.search);
+  const accountId = searchParams.get("account_id") ?? searchParams.get("accountId") ?? "default-account";
+  const userId = searchParams.get("user_id") ?? searchParams.get("userId") ?? "default-user";
+  const workspaceId = searchParams.get("workspace_id") ?? searchParams.get("workspaceId") ?? "default-workspace";
+  return `${scopeKey}:${accountId}:${userId}:${workspaceId}`;
+}
+
 export function NotificationCenterProvider({
   scopeKey,
   children,
@@ -122,7 +134,7 @@ export function NotificationCenterProvider({
   );
 
   const loadSnapshot = useCallback(() => {
-    const snapshot = loadNotificationStorageSnapshot(resolvedStorage, scopeKey);
+    const snapshot = loadNotificationStorageSnapshot(resolvedStorage, resolveRuntimeScopeKey(scopeKey));
     setNotifications(snapshot.notifications);
     setPreferences(snapshot.preferences);
     setErrorMessage(snapshot.errorMessage);
@@ -142,7 +154,7 @@ export function NotificationCenterProvider({
       return;
     }
 
-    persistNotificationStorageSnapshot(resolvedStorage, scopeKey, {
+    persistNotificationStorageSnapshot(resolvedStorage, resolveRuntimeScopeKey(scopeKey), {
       notifications,
       preferences,
     });
