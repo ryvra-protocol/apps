@@ -7,9 +7,11 @@ import {
   ComplianceEvidencePanel,
   ConfirmationReceiptCard,
   ErrorTransparencySummary,
+  mapClaimLifecycleNotification,
   OperationTimelineCard,
   useNotificationCenter,
   themeTokens,
+  useNotificationCenter,
 } from "@ryvra/ui";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
@@ -52,6 +54,10 @@ interface ClaimFingerprintCardClientProps {
 }
 
 function createReference(label: string, value?: string | null) {
+  return value && value.trim().length > 0 ? { label, value } : { label };
+}
+
+function createNotificationReference(label: string, value?: string | null) {
   return value && value.trim().length > 0 ? { label, value } : { label };
 }
 
@@ -149,6 +155,28 @@ export function ClaimFingerprintCardClient({ mode, payout, availability }: Claim
       ...current,
       submittedAt: current.submittedAt ?? new Date().toISOString(),
     }));
+    const submittedAt = new Date().toISOString();
+    addNotification(
+      mapClaimLifecycleNotification({
+        stage: "submitted",
+        eventKey: `claim:${idempotencyKey}:submitted`,
+        timestamp: submittedAt,
+        routeHref: "/payouts?ref=notification&entity=claim",
+        references: [
+          createNotificationReference("Payout", payout.id),
+          createNotificationReference("Idempotency key", idempotencyKey),
+        ],
+      }),
+    );
+    addNotification(
+      mapClaimLifecycleNotification({
+        stage: "processing",
+        eventKey: `claim:${idempotencyKey}:processing`,
+        timestamp: submittedAt,
+        routeHref: "/payouts?ref=notification&entity=claim",
+        references: [createNotificationReference("Payout", payout.id)],
+      }),
+    );
     setUiState((current) => transitionClaimUiState(current, "SUBMIT"));
     setSubmissionGuidance(null);
 
@@ -180,6 +208,19 @@ export function ClaimFingerprintCardClient({ mode, payout, availability }: Claim
       });
 
       if (!result.ok) {
+        addNotification(
+          mapClaimLifecycleNotification({
+            stage: "failed",
+            retryable: result.error.retryable,
+            eventKey: `claim:${idempotencyKey}:failed:${result.error.code}`,
+            timestamp: new Date().toISOString(),
+            routeHref: "/payouts?ref=notification&entity=claim",
+            references: [
+              createNotificationReference("Request ID", requestId),
+              createNotificationReference("Correlation ID", correlationId),
+            ],
+          }),
+        );
         setError(result.error);
         setSubmissionGuidance(result.retry.guidance);
         setTimelineTimestamps((current) => ({ ...current, resolvedAt: new Date().toISOString() }));

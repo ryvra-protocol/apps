@@ -23,6 +23,10 @@ interface DailyClaimCardProps {
   scope: DailyClaimScope;
 }
 
+function toNotificationReference(label: string, value?: string | null) {
+  return value && value.trim().length > 0 ? { label, value } : { label };
+}
+
 export function DailyClaimCard({ model, scope }: DailyClaimCardProps) {
   const router = useRouter();
   const { addNotification } = useNotificationCenter();
@@ -74,6 +78,19 @@ export function DailyClaimCard({ model, scope }: DailyClaimCardProps) {
       setAttempt(result.attempt);
 
       if (!result.ok) {
+        addNotification(
+          mapClaimLifecycleNotification({
+            stage: "failed",
+            retryable: result.error.retryable,
+            eventKey: `daily-claim:${nextAttempt.idempotencyKey}:failed:${result.error.code}`,
+            timestamp: new Date().toISOString(),
+            routeHref: `/points?account_id=${encodeURIComponent(scope.accountId)}&ref=notification&entity=claim`,
+            references: [
+              toNotificationReference("Request ID", result.error.requestId),
+              toNotificationReference("Correlation ID", result.error.correlationId),
+            ],
+          }),
+        );
         setDidSucceed(false);
         setWriteError(result.error);
         setWriteGuidance(result.retry.guidance);
