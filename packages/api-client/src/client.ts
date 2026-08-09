@@ -17,6 +17,7 @@ import type {
 } from "@ryvra/domain-payments";
 import type {
   PointEntryFilters,
+  PointsAccountScopedRequest,
   PointsAccountScopedListRequest,
   PointsOverviewRequest,
   PointsSummaryRequest,
@@ -51,6 +52,7 @@ import {
   decodePositionSummary,
 } from "./markets-codec";
 import {
+  decodeDailyClaimStatus,
   decodePointEntriesList,
   decodePointSummary,
   decodePointsOverview,
@@ -109,6 +111,8 @@ import type {
 } from "./types";
 
 type Decoder<T> = (value: unknown) => T;
+
+const pointsTasksDailyClaimStatusPath = "/points-tasks/eligibility";
 
 async function unwrap<T>(resultPromise: Promise<ApiResult<T>>): Promise<T> {
   const result = await resultPromise;
@@ -448,6 +452,12 @@ function setPointsTasksPaginationAndSort<TFilters extends object>(
   }
 
   setIfPresent(params, "sort", request.sort?.value);
+}
+
+function buildPointsTasksScopeQuery(request: { accountId: string; userId?: string; workspaceId?: string }): string {
+  const params = new URLSearchParams();
+  setPointsTasksScope(params, request);
+  return toQueryString(params);
 }
 
 function buildPointEntriesQuery(request: PointsAccountScopedListRequest<PointEntryFilters>): string {
@@ -1489,6 +1499,19 @@ function buildPointsTasksClient(transport: Transport, options: CreateApiClientOp
           path: `${pointsTasksRouteMap.getPointsOverview}${buildPointsOverviewQuery(scopedRequest)}`,
         },
         decodePointsOverview,
+      );
+    },
+    getDailyClaimStatus(request) {
+      const scopedRequest: PointsAccountScopedRequest = {
+        ...request,
+        accountId: resolveRequiredAccountId(request.accountId, pointsTasksDailyClaimStatusPath),
+      };
+      return executePointsTasks(
+        {
+          method: "GET",
+          path: `${pointsTasksDailyClaimStatusPath}${buildPointsTasksScopeQuery(scopedRequest)}`,
+        },
+        (value) => decodeDailyClaimStatus(value, scopedRequest),
       );
     },
     listTasks(request) {

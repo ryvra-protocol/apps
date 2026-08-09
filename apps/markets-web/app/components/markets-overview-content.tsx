@@ -1,6 +1,7 @@
 import type { MarketsOverviewDto } from "@ryvra/domain-markets";
 import type { RuntimeMode } from "@ryvra/config";
-import { Card, Section, themeTokens } from "@ryvra/ui";
+import type { UnifiedBalanceCardProps } from "@ryvra/ui";
+import { Card, Section, UnifiedBalanceCard, themeTokens } from "@ryvra/ui";
 import { ModeBadge } from "./mode-badge";
 import { StatusBadge } from "./status-badge";
 
@@ -9,9 +10,10 @@ interface MarketsOverviewContentProps {
   description: string;
   mode: RuntimeMode;
   overview: MarketsOverviewDto;
+  unifiedBalanceCard: UnifiedBalanceCardProps;
 }
 
-export function MarketsOverviewContent({ title, description, mode, overview }: MarketsOverviewContentProps) {
+export function MarketsOverviewContent({ title, description, mode, overview, unifiedBalanceCard }: MarketsOverviewContentProps) {
   return (
     <section style={{ display: "grid", gap: themeTokens.spacing.lg }}>
       <Section title={title} description={description}>
@@ -54,6 +56,8 @@ export function MarketsOverviewContent({ title, description, mode, overview }: M
             <p style={{ margin: 0 }}>As of: {overview.asOf}</p>
           </div>
         </Card>
+
+        <UnifiedBalanceCard {...unifiedBalanceCard} />
       </Section>
     </section>
   );

@@ -1,4 +1,4 @@
-import { ApiClientError, createApiClient, type MarketsClient } from "@ryvra/api-client";
+import { ApiClientError, createApiClient, resolveUnifiedBalanceAccountId, type MarketsClient } from "@ryvra/api-client";
 import { createStubAuthGuard, Role, type AuthDecision, type Session } from "@ryvra/auth";
 import { loadMarketsIntegrationConfig, type MarketsIntegrationConfig } from "@ryvra/config";
 import { createConsoleLogger, mapErrorToTaxonomy, type Logger } from "@ryvra/observability";
@@ -31,6 +31,10 @@ export function createMarketsRuntimeContext(scope: string): MarketsRuntimeContex
   const authScheme = getOptionalEnvValue("RYVRA_MARKETS_AUTH_SCHEME");
   const requestIdHeader = getOptionalEnvValue("RYVRA_MARKETS_REQUEST_ID_HEADER");
   const correlationIdHeader = getOptionalEnvValue("RYVRA_MARKETS_CORRELATION_ID_HEADER");
+  const defaultAccountId = resolveUnifiedBalanceAccountId({
+    mode: config.mode,
+    ...(config.accountId ? { configuredAccountId: config.accountId } : {}),
+  });
   const session: Session = {
     user: { id: "local-member", roles: [Role.Member] },
     issuedAt: new Date().toISOString(),
@@ -49,12 +53,12 @@ export function createMarketsRuntimeContext(scope: string): MarketsRuntimeContex
         ...(requestIdHeader ? { requestIdHeader } : {}),
         ...(correlationIdHeader ? { correlationIdHeader } : {}),
         ...(config.connectivityPath ? { connectivityPath: config.connectivityPath } : {}),
-        ...(config.accountId ? { defaultAccountId: config.accountId } : {}),
+        ...(defaultAccountId ? { defaultAccountId } : {}),
       },
       ...(config.compatibilityVersion ? { marketsCompatibilityVersion: config.compatibilityVersion } : {}),
       ...(config.parityCheckMarker ? { marketsParityCheckMarker: config.parityCheckMarker } : {}),
     }).markets,
-    ...(config.accountId ? { defaultAccountId: config.accountId } : {}),
+    ...(defaultAccountId ? { defaultAccountId } : {}),
   };
 }
 

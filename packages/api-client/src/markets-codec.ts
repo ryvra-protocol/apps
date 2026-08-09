@@ -155,11 +155,16 @@ function decodeNetExposureBand(payload: Record<string, unknown>, label: string):
 function decodePagination(value: unknown): MarketsListResponse<unknown>["pagination"] {
   const page = ensureObject(value, "pagination");
 
-  if (typeof page.limit !== "undefined" || typeof page.has_more !== "undefined") {
+  if (typeof page.limit !== "undefined" || typeof page.has_more !== "undefined" || typeof page.hasMore !== "undefined") {
+    const hasMoreValue = typeof page.has_more !== "undefined" ? page.has_more : page.hasMore;
+    const nextCursorValue = optionalString(
+      typeof page.next_cursor !== "undefined" ? page.next_cursor : page.nextCursor,
+      "pagination.next_cursor",
+    );
     return {
       limit: ensureNumber(page.limit, "pagination.limit"),
-      hasMore: ensureBoolean(page.has_more, "pagination.has_more"),
-      ...(optionalString(page.next_cursor, "pagination.next_cursor") ? { nextCursor: ensureString(page.next_cursor, "pagination.next_cursor") } : {}),
+      hasMore: ensureBoolean(hasMoreValue, "pagination.has_more"),
+      ...(nextCursorValue ? { nextCursor: nextCursorValue } : {}),
       ...(typeof page.page === "number" ? { page: ensureNumber(page.page, "pagination.page") } : {}),
     };
   }

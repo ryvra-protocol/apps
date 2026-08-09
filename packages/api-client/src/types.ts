@@ -37,6 +37,7 @@ import type {
 import type {
   PointEntryDto,
   PointEntryFilters,
+  PointsAccountScopedRequest,
   PointSummaryDto,
   PointsAccountScopedListRequest,
   PointsListResponse,
@@ -54,6 +55,7 @@ import type {
   TasksOverviewDto,
   TasksOverviewRequest,
 } from "@ryvra/domain-tasks";
+import type { DailyClaimStateDto } from "@ryvra/domain-tokenomics";
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
@@ -293,6 +295,7 @@ export interface PointsTasksClient {
   listPointEntries(request: PointsAccountScopedListRequest<PointEntryFilters>): Promise<PointsListResponse<PointEntryDto>>;
   getPointSummary(request: PointsSummaryRequest): Promise<PointSummaryDto>;
   getPointsOverview(request: PointsOverviewRequest): Promise<PointsOverviewDto>;
+  getDailyClaimStatus(request: PointsAccountScopedRequest): Promise<DailyClaimStateDto>;
   listTasks(request: TasksAccountScopedListRequest<TaskFilters>): Promise<TasksListResponse<TaskDto>>;
   getTaskSummary(request: TasksAccountScopedRequest): Promise<TaskSummaryDto>;
   getTasksOverview(request: TasksOverviewRequest): Promise<TasksOverviewDto>;

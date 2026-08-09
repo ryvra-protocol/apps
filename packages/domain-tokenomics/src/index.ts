@@ -3,6 +3,21 @@ export interface EligibilityResult {
   reasonCode?: string;
 }
 
+export const dailyClaimStatuses = ["available", "already_claimed", "cooldown"] as const;
+export type DailyClaimStatus = (typeof dailyClaimStatuses)[number];
+
+export interface DailyClaimStateDto {
+  accountId: string;
+  userId?: string | null;
+  workspaceId?: string | null;
+  eligible: boolean;
+  status?: DailyClaimStatus;
+  reasonCode?: string;
+  claimedAt?: string | null;
+  nextEligibleAt?: string | null;
+  invokeEndpointAvailable: boolean;
+}
+
 export interface DailyCapInput {
   baseCap: number;
   usageToday: number;

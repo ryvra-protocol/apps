@@ -1,8 +1,11 @@
 import type { TaskFilters, TasksAccountScopedListRequest, TasksAccountScopedRequest } from "@ryvra/domain-tasks";
+import type { PointsSummaryRequest } from "@ryvra/domain-points";
 import { Card, Section, themeTokens } from "@ryvra/ui";
 import { EmptyState, ErrorState, UnauthorizedState } from "../components/page-states";
 import { TasksTableClient } from "../components/tasks-table-client";
 import { ModeBadge } from "../components/mode-badge";
+import { formatNumber } from "../lib/format";
+import { buildPointsSummaryRequest, resolvePointsBalance } from "../lib/points-balance";
 import {
   parseAccountId,
   parseCursor,
@@ -99,11 +102,18 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
       ...(request.userId ? { userId: request.userId } : {}),
       ...(request.workspaceId ? { workspaceId: request.workspaceId } : {}),
     };
+    const pointsSummaryRequest: PointsSummaryRequest = buildPointsSummaryRequest({
+      accountId: request.accountId,
+      ...(request.userId ? { userId: request.userId } : {}),
+      ...(request.workspaceId ? { workspaceId: request.workspaceId } : {}),
+    });
 
-    const [taskList, summary] = await Promise.all([
+    const [taskList, summary, pointsSummary] = await Promise.all([
       runtime.pointsTasksClient.listTasks(request),
       runtime.pointsTasksClient.getTaskSummary(summaryRequest),
+      runtime.pointsTasksClient.getPointSummary(pointsSummaryRequest),
     ]);
+    const pointsBalance = resolvePointsBalance(pointsSummary);
 
     runtime.logger.info("Loaded tasks queue data", {
       mode: runtime.config.mode,
@@ -135,6 +145,9 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
             </Card>
             <Card title="Overdue tasks">
               <p style={{ margin: 0 }}>{summary.overdueTasks}</p>
+            </Card>
+            <Card title="Points balance">
+              <p style={{ margin: 0 }}>{formatNumber(pointsBalance)}</p>
             </Card>
           </div>
 

@@ -22,6 +22,7 @@ import {
   type TasksPaginationMeta,
   type TasksResponseMeta,
 } from "@ryvra/domain-tasks";
+import { dailyClaimStatuses, type DailyClaimStateDto } from "@ryvra/domain-tokenomics";
 
 const supportedPointsTasksApiVersions = new Set<string>([...pointsApiVersions, ...tasksApiVersions]);
 
@@ -73,6 +74,16 @@ function ensureEnum<T extends string>(value: string, values: readonly string[], 
   return value as T;
 }
 
+function firstPresent(payload: Record<string, unknown>, keys: readonly string[]): unknown {
+  for (const key of keys) {
+    if (typeof payload[key] !== "undefined") {
+      return payload[key];
+    }
+  }
+
+  return undefined;
+}
+
 function optionalNullableString(value: unknown, label: string): string | null | undefined {
   if (typeof value === "undefined") {
     return undefined;
@@ -111,6 +122,30 @@ function optionalMetadata(value: unknown, label: string): Record<string, unknown
   }
 
   throw new Error(`${label} must be an object or null`);
+}
+
+function decodeDailyClaimStatusValue(
+  payload: Record<string, unknown>,
+  eligible: boolean,
+  reasonCode: string | undefined,
+): NonNullable<DailyClaimStateDto["status"]> {
+  const explicitStatus = optionalNullableString(firstPresent(payload, ["status"]), "dailyClaim.status");
+  if (typeof explicitStatus === "string") {
+    return ensureEnum(explicitStatus, dailyClaimStatuses, "dailyClaim.status") as NonNullable<DailyClaimStateDto["status"]>;
+  }
+
+  if (eligible) {
+    return "available";
+  }
+
+  if (typeof reasonCode === "string") {
+    const normalizedReason = reasonCode.toLowerCase();
+    if (normalizedReason.includes("cooldown")) {
+      return "cooldown";
+    }
+  }
+
+  return "already_claimed";
 }
 
 function decodeDeprecatedPage(value: unknown, label: string): PointsResponseMeta["deprecatedPage"] {
@@ -433,5 +468,46 @@ export function decodeTasksOverview(value: unknown): TasksOverviewDto {
       decodeTaskOverviewItem(entry),
     ),
     atRisk: ensureArray(overviewPayload.at_risk, "tasksOverview.at_risk").map((entry) => decodeTaskOverviewItem(entry)),
+  };
+}
+
+export function decodeDailyClaimStatus(value: unknown, scope: { accountId: string; userId?: string; workspaceId?: string }): DailyClaimStateDto {
+  const payload = ensureObject(value, "daily claim status");
+  const explicitStatus = optionalNullableString(firstPresent(payload, ["status"]), "dailyClaim.status");
+  const eligibleCandidate = firstPresent(payload, ["eligible", "is_eligible"]);
+  const eligible =
+    typeof eligibleCandidate === "boolean"
+      ? eligibleCandidate
+      : typeof explicitStatus === "string"
+        ? explicitStatus === "available"
+        : ensureBoolean(eligibleCandidate, "dailyClaim.eligible");
+  const reasonCode = optionalNullableString(firstPresent(payload, ["reason_code", "reasonCode"]), "dailyClaim.reason_code");
+  const accountId = optionalNullableString(firstPresent(payload, ["account_id", "accountId"]), "dailyClaim.account_id");
+  const userId = optionalNullableString(firstPresent(payload, ["user_id", "userId"]), "dailyClaim.user_id");
+  const workspaceId = optionalNullableString(
+    firstPresent(payload, ["workspace_id", "workspaceId"]),
+    "dailyClaim.workspace_id",
+  );
+  const claimedAt = optionalNullableString(firstPresent(payload, ["claimed_at", "claimedAt"]), "dailyClaim.claimed_at");
+  const nextEligibleAt = optionalNullableString(
+    firstPresent(payload, ["next_eligible_at", "nextEligibleAt"]),
+    "dailyClaim.next_eligible_at",
+  );
+  const invokeEndpointAvailable = firstPresent(payload, ["invoke_endpoint_available", "invokeEndpointAvailable"]);
+
+  return {
+    accountId: accountId ?? scope.accountId,
+    ...(typeof userId !== "undefined" ? { userId } : typeof scope.userId !== "undefined" ? { userId: scope.userId } : {}),
+    ...(typeof workspaceId !== "undefined"
+      ? { workspaceId }
+      : typeof scope.workspaceId !== "undefined"
+        ? { workspaceId: scope.workspaceId }
+        : {}),
+    eligible,
+    status: decodeDailyClaimStatusValue(payload, eligible, typeof reasonCode === "string" ? reasonCode : undefined),
+    ...(typeof reasonCode === "string" ? { reasonCode } : {}),
+    ...(typeof claimedAt !== "undefined" ? { claimedAt } : {}),
+    ...(typeof nextEligibleAt !== "undefined" ? { nextEligibleAt } : {}),
+    invokeEndpointAvailable: typeof invokeEndpointAvailable === "boolean" ? invokeEndpointAvailable : false,
   };
 }

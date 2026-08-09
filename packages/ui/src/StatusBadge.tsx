@@ -2,7 +2,19 @@ import { themeTokens } from "./theme";
 
 type StatusTone = "success" | "warning" | "danger" | "neutral";
 
-const successKeywords = ["paid", "completed", "confirmed", "matched", "settled", "active", "pass", "open", "eligible", "tradable"];
+const successKeywords = [
+  "paid",
+  "completed",
+  "confirmed",
+  "matched",
+  "settled",
+  "active",
+  "pass",
+  "open",
+  "eligible",
+  "tradable",
+  "available",
+];
 const warningKeywords = ["pending", "scheduled", "processing", "queued", "running", "review", "created", "routed", "degraded", "medium", "high"];
 const dangerKeywords = ["failed", "mismatch", "void", "rejected", "reversed", "blocked", "error", "deny", "halted", "suspended"];
 
