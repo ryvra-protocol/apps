@@ -1,24 +1,64 @@
 import type { MarketsOverviewDto } from "@ryvra/domain-markets";
 import type { RuntimeMode } from "@ryvra/config";
-import type { UnifiedBalanceCardProps } from "@ryvra/ui";
-import { Card, Section, UnifiedBalanceCard, themeTokens } from "@ryvra/ui";
+import { Card, Section, UnifiedBalanceCard, themeTokens, type InsightWindowOption } from "@ryvra/ui";
+import { MarketsPortfolioInsightsCard } from "./markets-portfolio-insights-card";
 import { ModeBadge } from "./mode-badge";
 import { StatusBadge } from "./status-badge";
+import { formatDateTime } from "../lib/format";
+import { buildMarketsPortfolioInsights } from "../lib/portfolio-insights";
+import type { MarketsUnifiedBalanceCardModel } from "../lib/unified-balance";
+
+const historyUnavailableReason = "Historical windows are unavailable for markets overview snapshots.";
+const windowOptions: InsightWindowOption[] = [
+  {
+    window: "24h",
+    label: "24h",
+    disabled: true,
+    disabledReason: historyUnavailableReason,
+  },
+  {
+    window: "7d",
+    label: "7d",
+    disabled: true,
+    disabledReason: historyUnavailableReason,
+  },
+  {
+    window: "30d",
+    label: "30d",
+    disabled: true,
+    disabledReason: historyUnavailableReason,
+  },
+];
 
 interface MarketsOverviewContentProps {
   title: string;
   description: string;
   mode: RuntimeMode;
   overview: MarketsOverviewDto;
-  unifiedBalanceCard: UnifiedBalanceCardProps;
+  unifiedBalanceCard: MarketsUnifiedBalanceCardModel;
 }
 
 export function MarketsOverviewContent({ title, description, mode, overview, unifiedBalanceCard }: MarketsOverviewContentProps) {
+  const portfolioInsights = buildMarketsPortfolioInsights({
+    overview,
+    unifiedBalanceCard,
+  });
+
   return (
     <section style={{ display: "grid", gap: themeTokens.spacing.lg }}>
       <Section title={title} description={description}>
         <div style={{ display: "flex", justifyContent: "flex-end" }}>
           <ModeBadge mode={mode} />
+        </div>
+
+        <div
+          data-testid="markets-top-priority-zone"
+          style={{ display: "grid", gap: themeTokens.spacing.md, gridTemplateColumns: "repeat(auto-fit, minmax(270px, 1fr))" }}
+        >
+          <div data-testid="markets-unified-balance-top-card">
+            <UnifiedBalanceCard {...unifiedBalanceCard} />
+          </div>
+          <MarketsPortfolioInsightsCard model={portfolioInsights} windowOptions={windowOptions} />
         </div>
 
         <div style={{ display: "grid", gap: themeTokens.spacing.md, gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))" }}>
@@ -53,11 +93,9 @@ export function MarketsOverviewContent({ title, description, mode, overview, uni
             <p style={{ margin: 0 }}>
               Health: <StatusBadge status={overview.healthStatus} />
             </p>
-            <p style={{ margin: 0 }}>As of: {overview.asOf}</p>
+            <p style={{ margin: 0 }}>As of: {formatDateTime(overview.asOf)}</p>
           </div>
         </Card>
-
-        <UnifiedBalanceCard {...unifiedBalanceCard} />
       </Section>
     </section>
   );

@@ -15,6 +15,8 @@ Define clear responsibility boundaries between the three frontend apps and share
 - Uses shared Unified Balance Card UX, while sourcing account-scoped asset rows via read-only `marketsClient.listPositions`.
 - Owns user-facing order trust timeline/evidence composition while consuming shared trust primitives from `@ryvra/ui`.
 - Consumes shared in-app notification center + communication preference surfaces from `@ryvra/ui` without introducing product-specific notification persistence contracts.
+- Owns Markets-specific portfolio insight KPI composition while using shared insight primitives and existing read-only markets data.
+- Must keep Unified Balance in the top-priority dashboard/overview zone ahead of secondary analytics.
 
 ### `apps/pay-web`
 
@@ -28,6 +30,7 @@ Define clear responsibility boundaries between the three frontend apps and share
 - Owns claim/payout trust disclosures, receipt rendering, and evidence wiring without introducing new backend contract fields.
 - Owns payout-claim client orchestration while enforcing timeout/offline-safe UX and deterministic post-success revalidation.
 - Owns claim/payout notification producer mappings for Phase 14 while keeping persistence/deep-link shell behavior inside shared UI primitives.
+- Owns Pay-specific portfolio/operational trend KPI composition while keeping Unified Balance in the top-priority zone.
 
 ### `apps/points-tasks-web`
 
@@ -39,6 +42,8 @@ Define clear responsibility boundaries between the three frontend apps and share
 - Owns task/daily-claim trust timeline composition and explicit unavailable-state messaging for missing operation references.
 - Owns retry-safe daily-claim client retry/resume behavior (including retained `intentId` between retry attempts).
 - Owns task + daily-claim notification producer mappings for Phase 14 while consuming shared notification center/preference UX from `@ryvra/ui`.
+- Must keep points balance + daily-claim surfaces in top-priority zones on both `/points` and `/tasks`.
+- Owns points/tasks portfolio insight composition using canonical overview reads and explicit history-window fallback messaging.
 
 ## Shared packages
 
@@ -70,6 +75,7 @@ Define clear responsibility boundaries between the three frontend apps and share
 - Owns unified nav iconography and interaction styling semantics across products.
 - Owns reusable trust/compliance presentation primitives (timelines, disclosures, evidence panels, receipts, policy links, standardized error transparency copy).
 - Owns the reusable in-app notification center, scoped notification state provider, read/unread interactions, category/sort controls, and communication preference surfaces (email/webhook UI-first mode labeling).
+- Owns reusable portfolio/insight presentation primitives (window controls, module state rendering, compact trend visuals, and shared formatting helpers).
 - Enforces Phase 12.5A navigation policy across Markets, Pay, and Points/Tasks:
   - sidebar is collapsed by default on first load and expands only by user action
   - sidebar preference persists via client storage after user interaction

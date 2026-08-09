@@ -5,6 +5,7 @@ import type {
 import {
   Card,
   ComplianceEvidencePanel,
+  type InsightWindowOption,
   OperationTimelineCard,
   PolicyLinksCard,
   Section,
@@ -14,9 +15,16 @@ import {
 import nextDynamic from "next/dynamic";
 import { EmptyState, ErrorState, UnauthorizedState } from "../components/page-states";
 import { PointsTableClient } from "../components/points-table-client";
+import { PointsTasksPortfolioInsightsCard } from "../components/points-tasks-portfolio-insights-card";
+import { PointsTasksTopPrioritySection } from "../components/points-tasks-top-priority-section";
 import { ModeBadge } from "../components/mode-badge";
 import { formatNumber } from "../lib/format";
 import { buildDailyClaimViewModel } from "../lib/daily-claim";
+import {
+  buildPointsTasksPortfolioInsights,
+  buildPointsTasksWindowLinks,
+  resolvePointsTasksInsightWindow,
+} from "../lib/portfolio-insights";
 import { buildPointsSummaryRequest, resolvePointsBalance } from "../lib/points-balance";
 import { buildDailyClaimEvidenceReferences, buildDailyClaimTimelineStages } from "../lib/trust-compliance";
 import {
@@ -129,6 +137,7 @@ export default async function PointsPage({ searchParams }: PointsPageProps) {
     }
 
     const window = parsePointsWindow(searchParams);
+    const selectedInsightWindow = resolvePointsTasksInsightWindow(searchParams);
     const summaryRequest = buildPointsSummaryRequest({
       accountId: request.accountId,
       ...(request.userId ? { userId: request.userId } : {}),
@@ -137,7 +146,7 @@ export default async function PointsPage({ searchParams }: PointsPageProps) {
       ...(window ? { window } : {}),
     });
 
-    const [pointsList, summary, dailyClaim] = await Promise.all([
+    const [pointsList, summary, dailyClaim, pointsOverviewResult, tasksOverviewResult] = await Promise.all([
       runtime.pointsTasksClient.listPointEntries(request),
       runtime.pointsTasksClient.getPointSummary(summaryRequest),
       runtime.pointsTasksClient
@@ -161,11 +170,76 @@ export default async function PointsPage({ searchParams }: PointsPageProps) {
             retryHref: `/points?account_id=${encodeURIComponent(request.accountId)}`,
           });
         }),
+      runtime.pointsTasksClient
+        .getPointsOverview({
+          accountId: request.accountId,
+          ...(request.userId ? { userId: request.userId } : {}),
+          ...(request.workspaceId ? { workspaceId: request.workspaceId } : {}),
+          window: selectedInsightWindow,
+        })
+        .then((value) => ({
+          ok: true as const,
+          value,
+        }))
+        .catch((error: unknown) => ({
+          ok: false as const,
+          error,
+        })),
+      runtime.pointsTasksClient
+        .getTasksOverview({
+          accountId: request.accountId,
+          ...(request.userId ? { userId: request.userId } : {}),
+          ...(request.workspaceId ? { workspaceId: request.workspaceId } : {}),
+          window: selectedInsightWindow,
+        })
+        .then((value) => ({
+          ok: true as const,
+          value,
+        }))
+        .catch((error: unknown) => ({
+          ok: false as const,
+          error,
+        })),
     ]);
 
     const pointsBalance = resolvePointsBalance(summary);
     const dailyClaimObservedAt = new Date().toISOString();
     const dailyClaimTimeline = buildDailyClaimTimelineStages(dailyClaim, dailyClaimObservedAt);
+    const insightErrors: string[] = [];
+    const pointsOverview = pointsOverviewResult.ok
+      ? pointsOverviewResult.value
+      : (() => {
+          const uiError = capturePointsTasksPageError(runtime.logger, "/points/insights-points-overview", pointsOverviewResult.error);
+          insightErrors.push(uiError.message);
+          return undefined;
+        })();
+    const tasksOverview = tasksOverviewResult.ok
+      ? tasksOverviewResult.value
+      : (() => {
+          const uiError = capturePointsTasksPageError(runtime.logger, "/points/insights-tasks-overview", tasksOverviewResult.error);
+          insightErrors.push(uiError.message);
+          return undefined;
+        })();
+    const insightsModel = buildPointsTasksPortfolioInsights({
+      selectedWindow: selectedInsightWindow,
+      ...(pointsOverview ? { pointsOverview } : {}),
+      ...(tasksOverview ? { tasksOverview } : {}),
+      ...(insightErrors.length > 0 ? { errorMessage: insightErrors.join(" ") } : {}),
+    });
+    const windowLinkSearchParams: Record<string, string | string[] | undefined> = {
+      ...(searchParams ?? {}),
+      account_id: request.accountId,
+      ...(request.userId ? { user_id: request.userId } : {}),
+      ...(request.workspaceId ? { workspace_id: request.workspaceId } : {}),
+    };
+    const windowOptions: InsightWindowOption[] = buildPointsTasksWindowLinks({
+      route: "/points",
+      searchParams: windowLinkSearchParams,
+    }).map((link) => ({
+      window: link.window,
+      href: link.href,
+      label: link.window,
+    }));
 
     runtime.logger.info("Loaded points ledger data", {
       mode: runtime.config.mode,
@@ -185,10 +259,28 @@ export default async function PointsPage({ searchParams }: PointsPageProps) {
             </span>
           </div>
 
+          <PointsTasksTopPrioritySection
+            route="points"
+            pointsBalanceLabel={formatNumber(pointsBalance)}
+            dailyClaimSurface={
+              <DailyClaimCard
+                model={dailyClaim}
+                scope={{
+                  accountId: request.accountId,
+                  ...(request.userId ? { userId: request.userId } : {}),
+                  ...(request.workspaceId ? { workspaceId: request.workspaceId } : {}),
+                }}
+              />
+            }
+          />
+
+          <PointsTasksPortfolioInsightsCard
+            model={insightsModel}
+            selectedWindow={selectedInsightWindow}
+            windowOptions={windowOptions}
+          />
+
           <div style={{ display: "grid", gap: themeTokens.spacing.md, gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))" }}>
-            <Card title="Points balance">
-              <p style={{ margin: 0 }}>{formatNumber(pointsBalance)}</p>
-            </Card>
             <Card title="Total points">
               <p style={{ margin: 0 }}>{formatNumber(summary.totalPoints)}</p>
             </Card>
@@ -202,15 +294,6 @@ export default async function PointsPage({ searchParams }: PointsPageProps) {
               <p style={{ margin: 0 }}>{formatNumber(summary.entryCount, 0)}</p>
             </Card>
           </div>
-
-          <DailyClaimCard
-            model={dailyClaim}
-            scope={{
-              accountId: request.accountId,
-              ...(request.userId ? { userId: request.userId } : {}),
-              ...(request.workspaceId ? { workspaceId: request.workspaceId } : {}),
-            }}
-          />
 
           <TrustDisclosureCard
             title="Daily claim trust notice"

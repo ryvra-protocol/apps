@@ -89,6 +89,26 @@
   - explicit terminal failure messaging and new-attempt semantics
 - Fingerprint/WebAuthn/passkey auth is still out of scope for Points daily claim in this phase.
 
+## Phase 15 additions: portfolio + insights placement and analytics unification
+
+- Top-priority layout enforcement:
+  - `apps/markets-web` (`/`, `/overview`): Unified Balance card now renders in the first content zone before all secondary analytics.
+  - `apps/pay-web` (`/`, `/overview`): Unified Balance card now renders in the first content zone before all secondary analytics.
+  - `apps/points-tasks-web`:
+    - `/points`: points balance + daily claim now render together in the top-priority zone.
+    - `/tasks`: points balance + daily claim now render together in the top-priority zone.
+- Portfolio/insight modules now consume existing read contracts only:
+  - Markets/Pay portfolio totals + allocation from existing unified-balance position reads.
+  - Points/Tasks trend and productivity insights from existing overview reads (`getPointsOverview`, `getTasksOverview`).
+- Time-window controls:
+  - shared UI windows: `24h`, `7d`, `30d`
+  - Markets/Pay windows are explicit non-historical fallback states (no fabricated trend data)
+  - Points/Tasks windows use canonical overview window reads and expose explicit fallback copy when returned coverage is insufficient.
+- Shared insight primitives now live in `@ryvra/ui` for:
+  - normalized number/currency/timestamp rendering
+  - consistent loading/empty/error insight-state cards
+  - accessible window controls and compact trend visuals.
+
 ## Pay source-of-truth linkage (`ryvra-protocol/pay`)
 
 - Canonical source files currently define domain/service contracts (no published HTTP router/spec yet):

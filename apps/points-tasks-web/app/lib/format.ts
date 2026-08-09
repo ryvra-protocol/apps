@@ -1,15 +1,11 @@
+import { formatInsightNumber, formatInsightTimestamp } from "@ryvra/ui";
+
 export function formatDateTime(isoTimestamp: string): string {
-  return new Intl.DateTimeFormat("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(isoTimestamp));
+  return formatInsightTimestamp(isoTimestamp);
 }
 
 export function formatNumber(value: number, maximumFractionDigits = 2): string {
-  return new Intl.NumberFormat("en-US", { maximumFractionDigits }).format(value);
+  return formatInsightNumber(value, maximumFractionDigits);
 }
 
 export function formatSignedPoints(value: number): string {

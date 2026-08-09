@@ -33,6 +33,12 @@ This repository hosts the unified-shell baseline with Pay, Markets, and Points/T
 - Non-critical claim modules on `/pay/payouts` and `/points` are lazy-loaded to reduce initial client payload.
 - Added performance guard command: `pnpm perf:guard` (bundle budget + critical route artifact checks after build).
 
+## Phase 15 portfolio + placement notes
+
+- Markets and Pay dashboard/overview now place the shared Unified Balance card in the top-priority section.
+- `/points` and `/tasks` now place points balance + daily-claim surfaces in the top-priority section.
+- Portfolio/insight modules now use shared insight formatting/state primitives and explicit historical-window fallback messaging.
+
 ## Phase 14 notifications + communications notes
 
 - Shared in-app notification center is now available in the unified shell across Markets, Pay, and Points/Tasks.
@@ -295,3 +301,4 @@ See `docs/architecture/` for boundaries, responsibilities, and integration mappi
 - `docs/architecture/release-readiness-checklist.md`
 - `docs/architecture/reliability-performance-phase-17.md`
 - `docs/architecture/notifications-and-comms-phase-14.md`
+- `docs/architecture/portfolio-and-insights-phase-15.md`
