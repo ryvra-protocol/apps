@@ -19,6 +19,10 @@ interface DailyClaimCardProps {
   scope: DailyClaimScope;
 }
 
+function toNotificationReference(label: string, value?: string | null) {
+  return value && value.trim().length > 0 ? { label, value } : { label };
+}
+
 export function DailyClaimCard({ model, scope }: DailyClaimCardProps) {
   const router = useRouter();
   const { addNotification } = useNotificationCenter();
@@ -52,8 +56,8 @@ export function DailyClaimCard({ model, scope }: DailyClaimCardProps) {
         timestamp: startedAt,
         routeHref: `/points?account_id=${encodeURIComponent(scope.accountId)}&ref=notification&entity=claim`,
         references: [
-          { label: "Account", value: scope.accountId },
-          { label: "Idempotency key", value: nextAttempt.idempotencyKey },
+          toNotificationReference("Account", scope.accountId),
+          toNotificationReference("Idempotency key", nextAttempt.idempotencyKey),
         ],
       }),
     );
@@ -63,7 +67,7 @@ export function DailyClaimCard({ model, scope }: DailyClaimCardProps) {
         eventKey: `daily-claim:${nextAttempt.idempotencyKey}:processing`,
         timestamp: startedAt,
         routeHref: `/points?account_id=${encodeURIComponent(scope.accountId)}&ref=notification&entity=claim`,
-        references: [{ label: "Account", value: scope.accountId }],
+        references: [toNotificationReference("Account", scope.accountId)],
       }),
     );
 
@@ -84,8 +88,8 @@ export function DailyClaimCard({ model, scope }: DailyClaimCardProps) {
             timestamp: new Date().toISOString(),
             routeHref: `/points?account_id=${encodeURIComponent(scope.accountId)}&ref=notification&entity=claim`,
             references: [
-              { label: "Request ID", value: result.error.requestId },
-              { label: "Correlation ID", value: result.error.correlationId },
+              toNotificationReference("Request ID", result.error.requestId),
+              toNotificationReference("Correlation ID", result.error.correlationId),
             ],
           }),
         );
@@ -105,9 +109,9 @@ export function DailyClaimCard({ model, scope }: DailyClaimCardProps) {
           timestamp: new Date().toISOString(),
           routeHref: `/points?account_id=${encodeURIComponent(scope.accountId)}&ref=notification&entity=claim`,
           references: [
-            { label: "Intent ID", value: result.attempt.intentId },
-            { label: "Request ID", value: result.attempt.requestId },
-            { label: "Correlation ID", value: result.attempt.correlationId },
+            toNotificationReference("Intent ID", result.attempt.intentId),
+            toNotificationReference("Request ID", result.attempt.requestId),
+            toNotificationReference("Correlation ID", result.attempt.correlationId),
           ],
         }),
       );

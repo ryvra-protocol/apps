@@ -55,6 +55,10 @@ function createReference(label: string, value?: string | null) {
   return value && value.trim().length > 0 ? { label, value } : { label };
 }
 
+function createNotificationReference(label: string, value?: string | null) {
+  return value && value.trim().length > 0 ? { label, value } : { label };
+}
+
 export function ClaimFingerprintCardClient({ mode, payout, availability }: ClaimFingerprintCardClientProps) {
   const router = useRouter();
   const { addNotification } = useNotificationCenter();
@@ -157,8 +161,8 @@ export function ClaimFingerprintCardClient({ mode, payout, availability }: Claim
         timestamp: submittedAt,
         routeHref: "/payouts?ref=notification&entity=claim",
         references: [
-          { label: "Payout", value: payout.id },
-          { label: "Idempotency key", value: idempotencyKey },
+          createNotificationReference("Payout", payout.id),
+          createNotificationReference("Idempotency key", idempotencyKey),
         ],
       }),
     );
@@ -168,7 +172,7 @@ export function ClaimFingerprintCardClient({ mode, payout, availability }: Claim
         eventKey: `claim:${idempotencyKey}:processing`,
         timestamp: submittedAt,
         routeHref: "/payouts?ref=notification&entity=claim",
-        references: [{ label: "Payout", value: payout.id }],
+        references: [createNotificationReference("Payout", payout.id)],
       }),
     );
     setUiState((current) => transitionClaimUiState(current, "SUBMIT"));
@@ -194,8 +198,8 @@ export function ClaimFingerprintCardClient({ mode, payout, availability }: Claim
             timestamp: new Date().toISOString(),
             routeHref: "/payouts?ref=notification&entity=claim",
             references: [
-              { label: "Request ID", value: requestId },
-              { label: "Correlation ID", value: correlationId },
+              createNotificationReference("Request ID", requestId),
+              createNotificationReference("Correlation ID", correlationId),
             ],
           }),
         );
@@ -223,9 +227,9 @@ export function ClaimFingerprintCardClient({ mode, payout, availability }: Claim
           timestamp: new Date().toISOString(),
           routeHref: "/payouts?ref=notification&entity=claim",
           references: [
-            { label: "Intent ID", value: result.data.intentId },
-            { label: "Request ID", value: result.data.requestId ?? requestId },
-            { label: "Correlation ID", value: result.data.correlationId ?? correlationId },
+            createNotificationReference("Intent ID", result.data.intentId),
+            createNotificationReference("Request ID", result.data.requestId ?? requestId),
+            createNotificationReference("Correlation ID", result.data.correlationId ?? correlationId),
           ],
         }),
       );

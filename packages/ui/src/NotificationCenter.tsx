@@ -148,6 +148,23 @@ function makePreferencesStorageKey(appId: string, scopeKey: string): string {
   return `${PREFERENCES_STORAGE_PREFIX}:${appId}:${scopeKey}`;
 }
 
+function resolveScopeKeyFromSearch(search: string): string {
+  const params = new URLSearchParams(search);
+  const accountId = params.get("account_id") ?? params.get("accountId");
+  const workspaceId = params.get("workspace_id") ?? params.get("workspaceId");
+  const userId = params.get("user_id") ?? params.get("userId");
+
+  const scope = [
+    accountId ? `account:${accountId}` : null,
+    workspaceId ? `workspace:${workspaceId}` : null,
+    userId ? `user:${userId}` : null,
+  ]
+    .filter(Boolean)
+    .join("|");
+
+  return scope.length > 0 ? scope : DEFAULT_SCOPE_KEY;
+}
+
 function safeLocalStorage(): Storage | null {
   if (typeof window === "undefined") {
     return null;
@@ -413,6 +430,8 @@ function resolveClaimFailureGuidance(retryable: boolean): string {
 }
 
 export function mapClaimLifecycleNotification(input: ClaimLifecycleNotificationInput): NotificationDraft {
+  const references = input.references && input.references.length > 0 ? { references: input.references } : {};
+
   if (input.stage === "submitted") {
     return {
       eventKey: input.eventKey,
@@ -423,7 +442,7 @@ export function mapClaimLifecycleNotification(input: ClaimLifecycleNotificationI
       ...(input.timestamp ? { timestamp: input.timestamp } : {}),
       ...(input.routeHref ? { routeHref: input.routeHref } : {}),
       routeLabel: "Open claim context",
-      references: input.references,
+      ...references,
     };
   }
 
@@ -437,7 +456,7 @@ export function mapClaimLifecycleNotification(input: ClaimLifecycleNotificationI
       ...(input.timestamp ? { timestamp: input.timestamp } : {}),
       ...(input.routeHref ? { routeHref: input.routeHref } : {}),
       routeLabel: "Open claim context",
-      references: input.references,
+      ...references,
     };
   }
 
@@ -451,7 +470,7 @@ export function mapClaimLifecycleNotification(input: ClaimLifecycleNotificationI
       ...(input.timestamp ? { timestamp: input.timestamp } : {}),
       ...(input.routeHref ? { routeHref: input.routeHref } : {}),
       routeLabel: "Open claim context",
-      references: input.references,
+      ...references,
     };
   }
 
@@ -464,7 +483,7 @@ export function mapClaimLifecycleNotification(input: ClaimLifecycleNotificationI
     ...(input.timestamp ? { timestamp: input.timestamp } : {}),
     ...(input.routeHref ? { routeHref: input.routeHref } : {}),
     routeLabel: "Open claim context",
-    references: input.references,
+    ...references,
   };
 }
 
@@ -754,14 +773,15 @@ export function NotificationCenterProvider({
   initialFeedError,
   disableStorage = false,
 }: NotificationCenterProviderProps) {
-  const resolvedScopeKey = scopeKey?.trim() || DEFAULT_SCOPE_KEY;
+  const activeScopeKey =
+    scopeKey?.trim() || (typeof window !== "undefined" ? resolveScopeKeyFromSearch(window.location.search) : DEFAULT_SCOPE_KEY);
   const notificationStorageKey = useMemo(
-    () => makeNotificationStorageKey(appId, resolvedScopeKey),
-    [appId, resolvedScopeKey],
+    () => makeNotificationStorageKey(appId, activeScopeKey),
+    [activeScopeKey, appId],
   );
   const preferenceStorageKey = useMemo(
-    () => makePreferencesStorageKey(appId, resolvedScopeKey),
-    [appId, resolvedScopeKey],
+    () => makePreferencesStorageKey(appId, activeScopeKey),
+    [activeScopeKey, appId],
   );
 
   const [notifications, setNotifications] = useState<NotificationRecord[]>(initialNotifications ?? []);
@@ -836,7 +856,7 @@ export function NotificationCenterProvider({
       return;
     }
 
-    const systemEventKey = `system:local-preview:${resolvedScopeKey}`;
+    const systemEventKey = `system:local-preview:${activeScopeKey}`;
     setNotifications((current) => {
       if (current.some((item) => item.eventKey === systemEventKey)) {
         return current;
@@ -857,7 +877,7 @@ export function NotificationCenterProvider({
 
       return sortNotifications(next, "newest").slice(0, MAX_STORED_NOTIFICATIONS);
     });
-  }, [feedMode, resolvedScopeKey, storageHydrated]);
+  }, [activeScopeKey, feedMode, storageHydrated]);
 
   useEffect(() => {
     if (feedMode !== "local-preview" || disableStorage || !storageHydrated) {
