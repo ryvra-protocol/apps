@@ -300,15 +300,14 @@ test("daily claim view model supports available, cooldown, already-claimed, and 
       accountId: "acct-1",
       eligible: true,
       status: "available",
-      invokeEndpointAvailable: false,
+      invokeEndpointAvailable: true,
     },
     nowIso: "2026-08-09T05:00:00.000Z",
     claimStatusEndpointAvailable: true,
     expectedAccountId: "acct-1",
   });
   assert.equal(available.status, "available");
-  assert.equal(available.cta.enabled, false);
-  assert.equal(available.cta.reason?.includes("Phase 12.5B"), true);
+  assert.equal(available.cta.enabled, true);
 
   const cooldown = module.buildDailyClaimViewModel({
     claimState: {

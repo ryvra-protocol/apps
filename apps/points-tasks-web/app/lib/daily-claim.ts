@@ -143,7 +143,7 @@ export function buildDailyClaimViewModel(input: {
       cta: {
         label: "Claim daily points",
         enabled: invokeEndpointAvailable,
-        ...(invokeEndpointAvailable ? {} : { reason: "Claim execution is deferred to Phase 12.5B pay intent wiring." }),
+        ...(invokeEndpointAvailable ? {} : { reason: "Claim execution endpoint is currently unavailable. Retry when pay intent execution is restored." }),
       },
       retryable: false,
     };

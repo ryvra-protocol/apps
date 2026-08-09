@@ -15,6 +15,7 @@
     "@ryvra/api-client": "workspace:*",
     "@ryvra/auth": "workspace:*",
     "@ryvra/config": "workspace:*",
+    "@ryvra/domain-payments": "workspace:*",
     "@ryvra/domain-points": "workspace:*",
     "@ryvra/domain-tasks": "workspace:*",
     "@ryvra/observability": "workspace:*",
