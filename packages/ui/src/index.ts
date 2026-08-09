@@ -22,6 +22,59 @@ export type { AppShellProps } from "./AppShell";
 export { GlobalHeader } from "./GlobalHeader";
 export type { GlobalHeaderProps } from "./GlobalHeader";
 
+export { NotificationCenter } from "./NotificationCenter";
+export type { NotificationCenterProps } from "./NotificationCenter";
+
+export { NotificationCenterProvider, useNotificationCenter } from "./NotificationCenterProvider";
+export type {
+  NotificationCenterContextValue,
+  NotificationCenterProviderProps,
+  NotificationCenterStatus,
+} from "./NotificationCenterProvider";
+
+export {
+  notificationCategories,
+  notificationSeverities,
+  notificationSortOrders,
+  createDefaultCategoryToggles,
+  createDefaultNotificationPreferences,
+  createInitialNotificationPanelUiState,
+  createNotificationId,
+  countUnreadNotifications,
+  filterNotifications,
+  formatNotificationReferenceSnippet,
+  isWebhookEndpointUrlValid,
+  markAllNotificationsRead,
+  markNotificationRead,
+  mergeNotificationPreferences,
+  resolveNotificationListState,
+  sortNotifications,
+  toggleNotificationPanelOpen,
+  upsertNotification,
+} from "./notification-center-model";
+export type {
+  NotificationCategory,
+  NotificationCategoryToggles,
+  NotificationDraft,
+  NotificationFilter,
+  NotificationItem,
+  NotificationListState,
+  NotificationPanelUiState,
+  NotificationPreferences,
+  NotificationSeverity,
+  NotificationSortOrder,
+} from "./notification-center-model";
+
+export {
+  NOTIFICATION_FEED_STORAGE_PREFIX,
+  NOTIFICATION_PREFERENCES_STORAGE_PREFIX,
+  buildNotificationFeedStorageKey,
+  buildNotificationPreferencesStorageKey,
+  loadNotificationStorageSnapshot,
+  persistNotificationStorageSnapshot,
+} from "./notification-center-storage";
+export type { NotificationPersistenceMode, NotificationStorageLoadResult } from "./notification-center-storage";
+
 export { GlobalSidebar } from "./GlobalSidebar";
 export type { GlobalSidebarProps } from "./GlobalSidebar";
 

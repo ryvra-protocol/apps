@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Card, themeTokens } from "@ryvra/ui";
+import { Button, Card, useNotificationCenter, themeTokens } from "@ryvra/ui";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import {
@@ -12,6 +12,10 @@ import {
 } from "../lib/claim-execution";
 import { executeDailyClaimAttempt } from "../lib/claim-execution-client";
 import type { DailyClaimViewModel } from "../lib/daily-claim";
+import {
+  buildDailyClaimLifecycleNotification,
+  resolveDailyClaimLifecycleStageFromIntentState,
+} from "../lib/notification-comms";
 import { StatusBadge } from "./status-badge";
 
 interface DailyClaimCardProps {
@@ -21,6 +25,7 @@ interface DailyClaimCardProps {
 
 export function DailyClaimCard({ model, scope }: DailyClaimCardProps) {
   const router = useRouter();
+  const { addNotification } = useNotificationCenter();
   const lockRef = useRef(createClaimSubmissionLock());
   const [attempt, setAttempt] = useState<ClaimExecutionAttempt | null>(null);
   const [writeError, setWriteError] = useState<ClaimExecutionErrorEnvelope | null>(null);
@@ -43,6 +48,22 @@ export function DailyClaimCard({ model, scope }: DailyClaimCardProps) {
     setIsSubmitting(true);
     setWriteError(null);
     setWriteGuidance(null);
+    addNotification(
+      buildDailyClaimLifecycleNotification({
+        stage: "submitted",
+        accountId: scope.accountId,
+        requestId: nextAttempt.requestId,
+        correlationId: nextAttempt.correlationId,
+      }),
+    );
+    addNotification(
+      buildDailyClaimLifecycleNotification({
+        stage: "processing",
+        accountId: scope.accountId,
+        requestId: nextAttempt.requestId,
+        correlationId: nextAttempt.correlationId,
+      }),
+    );
 
     try {
       const result = await executeDailyClaimAttempt({
@@ -56,12 +77,39 @@ export function DailyClaimCard({ model, scope }: DailyClaimCardProps) {
         setDidSucceed(false);
         setWriteError(result.error);
         setWriteGuidance(result.retry.guidance);
+        addNotification(
+          buildDailyClaimLifecycleNotification({
+            stage: "failed",
+            accountId: scope.accountId,
+            requestId: result.error.requestId,
+            correlationId: result.error.correlationId,
+            retryable: result.error.retryable,
+          }),
+        );
         return;
       }
 
       setDidSucceed(true);
       setWriteError(null);
       setWriteGuidance("Claim submitted. Refreshing claim status and points balances.");
+      addNotification(
+        buildDailyClaimLifecycleNotification({
+          stage: resolveDailyClaimLifecycleStageFromIntentState(result.state),
+          accountId: scope.accountId,
+          intentId: result.attempt.intentId,
+          requestId: result.attempt.requestId,
+          correlationId: result.attempt.correlationId,
+        }),
+      );
+      addNotification(
+        buildDailyClaimLifecycleNotification({
+          stage: "completed",
+          accountId: scope.accountId,
+          intentId: result.attempt.intentId,
+          requestId: result.attempt.requestId,
+          correlationId: result.attempt.correlationId,
+        }),
+      );
       startRefresh(() => {
         router.refresh();
       });

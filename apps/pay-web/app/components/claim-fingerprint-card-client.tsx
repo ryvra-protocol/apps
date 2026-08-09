@@ -8,6 +8,7 @@ import {
   ConfirmationReceiptCard,
   ErrorTransparencySummary,
   OperationTimelineCard,
+  useNotificationCenter,
   themeTokens,
 } from "@ryvra/ui";
 import { useRouter } from "next/navigation";
@@ -27,6 +28,7 @@ import {
 } from "../lib/claim-ux";
 import { executeClaimSubmission } from "../lib/claim-submission-client";
 import { formatCurrencyMinor } from "../lib/format";
+import { buildClaimLifecycleNotification } from "../lib/notification-comms";
 import { StatusBadge } from "./status-badge";
 
 interface ClaimResponseData {
@@ -55,6 +57,7 @@ function createReference(label: string, value?: string | null) {
 
 export function ClaimFingerprintCardClient({ mode, payout, availability }: ClaimFingerprintCardClientProps) {
   const router = useRouter();
+  const { addNotification } = useNotificationCenter();
   const [panelOpen, setPanelOpen] = useState(false);
   const [uiState, setUiState] = useState<ClaimUiState>("idle");
   const [idempotencyKey, setIdempotencyKey] = useState(() => (payout ? createClaimIdempotencyKey(payout.id) : ""));
@@ -151,6 +154,22 @@ export function ClaimFingerprintCardClient({ mode, payout, availability }: Claim
 
     const requestId = createClientGeneratedId("req");
     const correlationId = createClientGeneratedId("corr");
+    addNotification(
+      buildClaimLifecycleNotification({
+        stage: "submitted",
+        payoutId: payout.id,
+        requestId,
+        correlationId,
+      }),
+    );
+    addNotification(
+      buildClaimLifecycleNotification({
+        stage: "processing",
+        payoutId: payout.id,
+        requestId,
+        correlationId,
+      }),
+    );
 
     try {
       const result = await executeClaimSubmission({
@@ -165,6 +184,15 @@ export function ClaimFingerprintCardClient({ mode, payout, availability }: Claim
         setSubmissionGuidance(result.retry.guidance);
         setTimelineTimestamps((current) => ({ ...current, resolvedAt: new Date().toISOString() }));
         setUiState((current) => transitionClaimUiState(current, "FAILURE"));
+        addNotification(
+          buildClaimLifecycleNotification({
+            stage: "failed",
+            payoutId: payout.id,
+            requestId: result.error.requestId,
+            correlationId: result.error.correlationId,
+            retryable: result.error.retryable,
+          }),
+        );
         return;
       }
 
@@ -178,6 +206,15 @@ export function ClaimFingerprintCardClient({ mode, payout, availability }: Claim
       setUiState((current) => transitionClaimUiState(current, "SUCCESS"));
       setError(null);
       setSubmissionGuidance("Claim submitted. Refreshing payout and status data.");
+      addNotification(
+        buildClaimLifecycleNotification({
+          stage: "completed",
+          payoutId: payout.id,
+          intentId: result.data.intentId,
+          requestId: result.data.requestId ?? requestId,
+          correlationId: result.data.correlationId ?? correlationId,
+        }),
+      );
 
       if (result.shouldRefresh) {
         startRefresh(() => {

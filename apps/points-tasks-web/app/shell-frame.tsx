@@ -8,7 +8,7 @@ import {
   type ShellNavItem,
   type UserMenuItem,
 } from "@ryvra/ui";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 
 const productId: ProductId = "points";
@@ -70,8 +70,17 @@ function buildBreadcrumbs(pathname: string): BreadcrumbItem[] {
   ];
 }
 
+function buildNotificationScopeKey(product: ProductId, searchParams: ReturnType<typeof useSearchParams>): string {
+  const accountId = searchParams.get("account_id") ?? searchParams.get("accountId") ?? "default-account";
+  const userId = searchParams.get("user_id") ?? searchParams.get("userId") ?? "default-user";
+  const workspaceId = searchParams.get("workspace_id") ?? searchParams.get("workspaceId") ?? "default-workspace";
+
+  return `${product}:${accountId}:${userId}:${workspaceId}`;
+}
+
 export function ShellFrame({ children }: { children: ReactNode }) {
   const pathname = usePathname() ?? "/";
+  const searchParams = useSearchParams();
   const normalizedPathname = normalizePath(pathname);
   const globalNav = getGlobalNavItems({ currentProduct: productId });
   const localNav = getProductNav(productId);
@@ -88,6 +97,7 @@ export function ShellFrame({ children }: { children: ReactNode }) {
       currentPath={normalizedPathname}
       userMenuItems={userMenuItems}
       commandTriggerLabel="Quick Actions"
+      notificationScopeKey={buildNotificationScopeKey(productId, searchParams)}
       footer="Ryvra unified shell foundation"
     >
       {children}

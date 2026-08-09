@@ -7,9 +7,10 @@ import {
   type TaskDto,
   type TasksPaginationMeta,
 } from "@ryvra/domain-tasks";
-import { Button, Card, DataTable, themeTokens } from "@ryvra/ui";
-import { useDeferredValue } from "react";
+import { Button, Card, DataTable, useNotificationCenter, themeTokens } from "@ryvra/ui";
+import { useDeferredValue, useEffect } from "react";
 import { formatDateTime, formatNumber } from "../lib/format";
+import { buildTaskStatusNotification } from "../lib/notification-comms";
 import { StatusBadge } from "./status-badge";
 import { useQueryFilters } from "./use-query-filters";
 
@@ -40,6 +41,7 @@ function parseSortParam(sortValue: string | null): { field: "updated_at" | "crea
 
 export function TasksTableClient({ items, pagination }: TasksTableClientProps) {
   const { searchParams, updateQuery, clearQuery } = useQueryFilters();
+  const { addNotification } = useNotificationCenter();
 
   const statusParam = (searchParams.get("task_status") ?? searchParams.get("status") ?? "ALL").toLowerCase();
   const typeParam = (searchParams.get("task_type") ?? searchParams.get("type") ?? "ALL").toLowerCase();
@@ -66,6 +68,12 @@ export function TasksTableClient({ items, pagination }: TasksTableClientProps) {
   const deferredItems = useDeferredValue(items);
   const visibleRows = deferredItems;
   const rowsPending = deferredItems !== items;
+
+  useEffect(() => {
+    for (const task of items.slice(0, 25)) {
+      addNotification(buildTaskStatusNotification(task));
+    }
+  }, [addNotification, items]);
 
   const updateSort = (field: string, direction: string) => {
     const normalizedField = field === "created_at" || field === "due_at" ? field : "updated_at";

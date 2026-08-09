@@ -189,6 +189,30 @@
   - non-critical claim modules are lazy-loaded on `/pay/payouts` and `/points`
   - performance guard command `pnpm perf:guard` validates chunk budgets and critical route build artifacts after builds
 
+## Phase 14 notifications + communications map
+
+- Shared notification center and communication preference surfaces are implemented in `@ryvra/ui` and consumed by all three apps through `AppShell`.
+- `NotificationCenterProvider` stores notification feed + preference state by scope-aware key (`product + account/user/workspace` context) to keep account/tenant views isolated in local preview mode.
+- Shared notification center supports:
+  - category filters (`All`, `Claims`, `Payouts`, `Tasks`, `System`)
+  - deterministic sort order controls
+  - loading/empty/error/success rendering states
+  - per-item read/unread toggles
+  - deep-link actions to related app routes
+- Producer integration points:
+  - `apps/pay-web/app/components/claim-fingerprint-card-client.tsx` -> claim lifecycle notifications
+  - `apps/pay-web/app/components/payouts-table-client.tsx` -> payout status notifications
+  - `apps/points-tasks-web/app/components/daily-claim-card.tsx` -> daily claim lifecycle notifications
+  - `apps/points-tasks-web/app/components/tasks-table-client.tsx` -> task progression notifications
+- Status mapping helpers live in app-boundary modules:
+  - `apps/pay-web/app/lib/notification-comms.ts`
+  - `apps/points-tasks-web/app/lib/notification-comms.ts`
+- Preference surfaces (email + webhook) are UI-first:
+  - explicit **local preview settings** labeling
+  - webhook URL inline validation
+  - disabled test ping control with explicit deferred-backend reason
+- No backend notification feed/preference endpoint is currently wired in Phase 14; remote persistence remains explicitly deferred.
+
 ## Placement guidance for future business logic
 
 - Domain-specific orchestration belongs in app-level features unless shared by multiple apps.

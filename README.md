@@ -33,6 +33,13 @@ This repository hosts the unified-shell baseline with Pay, Markets, and Points/T
 - Non-critical claim modules on `/pay/payouts` and `/points` are lazy-loaded to reduce initial client payload.
 - Added performance guard command: `pnpm perf:guard` (bundle budget + critical route artifact checks after build).
 
+## Phase 14 notifications + communications notes
+
+- Shared in-app notification center is now available in the unified shell across Markets, Pay, and Points/Tasks.
+- Notification categories include Claims, Payouts, Tasks, and System with read/unread controls and deep-link actions.
+- Communication preferences (email + webhook category toggles) are currently **local preview settings** unless remote persistence contracts are explicitly added.
+- Webhook test ping is intentionally disabled with explicit deferred-backend messaging in this phase.
+
 ## Setup
 
 ```bash
@@ -287,3 +294,4 @@ See `docs/architecture/` for boundaries, responsibilities, and integration mappi
 - `docs/architecture/points-tasks-integration-parity.md`
 - `docs/architecture/release-readiness-checklist.md`
 - `docs/architecture/reliability-performance-phase-17.md`
+- `docs/architecture/notifications-and-comms-phase-14.md`
