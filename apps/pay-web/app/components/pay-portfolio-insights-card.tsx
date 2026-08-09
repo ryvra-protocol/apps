@@ -27,7 +27,7 @@ export function PayPortfolioInsightsCard({ model, windowOptions }: PayPortfolioI
           label="Insight window"
           selectedWindow="24h"
           options={windowOptions}
-          fallbackMessage={model.fallbackMessage}
+          {...(model.fallbackMessage ? { fallbackMessage: model.fallbackMessage } : {})}
         />
       }
     >

@@ -203,6 +203,12 @@ export function buildPointsTasksPortfolioInsights(input: {
 
   const completionRate = input.tasksOverview?.completionRate ?? 0;
   const points24h = input.pointsOverview?.pointsLast24h ?? 0;
+  const coverageFallbackMessage = pickWindowCoverageMessage({
+    selectedWindow: input.selectedWindow,
+    ...(input.pointsOverview ? { pointsOverview: input.pointsOverview } : {}),
+    ...(input.tasksOverview ? { tasksOverview: input.tasksOverview } : {}),
+  });
+  const fallbackMessage = coverageFallbackMessage ?? (input.errorMessage ? "Some insight modules are unavailable for the selected scope." : undefined);
 
   return {
     state,
@@ -235,12 +241,7 @@ export function buildPointsTasksPortfolioInsights(input: {
         tone: atRiskCount > 0 ? "warning" : "positive",
       },
     ],
-    fallbackMessage:
-      pickWindowCoverageMessage({
-        selectedWindow: input.selectedWindow,
-        pointsOverview: input.pointsOverview,
-        tasksOverview: input.tasksOverview,
-      }) ?? (input.errorMessage ? "Some insight modules are unavailable for the selected scope." : undefined),
+    ...(fallbackMessage ? { fallbackMessage } : {}),
     ...(input.errorMessage && hasData ? { errorMessage: input.errorMessage } : {}),
   };
 }

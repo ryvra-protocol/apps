@@ -32,7 +32,7 @@ export function PointsTasksPortfolioInsightsCard({
           label="Insight window"
           selectedWindow={selectedWindow}
           options={windowOptions}
-          fallbackMessage={model.fallbackMessage}
+          {...(model.fallbackMessage ? { fallbackMessage: model.fallbackMessage } : {})}
         />
       }
     >
