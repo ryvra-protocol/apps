@@ -25,6 +25,7 @@ Define clear responsibility boundaries between the three frontend apps and share
 - Uses the same shared Unified Balance Card component/formatting as Markets and consumes read-only Markets positions for cross-app parity.
 - Must surface account-scope issues for unified balance explicitly (non-silent).
 - Owns claim/payout trust disclosures, receipt rendering, and evidence wiring without introducing new backend contract fields.
+- Owns payout-claim client orchestration while enforcing timeout/offline-safe UX and deterministic post-success revalidation.
 
 ### `apps/points-tasks-web`
 
@@ -34,6 +35,7 @@ Define clear responsibility boundaries between the three frontend apps and share
 - Preserves canonical auth optionality: health-only route (`/points-tasks/status/health`) may bypass bearer auth; status/data routes may not.
 - Owns points balance and daily-claim status surfaces, including guarded fallback UX when the daily-claim status endpoint is provisional/unavailable.
 - Owns task/daily-claim trust timeline composition and explicit unavailable-state messaging for missing operation references.
+- Owns retry-safe daily-claim client retry/resume behavior (including retained `intentId` between retry attempts).
 
 ## Shared packages
 
@@ -42,6 +44,8 @@ Define clear responsibility boundaries between the three frontend apps and share
 - Single boundary for backend/API access and transport behavior (`mock`/`http`).
 - Enforces canonical route mappings, auth requirements, scope guards, header policy, pagination/deprecation behavior, and error normalization.
 - Emits canonical request/correlation IDs for transport and diagnostics probes in both mock and http modes.
+- Centralizes reliability controls for HTTP mode (timeout, retry policy, idempotency-aware write retries, short-lived GET dedupe/cache, and write-triggered cache invalidation).
+- Exposes hot-path timing diagnostics through transport error metadata and optional metric hooks.
 - Exposes parity diagnostics metadata for status pages.
 - Hosts shared unified-balance aggregation/format helpers and provisional daily-claim read-status decoding used across apps.
 

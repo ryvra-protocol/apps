@@ -35,7 +35,6 @@ export const dynamic = "force-dynamic";
 const ClaimFingerprintCardClient = nextDynamic(
   () => import("../components/claim-fingerprint-card-client").then((module) => module.ClaimFingerprintCardClient),
   {
-    ssr: false,
     loading: () => (
       <Card title="Claim">
         <p style={{ marginTop: 0, marginBottom: themeTokens.spacing.xs, color: themeTokens.color.textMuted }}>

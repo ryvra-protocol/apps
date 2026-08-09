@@ -231,32 +231,26 @@ export function createFetchTransport(options: FetchTransportOptions): Transport 
       if (error instanceof Error && error.name === "AbortError") {
         return {
           ok: false,
-          error: normalizeApiError(
-            {
-              status: 504,
-              code: "request_timeout",
-              message: `Request timed out after ${timeoutMs}ms`,
-              retryable: true,
-              source: "runtime",
-            },
-            { fallbackStatus: 504, source: "runtime" },
-          ),
+          error: {
+            status: 504,
+            code: "request_timeout",
+            message: `Request timed out after ${timeoutMs}ms`,
+            retryable: true,
+            source: "runtime",
+          },
         };
       }
 
       if (isLikelyOfflineError(error)) {
         return {
           ok: false,
-          error: normalizeApiError(
-            {
-              status: 503,
-              code: "network_offline",
-              message: "Network appears offline. Check connectivity and retry.",
-              retryable: true,
-              source: "runtime",
-            },
-            { fallbackStatus: 503, source: "runtime" },
-          ),
+          error: {
+            status: 503,
+            code: "network_offline",
+            message: "Network appears offline. Check connectivity and retry.",
+            retryable: true,
+            source: "runtime",
+          },
         };
       }
 

@@ -45,7 +45,6 @@ export const dynamic = "force-dynamic";
 const DailyClaimCard = nextDynamic(
   () => import("../components/daily-claim-card").then((module) => module.DailyClaimCard),
   {
-    ssr: false,
     loading: () => (
       <Card title="Daily claim">
         <p style={{ marginTop: 0, marginBottom: themeTokens.spacing.xs, color: themeTokens.color.textMuted }}>
