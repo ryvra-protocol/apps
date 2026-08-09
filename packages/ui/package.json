@@ -9,10 +9,13 @@
     "lint": "eslint --max-warnings 0 --ext .ts,.tsx src",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "build": "tsc -p tsconfig.json",
-    "test": "node -e \"console.log('No tests configured for @ryvra/ui')\""
+    "test": "tsx --test src/navigation-shell.test.tsx"
   },
   "peerDependencies": {
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "tsx": "4.23.9"
   }
 }

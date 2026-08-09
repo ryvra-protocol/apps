@@ -1,12 +1,12 @@
 import type { ShellNavItem } from "./navigation";
-import { isCurrentRoute } from "./route-utils";
-import { NavItemIcon } from "./NavItemIcon";
+import { ShellNavList } from "./ShellNavList";
 
 export interface ContextualNavProps {
   title?: string;
   ariaLabel?: string;
   items: ShellNavItem[];
   currentPath?: string | undefined;
+  collapsed?: boolean;
 }
 
 export function ContextualNav({
@@ -14,6 +14,7 @@ export function ContextualNav({
   ariaLabel = "Module navigation",
   items,
   currentPath,
+  collapsed = false,
 }: ContextualNavProps) {
   if (items.length === 0) {
     return null;
@@ -21,32 +22,8 @@ export function ContextualNav({
 
   return (
     <nav className="ryvra-nav-group" aria-label={ariaLabel}>
-      <p className="ryvra-nav-title">{title}</p>
-      <ul className="ryvra-nav-list">
-        {items.map((item) => {
-          const current = isCurrentRoute(item, currentPath);
-
-          return (
-            <li key={item.id}>
-              <a
-                className="ryvra-nav-link"
-                href={item.href}
-                aria-current={current ? "page" : undefined}
-                aria-label={item.ariaLabel}
-                aria-disabled={item.disabled ? "true" : undefined}
-                target={item.external ? "_blank" : undefined}
-                rel={item.external ? "noreferrer" : undefined}
-              >
-                <span className="ryvra-nav-link-content">
-                  <NavItemIcon itemId={item.id} />
-                  <span className="ryvra-nav-link-label">{item.label}</span>
-                </span>
-                {item.badge ? <span className="ryvra-nav-badge">{item.badge}</span> : null}
-              </a>
-            </li>
-          );
-        })}
-      </ul>
+      <p className={collapsed ? "ryvra-nav-title ryvra-visually-hidden" : "ryvra-nav-title"}>{title}</p>
+      <ShellNavList items={items} currentPath={currentPath} iconOnly={collapsed} />
     </nav>
   );
 }

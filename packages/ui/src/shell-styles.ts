@@ -5,9 +5,22 @@ const motion = `background-color ${themeTokens.motion.standard} ease, color ${th
 export const shellStyles = `
 .ryvra-shell-root {
   min-height: 100vh;
+  --ryvra-bottom-dock-offset: calc(5rem + env(safe-area-inset-bottom));
   background: ${themeTokens.color.background};
   color: ${themeTokens.color.text};
   font-family: ${themeTokens.typography.fontFamily};
+}
+
+.ryvra-visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
 }
 
 .ryvra-skip-link {
@@ -61,12 +74,15 @@ export const shellStyles = `
 
 .ryvra-shell-layout {
   display: grid;
-  grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
   gap: ${themeTokens.spacing.xl};
   padding: ${themeTokens.spacing.xl};
+  padding-bottom: calc(${themeTokens.spacing.xl} + var(--ryvra-bottom-dock-offset));
 }
 
 .ryvra-sidebar {
+  width: 16rem;
   background: ${themeTokens.color.surface};
   border: 1px solid ${themeTokens.color.border};
   border-radius: ${themeTokens.radius.lg};
@@ -75,6 +91,62 @@ export const shellStyles = `
   display: grid;
   gap: ${themeTokens.spacing.xl};
   height: fit-content;
+  transition: width ${themeTokens.motion.standard} ease, padding ${themeTokens.motion.standard} ease;
+}
+
+.ryvra-sidebar--collapsed {
+  width: 5rem;
+  padding: ${themeTokens.spacing.md};
+  gap: ${themeTokens.spacing.lg};
+}
+
+.ryvra-sidebar-toggle {
+  justify-self: end;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: ${themeTokens.radius.md};
+  border: 1px solid ${themeTokens.color.border};
+  background: ${themeTokens.color.surfaceMuted};
+  color: ${themeTokens.color.text};
+  cursor: pointer;
+  transition: ${motion};
+}
+
+.ryvra-sidebar--collapsed .ryvra-sidebar-toggle {
+  justify-self: center;
+}
+
+.ryvra-sidebar-toggle:hover {
+  background: ${themeTokens.color.surfaceStrong};
+  border-color: ${themeTokens.color.borderStrong};
+}
+
+.ryvra-sidebar-toggle:active {
+  transform: translateY(1px);
+}
+
+.ryvra-sidebar-toggle:focus-visible {
+  outline: ${themeTokens.focusRing.width} solid ${themeTokens.color.focusRing};
+  outline-offset: ${themeTokens.focusRing.offset};
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+}
+
+.ryvra-sidebar-toggle-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ryvra-sidebar-toggle-icon {
+  display: block;
+}
+
+.ryvra-sidebar-sections {
+  display: grid;
+  gap: ${themeTokens.spacing.xl};
 }
 
 .ryvra-nav-group {
@@ -150,6 +222,56 @@ export const shellStyles = `
   flex: none;
   width: 1.125rem;
   height: 1.125rem;
+  transition: transform ${themeTokens.motion.fast} ease;
+}
+
+.ryvra-nav-link--icon-only {
+  justify-content: center;
+  padding: ${themeTokens.spacing.sm};
+  position: relative;
+  --ryvra-tooltip-hidden-transform: translateY(-50%) translateX(-4px);
+  --ryvra-tooltip-visible-transform: translateY(-50%) translateX(0);
+}
+
+.ryvra-nav-link--tooltip-top {
+  --ryvra-tooltip-hidden-transform: translateX(-50%) translateY(4px);
+  --ryvra-tooltip-visible-transform: translateX(-50%) translateY(0);
+}
+
+.ryvra-nav-link--icon-only .ryvra-nav-link-content {
+  justify-content: center;
+}
+
+.ryvra-nav-link--icon-only::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: calc(100% + ${themeTokens.spacing.sm});
+  top: 50%;
+  transform: var(--ryvra-tooltip-hidden-transform);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 55;
+  border-radius: ${themeTokens.radius.sm};
+  background: ${themeTokens.color.text};
+  color: ${themeTokens.color.textInverse};
+  font-size: ${themeTokens.typography.size.xs};
+  font-weight: ${themeTokens.typography.weight.medium};
+  line-height: 1.25;
+  padding: ${themeTokens.spacing.xs} ${themeTokens.spacing.sm};
+  white-space: nowrap;
+  transition: opacity ${themeTokens.motion.standard} ease, transform ${themeTokens.motion.standard} ease;
+}
+
+.ryvra-nav-link--tooltip-top::after {
+  left: 50%;
+  top: auto;
+  bottom: calc(100% + ${themeTokens.spacing.sm});
+}
+
+.ryvra-nav-link--icon-only:hover::after,
+.ryvra-nav-link--icon-only:focus-visible::after {
+  opacity: 1;
+  transform: var(--ryvra-tooltip-visible-transform);
 }
 
 .ryvra-nav-link:hover,
@@ -186,6 +308,10 @@ export const shellStyles = `
   color: ${themeTokens.color.primaryActive};
   border-color: ${themeTokens.color.borderStrong};
   font-weight: ${themeTokens.typography.weight.semibold};
+}
+
+.ryvra-nav-link[aria-current="page"] .ryvra-nav-icon {
+  transform: scale(1.08);
 }
 
 .ryvra-nav-link[aria-disabled="true"],
@@ -309,16 +435,50 @@ export const shellStyles = `
   padding: ${themeTokens.spacing.sm};
 }
 
+.ryvra-bottom-dock {
+  position: fixed;
+  left: 50%;
+  bottom: calc(${themeTokens.spacing.lg} + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100vw - ${themeTokens.spacing["2xl"]});
+  z-index: 45;
+  border-radius: ${themeTokens.radius.pill};
+  border: 1px solid ${themeTokens.color.borderStrong};
+  background: ${themeTokens.color.surface};
+  box-shadow: ${themeTokens.shadow.lg};
+  padding: ${themeTokens.spacing.xs};
+}
+
+.ryvra-bottom-dock-list {
+  display: flex;
+  align-items: center;
+  gap: ${themeTokens.spacing.xs};
+}
+
+.ryvra-bottom-dock-link {
+  border-radius: ${themeTokens.radius.pill};
+  min-width: 2.5rem;
+  min-height: 2.5rem;
+}
+
 .ryvra-shell-footer {
-  padding: 0 ${themeTokens.spacing.xl} ${themeTokens.spacing.xl};
+  padding: 0 ${themeTokens.spacing.xl} calc(${themeTokens.spacing.xl} + var(--ryvra-bottom-dock-offset));
   color: ${themeTokens.color.textMuted};
   font-size: ${themeTokens.typography.size.sm};
 }
 
 @media (max-width: 1024px) {
   .ryvra-shell-layout {
-    grid-template-columns: minmax(200px, 230px) minmax(0, 1fr);
     gap: ${themeTokens.spacing.lg};
+  }
+
+  .ryvra-sidebar {
+    width: 14.5rem;
+  }
+
+  .ryvra-sidebar--collapsed {
+    width: 4.75rem;
   }
 }
 
@@ -333,6 +493,12 @@ export const shellStyles = `
   .ryvra-shell-layout {
     grid-template-columns: minmax(0, 1fr);
     padding: ${themeTokens.spacing.lg};
+    padding-bottom: calc(${themeTokens.spacing.lg} + var(--ryvra-bottom-dock-offset));
+  }
+
+  .ryvra-sidebar,
+  .ryvra-sidebar--collapsed {
+    width: 100%;
   }
 
   .ryvra-shell-main {
@@ -342,6 +508,20 @@ export const shellStyles = `
   .ryvra-breadcrumbs {
     padding-left: ${themeTokens.spacing.lg};
     padding-right: ${themeTokens.spacing.lg};
+  }
+
+  .ryvra-bottom-dock {
+    max-width: calc(100vw - ${themeTokens.spacing.lg});
+  }
+}
+
+@media (max-height: 720px) {
+  .ryvra-shell-root {
+    --ryvra-bottom-dock-offset: calc(4.5rem + env(safe-area-inset-bottom));
+  }
+
+  .ryvra-bottom-dock {
+    bottom: calc(${themeTokens.spacing.sm} + env(safe-area-inset-bottom));
   }
 }
 

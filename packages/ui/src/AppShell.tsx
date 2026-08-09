@@ -1,8 +1,16 @@
-import type { ReactNode } from "react";
+"use client";
+
+import { useEffect, useState, type ReactNode } from "react";
 import type { BreadcrumbItem, ProductSwitcherItem, ShellNavItem, UserMenuItem } from "./navigation";
 import { shellStyles } from "./shell-styles";
 import { GlobalHeader } from "./GlobalHeader";
 import { GlobalSidebar } from "./GlobalSidebar";
+import { BottomIconDock } from "./BottomIconDock";
+import {
+  readSidebarCollapsedPreference,
+  toggleSidebarCollapsed,
+  writeSidebarCollapsedPreference,
+} from "./sidebar-preferences";
 
 export interface AppShellProps {
   appName: string;
@@ -33,6 +41,23 @@ export function AppShell({
   userMenuItems = [],
   commandTriggerLabel = "Command Palette",
 }: AppShellProps) {
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+
+  useEffect(() => {
+    const preference = readSidebarCollapsedPreference(typeof window !== "undefined" ? window.localStorage : null);
+    if (preference !== null) {
+      setSidebarCollapsed(preference);
+    }
+  }, []);
+
+  function handleSidebarToggle() {
+    setSidebarCollapsed((current) => {
+      const next = toggleSidebarCollapsed(current);
+      writeSidebarCollapsedPreference(typeof window !== "undefined" ? window.localStorage : null, next);
+      return next;
+    });
+  }
+
   return (
     <div className="ryvra-shell-root">
       <style>{shellStyles}</style>
@@ -41,7 +66,6 @@ export function AppShell({
       </a>
       <GlobalHeader
         appName={appName}
-        productSwitcherItems={productSwitcherItems}
         breadcrumbs={breadcrumbs}
         userMenuItems={userMenuItems}
         commandTriggerLabel={commandTriggerLabel}
@@ -53,11 +77,14 @@ export function AppShell({
           localNavTitle={localNavTitle}
           localNavAriaLabel={localNavAriaLabel}
           currentPath={currentPath}
+          collapsed={sidebarCollapsed}
+          onToggleCollapsed={handleSidebarToggle}
         />
         <main id="app-main-content" className="ryvra-shell-main" tabIndex={-1}>
           <div className="ryvra-content-frame">{children}</div>
         </main>
       </div>
+      <BottomIconDock items={productSwitcherItems} />
       {footer ? <footer className="ryvra-shell-footer">{footer}</footer> : null}
     </div>
   );
