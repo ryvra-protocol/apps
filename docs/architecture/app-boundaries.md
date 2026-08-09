@@ -19,6 +19,7 @@ Define clear responsibility boundaries between the three frontend apps and share
 - Consumes Pay contracts via `@ryvra/api-client` + `@ryvra/domain-payments`.
 - Keeps write/transition behavior behind API client methods; no raw protocol payload crafting in UI layers.
 - Maintains parity diagnostics with explicit retry/error handling and shared request/correlation headers.
+- Fingerprint-style claim confirmation remains a UI interaction boundary only; identity/security remains session/token + server-side validation.
 
 ### `apps/points-tasks-web`
 
@@ -50,6 +51,7 @@ Define clear responsibility boundaries between the three frontend apps and share
 
 - Shared shell, navigation, and reusable presentational components.
 - No backend integration or product-specific business decisions.
+- Owns unified nav iconography and interaction styling semantics across products.
 
 ### `@ryvra/auth`
 

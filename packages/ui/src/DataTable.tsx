@@ -36,7 +36,18 @@ export function DataTable<Row extends object>({
 }: DataTableProps<Row>) {
   if (rows.length === 0) {
     return (
-      <p role="status" aria-live="polite" style={{ margin: 0 }}>
+      <p
+        role="status"
+        aria-live="polite"
+        style={{
+          margin: 0,
+          borderRadius: themeTokens.radius.md,
+          border: `1px dashed ${themeTokens.color.borderStrong}`,
+          padding: `${themeTokens.spacing.md} ${themeTokens.spacing.lg}`,
+          color: themeTokens.color.textMuted,
+          background: themeTokens.color.surfaceMuted,
+        }}
+      >
         {emptyMessage}
       </p>
     );
@@ -63,7 +74,8 @@ export function DataTable<Row extends object>({
       <style>{`
         .ryvra-data-table {
           width: 100%;
-          border-collapse: collapse;
+          border-collapse: separate;
+          border-spacing: 0;
           border: 1px solid ${themeTokens.color.border};
           border-radius: ${themeTokens.radius.md};
           overflow: hidden;
@@ -103,6 +115,7 @@ export function DataTable<Row extends object>({
         .ryvra-data-table-row-interactive:focus-visible {
           outline: ${themeTokens.focusRing.width} solid ${themeTokens.color.focusRing};
           outline-offset: -2px;
+          box-shadow: inset 0 0 0 2px rgba(37, 99, 235, 0.15);
         }
 
         .ryvra-data-table-row-expanded td {
@@ -110,7 +123,18 @@ export function DataTable<Row extends object>({
         }
       `}</style>
       <table className="ryvra-data-table">
-        {caption ? <caption style={{ textAlign: "left", padding: `${themeTokens.spacing.sm} ${themeTokens.spacing.md}` }}>{caption}</caption> : null}
+        {caption ? (
+          <caption
+            style={{
+              textAlign: "left",
+              padding: `${themeTokens.spacing.sm} ${themeTokens.spacing.md}`,
+              color: themeTokens.color.textMuted,
+              fontSize: themeTokens.typography.size.sm,
+            }}
+          >
+            {caption}
+          </caption>
+        ) : null}
         <thead>
           <tr>
             {columns.map((column) => (

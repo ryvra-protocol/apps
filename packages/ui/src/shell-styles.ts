@@ -1,6 +1,6 @@
 import { themeTokens } from "./theme";
 
-const motion = `background-color ${themeTokens.motion.standard} ease, color ${themeTokens.motion.standard} ease, box-shadow ${themeTokens.motion.standard} ease, transform ${themeTokens.motion.fast} ease`;
+const motion = `background-color ${themeTokens.motion.standard} ease, color ${themeTokens.motion.standard} ease, box-shadow ${themeTokens.motion.standard} ease, transform ${themeTokens.motion.fast} ease, border-color ${themeTokens.motion.standard} ease`;
 
 export const shellStyles = `
 .ryvra-shell-root {
@@ -126,8 +126,30 @@ export const shellStyles = `
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: ${themeTokens.spacing.sm};
+  min-height: 2.5rem;
   padding: ${themeTokens.spacing.sm} ${themeTokens.spacing.md};
   font-size: ${themeTokens.typography.size.sm};
+}
+
+.ryvra-nav-link-content {
+  display: inline-flex;
+  align-items: center;
+  gap: ${themeTokens.spacing.sm};
+  min-width: 0;
+}
+
+.ryvra-nav-link-label {
+  display: inline-block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ryvra-nav-icon {
+  flex: none;
+  width: 1.125rem;
+  height: 1.125rem;
 }
 
 .ryvra-nav-link:hover,
@@ -136,7 +158,7 @@ export const shellStyles = `
 .ryvra-command-trigger:hover,
 .ryvra-summary-trigger:hover {
   background: ${themeTokens.color.surfaceStrong};
-  border-color: ${themeTokens.color.border};
+  border-color: ${themeTokens.color.borderStrong};
 }
 
 .ryvra-nav-link:active,
@@ -155,6 +177,7 @@ export const shellStyles = `
 .ryvra-summary-trigger:focus-visible {
   outline: ${themeTokens.focusRing.width} solid ${themeTokens.color.focusRing};
   outline-offset: ${themeTokens.focusRing.offset};
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
 }
 
 .ryvra-nav-link[aria-current="page"],

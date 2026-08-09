@@ -10,6 +10,9 @@ export type { SectionProps } from "./Section";
 export { DataTable } from "./DataTable";
 export type { DataTableColumn, DataTableProps } from "./DataTable";
 
+export { StatusBadge } from "./StatusBadge";
+export type { StatusBadgeProps } from "./StatusBadge";
+
 export { AppShell } from "./AppShell";
 export type { AppShellProps } from "./AppShell";
 
@@ -33,6 +36,17 @@ export type { CommandPaletteTriggerProps } from "./CommandPaletteTrigger";
 
 export { ContextualNav } from "./ContextualNav";
 export type { ContextualNavProps } from "./ContextualNav";
+
+export { NavItemIcon } from "./NavItemIcon";
+export type { NavItemIconProps } from "./NavItemIcon";
+export {
+  NAV_ICON_SIZE,
+  NAV_ICON_STROKE_WIDTH,
+  NAV_ICON_VIEW_BOX,
+  navIconNames,
+  resolveNavIconName,
+  type NavIconName,
+} from "./nav-icons";
 
 export type { ShellNavItem, ProductSwitcherItem, BreadcrumbItem, UserMenuItem } from "./navigation";
 

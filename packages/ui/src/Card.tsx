@@ -15,14 +15,16 @@ export function Card({ title, children }: CardProps) {
         padding: themeTokens.spacing.lg,
         background: themeTokens.color.surface,
         boxShadow: themeTokens.shadow.sm,
+        display: "grid",
+        gap: themeTokens.spacing.sm,
       }}
     >
       {title ? (
         <h3
           style={{
-            marginTop: 0,
-            marginBottom: themeTokens.spacing.md,
-            fontSize: themeTokens.typography.size.lg,
+            margin: 0,
+            fontSize: themeTokens.typography.size.md,
+            fontWeight: themeTokens.typography.weight.semibold,
             lineHeight: themeTokens.typography.lineHeight.tight,
           }}
         >

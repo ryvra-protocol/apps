@@ -1,0 +1,371 @@
+"use client";
+
+import type { RuntimeMode } from "@ryvra/config";
+import { Button, Card, themeTokens } from "@ryvra/ui";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  buildClaimRequestContext,
+  createClaimIdempotencyKey,
+  createClaimSubmissionLock,
+  createClientGeneratedId,
+  formatClaimErrorMeta,
+  getFingerprintAriaLabel,
+  normalizeClaimErrorEnvelope,
+  resolveClaimConfirmationDelay,
+  transitionClaimUiState,
+  type ClaimAvailability,
+  type ClaimErrorEnvelope,
+  type ClaimPayoutCandidate,
+  type ClaimUiState,
+} from "../lib/claim-ux";
+import { formatCurrencyMinor } from "../lib/format";
+import { StatusBadge } from "./status-badge";
+
+interface ClaimResponseData {
+  intentId?: string;
+  state?: string;
+  requestId?: string;
+  correlationId?: string;
+}
+
+interface ClaimFingerprintCardClientProps {
+  mode: RuntimeMode;
+  payout: ClaimPayoutCandidate | null;
+  availability: ClaimAvailability;
+}
+
+export function ClaimFingerprintCardClient({ mode, payout, availability }: ClaimFingerprintCardClientProps) {
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [uiState, setUiState] = useState<ClaimUiState>("idle");
+  const [idempotencyKey, setIdempotencyKey] = useState(() => (payout ? createClaimIdempotencyKey(payout.id) : ""));
+  const [error, setError] = useState<ClaimErrorEnvelope | null>(null);
+  const [successData, setSuccessData] = useState<ClaimResponseData | null>(null);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
+  const lockRef = useRef(createClaimSubmissionLock());
+  const confirmationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const updateMotionPreference = () => setPrefersReducedMotion(mediaQuery.matches);
+
+    updateMotionPreference();
+
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", updateMotionPreference);
+      return () => mediaQuery.removeEventListener("change", updateMotionPreference);
+    }
+
+    mediaQuery.addListener(updateMotionPreference);
+    return () => mediaQuery.removeListener(updateMotionPreference);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (confirmationTimerRef.current) {
+        clearTimeout(confirmationTimerRef.current);
+      }
+    };
+  }, []);
+
+  const disabled = !availability.enabled || !payout;
+
+  const confirmationHint = useMemo(
+    () =>
+      prefersReducedMotion
+        ? "Reduced motion is enabled, so confirmation submits immediately after tap."
+        : "Tap the fingerprint control to confirm before submit.",
+    [prefersReducedMotion],
+  );
+
+  const resetFlow = (closePanel = false) => {
+    if (confirmationTimerRef.current) {
+      clearTimeout(confirmationTimerRef.current);
+      confirmationTimerRef.current = null;
+    }
+
+    lockRef.current.release();
+    setUiState("idle");
+    setError(null);
+    setSuccessData(null);
+
+    if (closePanel) {
+      setPanelOpen(false);
+    }
+  };
+
+  const openPanel = () => {
+    if (disabled || !payout) {
+      return;
+    }
+
+    resetFlow(false);
+    setPanelOpen(true);
+    setIdempotencyKey(createClaimIdempotencyKey(payout.id));
+  };
+
+  const submitClaim = async () => {
+    if (!payout || disabled) {
+      return;
+    }
+
+    if (!lockRef.current.acquire()) {
+      return;
+    }
+
+    setUiState((current) => transitionClaimUiState(current, "SUBMIT"));
+
+    const requestId = createClientGeneratedId("req");
+    const correlationId = createClientGeneratedId("corr");
+    const requestContext = buildClaimRequestContext(idempotencyKey, requestId, correlationId);
+
+    try {
+      const response = await fetch("/api/claims/payout", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-request-id": requestContext.requestId,
+          "x-correlation-id": requestContext.correlationId,
+        },
+        body: JSON.stringify({
+          payout,
+          idempotencyKey: requestContext.idempotencyKey,
+        }),
+      });
+
+      const payload = (await response.json().catch(() => null)) as { data?: ClaimResponseData; error?: unknown } | null;
+
+      if (!response.ok) {
+        const normalizedError = normalizeClaimErrorEnvelope(payload?.error ?? payload ?? undefined, requestId, correlationId);
+        setError(normalizedError);
+        setUiState((current) => transitionClaimUiState(current, "FAILURE"));
+        return;
+      }
+
+      setSuccessData(payload?.data ?? {});
+      setUiState((current) => transitionClaimUiState(current, "SUCCESS"));
+      setError(null);
+    } catch (submissionError) {
+      const normalizedError = normalizeClaimErrorEnvelope(submissionError, requestId, correlationId);
+      setError(normalizedError);
+      setUiState((current) => transitionClaimUiState(current, "FAILURE"));
+    } finally {
+      lockRef.current.release();
+    }
+  };
+
+  const beginConfirmation = () => {
+    if (disabled || !payout || uiState === "submitting") {
+      return;
+    }
+
+    if (confirmationTimerRef.current) {
+      clearTimeout(confirmationTimerRef.current);
+      confirmationTimerRef.current = null;
+    }
+
+    setUiState((current) => transitionClaimUiState(current, "START_CONFIRM"));
+    setError(null);
+
+    const delay = resolveClaimConfirmationDelay(prefersReducedMotion);
+    if (delay === 0) {
+      void submitClaim();
+      return;
+    }
+
+    confirmationTimerRef.current = setTimeout(() => {
+      void submitClaim();
+    }, delay);
+  };
+
+  const stateMessage =
+    uiState === "confirming"
+      ? "Confirming claim"
+      : uiState === "submitting"
+        ? "Submitting claim"
+        : uiState === "success"
+          ? "Claim submitted"
+          : uiState === "failure"
+            ? "Claim failed"
+            : "Awaiting confirmation";
+
+  return (
+    <Card title="Claim">
+      <style>{`
+        .pay-claim-shell {
+          display: grid;
+          gap: ${themeTokens.spacing.md};
+        }
+
+        .pay-claim-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: ${themeTokens.spacing.sm};
+        }
+
+        .pay-claim-cta {
+          align-self: flex-start;
+        }
+
+        .pay-claim-disabled-note {
+          margin: 0;
+          color: ${themeTokens.color.textMuted};
+          font-size: ${themeTokens.typography.size.sm};
+        }
+
+        .pay-claim-panel {
+          border: 1px solid ${themeTokens.color.borderStrong};
+          border-radius: ${themeTokens.radius.md};
+          padding: ${themeTokens.spacing.md};
+          background: ${themeTokens.color.surfaceMuted};
+          display: grid;
+          gap: ${themeTokens.spacing.md};
+        }
+
+        .pay-claim-fingerprint {
+          border: 1px solid ${themeTokens.color.borderStrong};
+          background: ${themeTokens.color.surface};
+          border-radius: 9999px;
+          min-height: 3.2rem;
+          min-width: 3.2rem;
+          padding: ${themeTokens.spacing.md};
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          font-size: ${themeTokens.typography.size.sm};
+          font-weight: ${themeTokens.typography.weight.semibold};
+          cursor: pointer;
+          color: ${themeTokens.color.text};
+          transition: transform ${themeTokens.motion.fast} ease, border-color ${themeTokens.motion.standard} ease, background-color ${themeTokens.motion.standard} ease;
+        }
+
+        .pay-claim-fingerprint:hover {
+          border-color: ${themeTokens.color.primary};
+          background: ${themeTokens.color.surfaceStrong};
+        }
+
+        .pay-claim-fingerprint:active {
+          transform: translateY(1px);
+        }
+
+        .pay-claim-fingerprint:focus-visible {
+          outline: ${themeTokens.focusRing.width} solid ${themeTokens.color.focusRing};
+          outline-offset: ${themeTokens.focusRing.offset};
+        }
+
+        .pay-claim-fingerprint[aria-busy='true'] {
+          cursor: progress;
+        }
+
+        .pay-claim-meta {
+          margin: 0;
+          color: ${themeTokens.color.textMuted};
+          font-size: ${themeTokens.typography.size.sm};
+        }
+      `}</style>
+      <div className="pay-claim-shell">
+        <div className="pay-claim-row">
+          <p style={{ margin: 0, color: themeTokens.color.textMuted, fontSize: themeTokens.typography.size.sm }}>Mode: {mode.toUpperCase()}</p>
+          {payout ? <StatusBadge status={payout.status} /> : null}
+        </div>
+
+        {payout ? (
+          <p style={{ margin: 0 }}>
+            Claim candidate: <strong>{payout.id}</strong> • {formatCurrencyMinor(payout.amountMinor, payout.currency)} • {payout.destinationLabel}
+          </p>
+        ) : (
+          <p style={{ margin: 0 }}>No payout currently qualifies for claim submission.</p>
+        )}
+
+        <div className="pay-claim-cta">
+          <Button
+            type="button"
+            onClick={openPanel}
+            disabled={disabled}
+            aria-describedby={disabled ? "pay-claim-disabled-reason" : undefined}
+          >
+            Claim
+          </Button>
+        </div>
+
+        {disabled && availability.reason ? (
+          <p id="pay-claim-disabled-reason" className="pay-claim-disabled-note">
+            {availability.reason}
+          </p>
+        ) : null}
+
+        {panelOpen ? (
+          <section className="pay-claim-panel" aria-label="Claim confirmation panel">
+            <h4 style={{ margin: 0, fontSize: themeTokens.typography.size.md }}>Fingerprint-style confirmation</h4>
+            <p id="pay-claim-legal-copy" style={{ margin: 0, fontSize: themeTokens.typography.size.sm }}>
+              Fingerprint-style confirmation is a UI interaction, not biometric verification.
+            </p>
+            <p id="pay-claim-hint" className="pay-claim-meta">
+              {confirmationHint}
+            </p>
+
+            <div className="pay-claim-row">
+              <button
+                type="button"
+                className="pay-claim-fingerprint"
+                onClick={beginConfirmation}
+                disabled={uiState === "submitting"}
+                aria-label={getFingerprintAriaLabel(uiState)}
+                aria-describedby="pay-claim-legal-copy pay-claim-hint pay-claim-state"
+                aria-busy={uiState === "submitting" ? "true" : "false"}
+              >
+                Tap fingerprint
+              </button>
+
+              <Button type="button" variant="secondary" onClick={() => resetFlow(true)} disabled={uiState === "submitting"}>
+                Cancel
+              </Button>
+            </div>
+
+            <p id="pay-claim-state" role="status" aria-live="polite" className="pay-claim-meta">
+              {stateMessage}
+            </p>
+
+            {uiState === "success" ? (
+              <div role="status" aria-live="polite" style={{ display: "grid", gap: themeTokens.spacing.xs }}>
+                <p style={{ margin: 0 }}>Claim submitted.</p>
+                <p className="pay-claim-meta" style={{ margin: 0 }}>
+                  Intent: {successData?.intentId ?? "n/a"} • State: {successData?.state ?? "created"}
+                </p>
+                <p className="pay-claim-meta" style={{ margin: 0 }}>
+                  Request: {successData?.requestId ?? "n/a"} • Correlation: {successData?.correlationId ?? "n/a"}
+                </p>
+                <Button type="button" variant="secondary" onClick={() => resetFlow(true)}>
+                  Close
+                </Button>
+              </div>
+            ) : null}
+
+            {uiState === "failure" && error ? (
+              <div role="alert" aria-live="assertive" style={{ display: "grid", gap: themeTokens.spacing.xs }}>
+                <p style={{ margin: 0 }}>{error.message}</p>
+                <p className="pay-claim-meta" style={{ margin: 0 }}>
+                  {formatClaimErrorMeta(error)}
+                </p>
+                <p className="pay-claim-meta" style={{ margin: 0 }}>
+                  Request: {error.requestId} • Correlation: {error.correlationId}
+                </p>
+                {error.retryable ? (
+                  <Button type="button" variant="secondary" onClick={() => void submitClaim()}>
+                    Retry claim
+                  </Button>
+                ) : null}
+              </div>
+            ) : null}
+          </section>
+        ) : null}
+      </div>
+    </Card>
+  );
+}

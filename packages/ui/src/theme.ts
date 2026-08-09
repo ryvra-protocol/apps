@@ -1,6 +1,6 @@
 export const themeTokens = {
   color: {
-    background: "#f4f6fb",
+    background: "#f3f5fb",
     surface: "#ffffff",
     surfaceMuted: "#f8fafc",
     surfaceStrong: "#eef2ff",
@@ -14,8 +14,11 @@ export const themeTokens = {
     borderStrong: "#c3d0e3",
     focusRing: "#2563eb",
     success: "#047857",
+    successSurface: "#ecfdf5",
     warning: "#b45309",
+    warningSurface: "#fff7ed",
     danger: "#b91c1c",
+    dangerSurface: "#fef2f2",
     disabledBackground: "#f1f5f9",
     disabledText: "#94a3b8",
   },
