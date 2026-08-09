@@ -1,6 +1,7 @@
 import type { PayOverviewDto } from "@ryvra/domain-payments";
 import type { RuntimeMode } from "@ryvra/config";
-import { Card, DataTable, Section, themeTokens } from "@ryvra/ui";
+import type { UnifiedBalanceCardProps } from "@ryvra/ui";
+import { Card, DataTable, Section, UnifiedBalanceCard, themeTokens } from "@ryvra/ui";
 import { formatCurrencyMinor, formatDateTime } from "../lib/format";
 import { ModeBadge } from "./mode-badge";
 import { StatusBadge } from "./status-badge";
@@ -10,9 +11,10 @@ interface PayOverviewContentProps {
   description: string;
   mode: RuntimeMode;
   overview: PayOverviewDto;
+  unifiedBalanceCard: UnifiedBalanceCardProps;
 }
 
-export function PayOverviewContent({ title, description, mode, overview }: PayOverviewContentProps) {
+export function PayOverviewContent({ title, description, mode, overview, unifiedBalanceCard }: PayOverviewContentProps) {
   return (
     <section style={{ display: "grid", gap: themeTokens.spacing.lg }}>
       <Section title={title} description={description}>
@@ -70,6 +72,8 @@ export function PayOverviewContent({ title, description, mode, overview }: PayOv
             emptyMessage="No recent pay activity available."
           />
         </Card>
+
+        <UnifiedBalanceCard {...unifiedBalanceCard} />
       </Section>
     </section>
   );

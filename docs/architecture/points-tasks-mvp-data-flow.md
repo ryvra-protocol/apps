@@ -21,9 +21,11 @@ Canonical references (`ryvra-protocol/protocol-core`, default branch):
 - `/points`
   - `pointsTasksClient.listPointEntries({ accountId, userId?, workspaceId?, filters?, pagination?, sort? })`
   - `pointsTasksClient.getPointSummary({ accountId, userId?, workspaceId?, window?, dateRange? })`
+  - `pointsTasksClient.getDailyClaimStatus({ accountId, userId?, workspaceId? })` (read-only status, provisional route)
 - `/tasks`
   - `pointsTasksClient.listTasks({ accountId, userId?, workspaceId?, filters?, pagination?, sort? })`
   - `pointsTasksClient.getTaskSummary({ accountId, userId?, workspaceId? })`
+  - `pointsTasksClient.getPointSummary({ accountId, userId?, workspaceId? })` (tasks-page balance card reuse)
 - `/status`
   - `pointsTasksClient.getParityDiagnostics()`
 
@@ -71,7 +73,17 @@ Normalized Points/Tasks errors are canonical-only:
 
 - overview/dashboard render canonical overview KPIs and activity summaries
 - points/tasks routes serialize canonical filter/sort/pagination params
+- `/points` renders points balance + daily-claim status module with disabled CTA reasons when claim execution is unavailable
+- `/tasks` renders tasks summary plus account-scoped points balance card via shared points-summary request builder
 - status route renders canonical contract provenance (OpenAPI path/changelog/SHA/commit/version) plus connectivity probe behavior
+
+## Daily claim Phase 12B guardrails
+
+- Daily claim in this phase is read/invoke-safe only:
+  - status comes from provisional read endpoint (`GET /points-tasks/eligibility`)
+  - no pay-intent write submission is introduced from Points/Tasks (`POST /pay/intents` not wired here)
+- Endpoint unavailability is surfaced with explicit disabled CTA reason + retry when retryable.
+- Cooldown/already-claimed states include next-eligible timestamp when provided.
 
 ## Migration notes
 

@@ -35,7 +35,7 @@ import type {
   TasksListResponse,
   TasksOverviewDto,
 } from "@ryvra/domain-tasks";
-import type { ConversionPreviewDto, EligibilityResult } from "@ryvra/domain-tokenomics";
+import type { ConversionPreviewDto, DailyClaimStateDto } from "@ryvra/domain-tokenomics";
 import { payCanonicalPaymentIntentStates } from "./pay-parity";
 import {
   POINTS_TASKS_CANONICAL_API_VERSION,
@@ -2592,11 +2592,61 @@ export function createMockTransport(): Transport {
       }
 
       if (request.method === "GET" && pathname === "/points-tasks/eligibility") {
-        const eligibility: EligibilityResult = {
-          eligible: true,
-          reasonCode: "mock-mode",
-        };
-        return success(eligibility as T);
+        const accountId = getParam(searchParams, "account_id") ?? "acct-core-1";
+        const userId = getParam(searchParams, "user_id");
+        const workspaceId = getParam(searchParams, "workspace_id");
+
+        let claimState: DailyClaimStateDto;
+
+        if (accountId === "acct-core-1") {
+          claimState = {
+            accountId,
+            ...(userId ? { userId } : {}),
+            ...(workspaceId ? { workspaceId } : {}),
+            eligible: false,
+            status: "cooldown",
+            reasonCode: "cooldown_active",
+            claimedAt: "2026-08-08T08:00:00.000Z",
+            nextEligibleAt: "2026-08-09T08:00:00.000Z",
+            invokeEndpointAvailable: false,
+          };
+        } else if (accountId === "acct-core-2") {
+          claimState = {
+            accountId,
+            ...(userId ? { userId } : {}),
+            ...(workspaceId ? { workspaceId } : {}),
+            eligible: false,
+            status: "already_claimed",
+            reasonCode: "already_claimed_today",
+            claimedAt: "2026-08-09T01:10:00.000Z",
+            nextEligibleAt: "2026-08-10T00:00:00.000Z",
+            invokeEndpointAvailable: false,
+          };
+        } else {
+          claimState = {
+            accountId,
+            ...(userId ? { userId } : {}),
+            ...(workspaceId ? { workspaceId } : {}),
+            eligible: true,
+            status: "available",
+            reasonCode: "claim_available",
+            invokeEndpointAvailable: false,
+          };
+        }
+
+        return success(
+          {
+            account_id: claimState.accountId,
+            ...(typeof claimState.userId === "undefined" ? {} : { user_id: claimState.userId }),
+            ...(typeof claimState.workspaceId === "undefined" ? {} : { workspace_id: claimState.workspaceId }),
+            eligible: claimState.eligible,
+            status: claimState.status,
+            ...(claimState.reasonCode ? { reason_code: claimState.reasonCode } : {}),
+            ...(typeof claimState.claimedAt === "undefined" ? {} : { claimed_at: claimState.claimedAt }),
+            ...(typeof claimState.nextEligibleAt === "undefined" ? {} : { next_eligible_at: claimState.nextEligibleAt }),
+            invoke_endpoint_available: claimState.invokeEndpointAvailable,
+          } as T,
+        );
       }
 
       if (request.method === "POST" && pathname === "/points-tasks/conversion/preview") {

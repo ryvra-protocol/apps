@@ -139,6 +139,7 @@ Contract behavior notes:
 - Points/Tasks HTTP errors are normalized to canonical envelope (`code`, `message`, `retryable`, `source`, optional `details`)
 - deprecated payload aliases are accepted only where canonical compatibility allows
 - runtime config now fails fast in `http` mode if `RYVRA_POINTS_TASKS_AUTH_TOKEN` is missing
+- `/points` daily-claim module uses read-only status metadata; if claim execution endpoint is unavailable, CTA stays disabled with explicit reason/retry guidance
 
 Optional smoke-test guard:
 
@@ -166,6 +167,12 @@ Phase 12A UX note:
 - `/pay/payouts` now includes a fingerprint-style **UI-only** claim confirmation flow (no WebAuthn).
 - Claim submission uses canonical pay client write path (`createPaymentIntent` -> `POST /pay/intents`) with idempotency + request/correlation IDs.
 
+Phase 12B UI/data-flow note:
+
+- Pay dashboard/overview now render a shared **Unified Balance** card backed by read-only Markets positions data.
+- Unified balance scope in Pay uses `RYVRA_MARKETS_ACCOUNT_ID` (mock fallback supported).
+- No new pay write wiring was introduced for Points daily claim in this phase (deferred to Phase 12.5B).
+
 ### Environment variables
 
 Core mode/base URL:
@@ -185,6 +192,8 @@ Pay parity/auth/header controls:
 - `RYVRA_PAY_CONNECTIVITY_PATH` (default probe: `/health`, fallback `/pay/overview`)
 - `RYVRA_PAY_COMPATIBILITY_VERSION` (optional override)
 - `RYVRA_PAY_PARITY_CHECK_MARKER` (optional override)
+- `RYVRA_MARKETS_ACCOUNT_ID` (required in `http` mode to load Pay unified-balance card)
+- `RYVRA_MARKETS_AUTH_TOKEN` (optional if distinct from pay auth token; required when Markets read routes need separate auth)
 
 Optional smoke-test guard:
 
@@ -255,5 +264,6 @@ See `docs/architecture/` for boundaries, responsibilities, and integration mappi
 - `docs/architecture/pay-integration-parity.md`
 - `docs/architecture/claim-ux-fingerprint-phase-12a.md`
 - `docs/architecture/points-tasks-mvp-data-flow.md`
+- `docs/architecture/unified-balance-and-daily-claim-phase-12b.md`
 - `docs/architecture/points-tasks-integration-parity.md`
 - `docs/architecture/release-readiness-checklist.md`

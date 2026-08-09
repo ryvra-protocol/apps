@@ -2,6 +2,7 @@ import { Section, themeTokens } from "@ryvra/ui";
 import { ErrorState, UnauthorizedState } from "./components/page-states";
 import { PayOverviewContent } from "./components/pay-overview-content";
 import { createPayRuntimeContext, capturePayPageError } from "./lib/runtime";
+import { loadPayUnifiedBalanceCard } from "./lib/unified-balance";
 
 export default async function PayHomePage() {
   const runtime = createPayRuntimeContext("pay-web:dashboard");
@@ -17,7 +18,20 @@ export default async function PayHomePage() {
   }
 
   try {
-    const overview = await runtime.payClient.getPayOverview();
+    const [overview, unifiedBalanceCard] = await Promise.all([
+      runtime.payClient.getPayOverview(),
+      loadPayUnifiedBalanceCard({
+        marketsClient: runtime.marketsClient,
+        logger: runtime.logger,
+        accountId: runtime.marketsAccountId,
+        route: "/",
+      }),
+    ]);
+
+    runtime.logger.info("Loaded unified balance for pay dashboard", {
+      accountId: runtime.marketsAccountId ?? "missing",
+      state: unifiedBalanceCard.state,
+    });
 
     runtime.logger.info("Loaded pay dashboard overview", {
       mode: runtime.config.mode,
@@ -30,6 +44,7 @@ export default async function PayHomePage() {
         description="MVP finance metrics and recent invoice/payout/reconciliation activity."
         mode={runtime.config.mode}
         overview={overview}
+        unifiedBalanceCard={unifiedBalanceCard}
       />
     );
   } catch (error) {

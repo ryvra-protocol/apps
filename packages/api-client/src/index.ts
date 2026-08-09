@@ -3,6 +3,24 @@ export { createFetchTransport } from "./transport";
 export { createMockTransport } from "./mock-transport";
 export { ApiClientError, normalizeApiError } from "./errors";
 export {
+  aggregateUnifiedBalance,
+  createUnifiedBalanceDisplayModel,
+  createUnifiedBalanceDisplayModelFromPositions,
+  formatUnifiedBalanceChain,
+  formatUnifiedBalanceQuantity,
+  formatUnifiedBalanceValue,
+  mapPositionsToUnifiedBalanceRows,
+  resolveUnifiedBalanceAccountId,
+} from "./unified-balance";
+export type {
+  UnifiedBalanceAggregation,
+  UnifiedBalanceDisplayModel,
+  UnifiedBalanceDisplayRow,
+  UnifiedBalanceRow,
+  UnifiedBalanceSource,
+  UnifiedBalanceSourceRow,
+} from "./unified-balance";
+export {
   MARKETS_PARITY_CHECK_MARKER,
   MARKETS_PROTOCOL_CHANGELOG_PATH,
   MARKETS_PROTOCOL_COMPATIBILITY_VERSION,

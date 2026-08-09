@@ -1,4 +1,10 @@
-import { ApiClientError, createPayClient, type PayClient } from "@ryvra/api-client";
+import {
+  ApiClientError,
+  createApiClient,
+  resolveUnifiedBalanceAccountId,
+  type MarketsClient,
+  type PayClient,
+} from "@ryvra/api-client";
 import { createStubAuthGuard, Role, type AuthDecision, type Session } from "@ryvra/auth";
 import { loadPayConfig, type AppConfig } from "@ryvra/config";
 import { createConsoleLogger, mapErrorToTaxonomy, type Logger } from "@ryvra/observability";
@@ -8,6 +14,8 @@ export interface PayRuntimeContext {
   logger: Logger;
   authDecision: AuthDecision;
   payClient: PayClient;
+  marketsClient: MarketsClient;
+  marketsAccountId?: string;
 }
 
 export interface PayUiError {
@@ -34,29 +42,49 @@ export function createPayRuntimeContext(scope: string): PayRuntimeContext {
   const connectivityPath = getOptionalEnvValue("RYVRA_PAY_CONNECTIVITY_PATH");
   const payCompatibilityVersion = getOptionalEnvValue("RYVRA_PAY_COMPATIBILITY_VERSION");
   const payParityCheckMarker = getOptionalEnvValue("RYVRA_PAY_PARITY_CHECK_MARKER");
+  const marketsAuthToken = getOptionalEnvValue("RYVRA_MARKETS_AUTH_TOKEN") ?? authToken;
+  const marketsAuthScheme = getOptionalEnvValue("RYVRA_MARKETS_AUTH_SCHEME") ?? authScheme;
+  const marketsRequestIdHeader = getOptionalEnvValue("RYVRA_MARKETS_REQUEST_ID_HEADER") ?? requestIdHeader;
+  const marketsCorrelationIdHeader = getOptionalEnvValue("RYVRA_MARKETS_CORRELATION_ID_HEADER") ?? correlationIdHeader;
+  const marketsConnectivityPath = getOptionalEnvValue("RYVRA_MARKETS_CONNECTIVITY_PATH");
+  const marketsAccountId = resolveUnifiedBalanceAccountId({
+    configuredAccountId: getOptionalEnvValue("RYVRA_MARKETS_ACCOUNT_ID"),
+    mode: config.mode,
+  });
   const session: Session = {
     user: { id: "local-member", roles: [Role.Member] },
     issuedAt: new Date().toISOString(),
   };
+  const apiClient = createApiClient({
+    mode: config.mode,
+    baseUrl: config.apiBaseUrl,
+    pay: {
+      ...(authToken ? { authToken } : {}),
+      ...(authScheme ? { authScheme } : {}),
+      ...(requestIdHeader ? { requestIdHeader } : {}),
+      ...(correlationIdHeader ? { correlationIdHeader } : {}),
+      ...(idempotencyHeader ? { idempotencyHeader } : {}),
+      ...(connectivityPath ? { connectivityPath } : {}),
+    },
+    markets: {
+      ...(marketsAuthToken ? { authToken: marketsAuthToken } : {}),
+      ...(marketsAuthScheme ? { authScheme: marketsAuthScheme } : {}),
+      ...(marketsRequestIdHeader ? { requestIdHeader: marketsRequestIdHeader } : {}),
+      ...(marketsCorrelationIdHeader ? { correlationIdHeader: marketsCorrelationIdHeader } : {}),
+      ...(marketsConnectivityPath ? { connectivityPath: marketsConnectivityPath } : {}),
+      ...(marketsAccountId ? { defaultAccountId: marketsAccountId } : {}),
+    },
+    ...(payCompatibilityVersion ? { payCompatibilityVersion } : {}),
+    ...(payParityCheckMarker ? { payParityCheckMarker } : {}),
+  });
 
   return {
     config,
     logger,
     authDecision: authGuard.authorize(session),
-    payClient: createPayClient({
-      mode: config.mode,
-      baseUrl: config.apiBaseUrl,
-      pay: {
-        ...(authToken ? { authToken } : {}),
-        ...(authScheme ? { authScheme } : {}),
-        ...(requestIdHeader ? { requestIdHeader } : {}),
-        ...(correlationIdHeader ? { correlationIdHeader } : {}),
-        ...(idempotencyHeader ? { idempotencyHeader } : {}),
-        ...(connectivityPath ? { connectivityPath } : {}),
-      },
-      ...(payCompatibilityVersion ? { payCompatibilityVersion } : {}),
-      ...(payParityCheckMarker ? { payParityCheckMarker } : {}),
-    }),
+    payClient: apiClient.pay,
+    marketsClient: apiClient.markets,
+    ...(marketsAccountId ? { marketsAccountId } : {}),
   };
 }
 

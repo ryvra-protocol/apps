@@ -61,6 +61,22 @@
 - Claim submissions flow through `app/api/claims/payout/route.ts` and call `payClient.createPaymentIntent(...)` -> `POST /pay/intents` with idempotency key + request/correlation IDs attached on every write request.
 - In `http` mode, claim submission is disabled unless `RYVRA_PAY_AUTH_TOKEN` is configured; UI always shows an explicit reason when claim is disabled.
 
+## Phase 12B additions: unified balance + points daily-claim read flow
+
+- Shared **Unified Balance Card** is now consumed by both:
+  - `apps/markets-web` (dashboard + overview)
+  - `apps/pay-web` (dashboard + overview)
+- Unified balance data source is read-only and account-scoped:
+  - `marketsClient.listPositions({ account_id })`
+  - deterministic aggregation + formatting from shared `@ryvra/api-client` helpers (`unified-balance.ts`)
+- Pay app unified-balance scope uses `RYVRA_MARKETS_ACCOUNT_ID` (or mock fallback) and surfaces explicit scope errors when missing/mismatched.
+- `apps/points-tasks-web` now includes:
+  - points balance card on `/points`
+  - points balance card on `/tasks` via shared points-summary request builder
+  - `/points` daily-claim module driven by read-only status (`pointsTasksClient.getDailyClaimStatus`) with guarded fallback when endpoint is unavailable.
+- Daily-claim endpoint path remains provisional (`GET /points-tasks/eligibility`) and is treated as read-only status metadata (no write execution).
+- **Explicit deferral:** Phase 12B does not add or wire pay write-intent execution (`POST /pay/intents` / transition writes) for daily claim; that remains deferred to Phase 12.5B.
+
 ## Pay source-of-truth linkage (`ryvra-protocol/pay`)
 
 - Canonical source files currently define domain/service contracts (no published HTTP router/spec yet):

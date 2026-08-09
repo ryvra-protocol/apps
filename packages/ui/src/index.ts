@@ -13,6 +13,9 @@ export type { DataTableColumn, DataTableProps } from "./DataTable";
 export { StatusBadge } from "./StatusBadge";
 export type { StatusBadgeProps } from "./StatusBadge";
 
+export { UnifiedBalanceCard } from "./UnifiedBalanceCard";
+export type { UnifiedBalanceCardProps, UnifiedBalanceCardRow, UnifiedBalanceCardState } from "./UnifiedBalanceCard";
+
 export { AppShell } from "./AppShell";
 export type { AppShellProps } from "./AppShell";
 

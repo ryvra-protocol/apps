@@ -1,13 +1,15 @@
 import type {
   PointEntryFilters,
   PointsAccountScopedListRequest,
-  PointsSummaryRequest,
 } from "@ryvra/domain-points";
 import { Card, Section, themeTokens } from "@ryvra/ui";
 import { EmptyState, ErrorState, UnauthorizedState } from "../components/page-states";
 import { PointsTableClient } from "../components/points-table-client";
+import { DailyClaimCard } from "../components/daily-claim-card";
 import { ModeBadge } from "../components/mode-badge";
 import { formatNumber } from "../lib/format";
+import { buildDailyClaimViewModel } from "../lib/daily-claim";
+import { buildPointsSummaryRequest, resolvePointsBalance } from "../lib/points-balance";
 import {
   parseAccountId,
   parseCursor,
@@ -101,18 +103,41 @@ export default async function PointsPage({ searchParams }: PointsPageProps) {
     }
 
     const window = parsePointsWindow(searchParams);
-    const summaryRequest: PointsSummaryRequest = {
+    const summaryRequest = buildPointsSummaryRequest({
       accountId: request.accountId,
       ...(request.userId ? { userId: request.userId } : {}),
       ...(request.workspaceId ? { workspaceId: request.workspaceId } : {}),
       ...(request.filters?.dateRange ? { dateRange: request.filters.dateRange } : {}),
       ...(window ? { window } : {}),
-    };
+    });
 
-    const [pointsList, summary] = await Promise.all([
+    const [pointsList, summary, dailyClaim] = await Promise.all([
       runtime.pointsTasksClient.listPointEntries(request),
       runtime.pointsTasksClient.getPointSummary(summaryRequest),
+      runtime.pointsTasksClient
+        .getDailyClaimStatus(summaryRequest)
+        .then((claimState) =>
+          buildDailyClaimViewModel({
+            claimState,
+            nowIso: new Date().toISOString(),
+            claimStatusEndpointAvailable: true,
+            expectedAccountId: request.accountId,
+          }),
+        )
+        .catch((error) => {
+          const uiError = capturePointsTasksPageError(runtime.logger, "/points/daily-claim", error);
+          return buildDailyClaimViewModel({
+            nowIso: new Date().toISOString(),
+            claimStatusEndpointAvailable: false,
+            expectedAccountId: request.accountId,
+            endpointErrorMessage: uiError.message,
+            endpointRetryable: uiError.retryable,
+            retryHref: `/points?account_id=${encodeURIComponent(request.accountId)}`,
+          });
+        }),
     ]);
+
+    const pointsBalance = resolvePointsBalance(summary);
 
     runtime.logger.info("Loaded points ledger data", {
       mode: runtime.config.mode,
@@ -133,11 +158,11 @@ export default async function PointsPage({ searchParams }: PointsPageProps) {
           </div>
 
           <div style={{ display: "grid", gap: themeTokens.spacing.md, gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))" }}>
+            <Card title="Points balance">
+              <p style={{ margin: 0 }}>{formatNumber(pointsBalance)}</p>
+            </Card>
             <Card title="Total points">
               <p style={{ margin: 0 }}>{formatNumber(summary.totalPoints)}</p>
-            </Card>
-            <Card title="Available">
-              <p style={{ margin: 0 }}>{formatNumber(summary.availablePoints)}</p>
             </Card>
             <Card title="Pending">
               <p style={{ margin: 0 }}>{formatNumber(summary.pendingPoints)}</p>
@@ -149,6 +174,8 @@ export default async function PointsPage({ searchParams }: PointsPageProps) {
               <p style={{ margin: 0 }}>{formatNumber(summary.entryCount, 0)}</p>
             </Card>
           </div>
+
+          <DailyClaimCard model={dailyClaim} />
 
           <PointsTableClient items={pointsList.items} pagination={pointsList.pagination} />
 

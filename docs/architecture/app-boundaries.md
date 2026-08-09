@@ -12,6 +12,7 @@ Define clear responsibility boundaries between the three frontend apps and share
 - Consumes canonical Markets contracts via `@ryvra/api-client` + `@ryvra/domain-markets`.
 - Must not implement protocol-level transport logic directly in pages/components.
 - Surfaces actionable runtime errors (including diagnostics/status failures) without bypassing shared guardrails.
+- Uses shared Unified Balance Card UX, while sourcing account-scoped asset rows via read-only `marketsClient.listPositions`.
 
 ### `apps/pay-web`
 
@@ -20,6 +21,8 @@ Define clear responsibility boundaries between the three frontend apps and share
 - Keeps write/transition behavior behind API client methods; no raw protocol payload crafting in UI layers.
 - Maintains parity diagnostics with explicit retry/error handling and shared request/correlation headers.
 - Fingerprint-style claim confirmation remains a UI interaction boundary only; identity/security remains session/token + server-side validation.
+- Uses the same shared Unified Balance Card component/formatting as Markets and consumes read-only Markets positions for cross-app parity.
+- Must surface account-scope issues for unified balance explicitly (non-silent).
 
 ### `apps/points-tasks-web`
 
@@ -27,6 +30,7 @@ Define clear responsibility boundaries between the three frontend apps and share
 - Consumes canonical Points/Tasks OpenAPI contracts via `@ryvra/api-client` + `@ryvra/domain-points`/`@ryvra/domain-tasks`.
 - Must not bypass shared parity/auth/scope guards with direct fetch calls.
 - Preserves canonical auth optionality: health-only route (`/points-tasks/status/health`) may bypass bearer auth; status/data routes may not.
+- Owns points balance and daily-claim status surfaces, including guarded fallback UX when the daily-claim status endpoint is provisional/unavailable.
 
 ## Shared packages
 
@@ -36,6 +40,7 @@ Define clear responsibility boundaries between the three frontend apps and share
 - Enforces canonical route mappings, auth requirements, scope guards, header policy, pagination/deprecation behavior, and error normalization.
 - Emits canonical request/correlation IDs for transport and diagnostics probes in both mock and http modes.
 - Exposes parity diagnostics metadata for status pages.
+- Hosts shared unified-balance aggregation/format helpers and provisional daily-claim read-status decoding used across apps.
 
 ### `@ryvra/domain-*`
 
@@ -83,6 +88,7 @@ Define clear responsibility boundaries between the three frontend apps and share
 - Re-defining canonical protocol enums/DTOs locally.
 - Re-implementing transport/parity/auth rules in page components.
 - Introducing per-app ad hoc error formats for protocol-backed routes.
+- Wiring new pay-intent write execution flows for Points daily claim in Phase 12B (explicitly deferred to Phase 12.5B).
 
 ## Change policy
 

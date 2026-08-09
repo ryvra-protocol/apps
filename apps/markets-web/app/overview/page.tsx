@@ -2,6 +2,7 @@ import { Section, themeTokens } from "@ryvra/ui";
 import { ErrorState, UnauthorizedState } from "../components/page-states";
 import { MarketsOverviewContent } from "../components/markets-overview-content";
 import { captureMarketsPageError, createMarketsRuntimeContext } from "../lib/runtime";
+import { loadMarketsUnifiedBalanceCard } from "../lib/unified-balance";
 
 export default async function MarketsOverviewPage() {
   const runtime = createMarketsRuntimeContext("markets-web:overview");
@@ -17,8 +18,38 @@ export default async function MarketsOverviewPage() {
   }
 
   try {
-    const overview = await runtime.marketsClient.getMarketsOverview({
-      accountId: runtime.defaultAccountId ?? "",
+    const accountId = runtime.defaultAccountId ?? "";
+    if (!accountId) {
+      return (
+        <section style={{ display: "grid", gap: themeTokens.spacing.lg }}>
+          <Section title="Markets Overview" description="Shared overview route with dashboard-consistent market metrics and activity.">
+            <ErrorState
+              title="Account scope is required"
+              message="Set RYVRA_MARKETS_ACCOUNT_ID before loading the unified balance and markets overview."
+              source="runtime"
+              retryable={false}
+              retryLink={{ href: "/overview", label: "Retry overview" }}
+            />
+          </Section>
+        </section>
+      );
+    }
+
+    const [overview, unifiedBalanceCard] = await Promise.all([
+      runtime.marketsClient.getMarketsOverview({
+        accountId,
+      }),
+      loadMarketsUnifiedBalanceCard({
+        marketsClient: runtime.marketsClient,
+        logger: runtime.logger,
+        accountId,
+        route: "/overview",
+      }),
+    ]);
+
+    runtime.logger.info("Loaded unified balance for markets overview", {
+      accountId,
+      state: unifiedBalanceCard.state,
     });
 
     runtime.logger.info("Loaded markets overview route", {
@@ -33,6 +64,7 @@ export default async function MarketsOverviewPage() {
         description="Shared overview route with dashboard-consistent market metrics and activity."
         mode={runtime.config.mode}
         overview={overview}
+        unifiedBalanceCard={unifiedBalanceCard}
       />
     );
   } catch (error) {
