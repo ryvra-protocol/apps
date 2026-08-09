@@ -1,6 +1,7 @@
 import type { ShellNavItem } from "./navigation";
 import { isCurrentRoute } from "./route-utils";
 import { ContextualNav } from "./ContextualNav";
+import { NavItemIcon } from "./NavItemIcon";
 
 export interface GlobalSidebarProps {
   globalNavItems: ShellNavItem[];
@@ -35,7 +36,10 @@ export function GlobalSidebar({
                   target={item.external ? "_blank" : undefined}
                   rel={item.external ? "noreferrer" : undefined}
                 >
-                  <span>{item.label}</span>
+                  <span className="ryvra-nav-link-content">
+                    <NavItemIcon itemId={item.id} />
+                    <span className="ryvra-nav-link-label">{item.label}</span>
+                  </span>
                   {item.badge ? <span className="ryvra-nav-badge">{item.badge}</span> : null}
                 </a>
               </li>

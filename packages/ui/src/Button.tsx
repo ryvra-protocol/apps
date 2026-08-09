@@ -7,26 +7,25 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
 }
 
-const variantStyles: Record<ButtonVariant, string> = {
-  primary: themeTokens.color.primary,
-  secondary: themeTokens.color.surface,
-};
-
 export function Button({ variant = "primary", style, ...props }: ButtonProps) {
-  const textColor = variant === "primary" ? themeTokens.color.textInverse : themeTokens.color.text;
-
   return (
     <>
       <style>{`
         .ryvra-ui-button {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: ${themeTokens.spacing.xs};
+          min-height: 2.5rem;
           font-family: ${themeTokens.typography.fontFamily};
           font-size: ${themeTokens.typography.size.sm};
           font-weight: ${themeTokens.typography.weight.medium};
           line-height: ${themeTokens.typography.lineHeight.normal};
           border-radius: ${themeTokens.radius.md};
           padding: ${themeTokens.spacing.sm} ${themeTokens.spacing.lg};
-          border: 1px solid ${themeTokens.color.borderStrong};
+          border: 1px solid transparent;
           cursor: pointer;
+          text-decoration: none;
           transition:
             background-color ${themeTokens.motion.standard} ease,
             color ${themeTokens.motion.standard} ease,
@@ -35,7 +34,27 @@ export function Button({ variant = "primary", style, ...props }: ButtonProps) {
             transform ${themeTokens.motion.fast} ease;
         }
 
-        .ryvra-ui-button:hover {
+        .ryvra-ui-button[data-variant='primary'] {
+          background: ${themeTokens.color.primary};
+          color: ${themeTokens.color.textInverse};
+          border-color: ${themeTokens.color.primary};
+          box-shadow: ${themeTokens.shadow.sm};
+        }
+
+        .ryvra-ui-button[data-variant='primary']:hover {
+          background: ${themeTokens.color.primaryHover};
+          border-color: ${themeTokens.color.primaryHover};
+        }
+
+        .ryvra-ui-button[data-variant='secondary'] {
+          background: ${themeTokens.color.surface};
+          color: ${themeTokens.color.text};
+          border-color: ${themeTokens.color.borderStrong};
+          box-shadow: ${themeTokens.shadow.sm};
+        }
+
+        .ryvra-ui-button[data-variant='secondary']:hover {
+          background: ${themeTokens.color.surfaceStrong};
           border-color: ${themeTokens.color.primary};
         }
 
@@ -52,21 +71,16 @@ export function Button({ variant = "primary", style, ...props }: ButtonProps) {
           background: ${themeTokens.color.disabledBackground};
           color: ${themeTokens.color.disabledText};
           border-color: transparent;
+          box-shadow: none;
           cursor: not-allowed;
+          transform: none;
         }
       `}</style>
       <button
         {...props}
+        data-variant={variant}
         className={["ryvra-ui-button", props.className].filter(Boolean).join(" ")}
-        style={{
-          borderColor: variant === "primary" ? themeTokens.color.primary : themeTokens.color.borderStrong,
-          borderRadius: themeTokens.radius.md,
-          padding: `${themeTokens.spacing.sm} ${themeTokens.spacing.lg}`,
-          background: variantStyles[variant],
-          color: textColor,
-          boxShadow: themeTokens.shadow.sm,
-          ...style,
-        }}
+        style={style}
       />
     </>
   );

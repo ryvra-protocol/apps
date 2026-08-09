@@ -57,6 +57,9 @@
 - query/filter parity in HTTP mode uses snake_case compatibility keys.
 - `/pay/status` displays mode, base URL, compatibility version, parity marker, and connectivity probe result.
 - `/pay/status` now renders explicit retryable error state when diagnostics cannot be loaded.
+- `/pay/payouts` now exposes a user-facing `Claim` CTA via `app/components/claim-fingerprint-card-client.tsx` with a UI-only fingerprint-style confirmation step (no WebAuthn).
+- Claim submissions flow through `app/api/claims/payout/route.ts` and call `payClient.createPaymentIntent(...)` -> `POST /pay/intents` with idempotency key + request/correlation IDs attached on every write request.
+- In `http` mode, claim submission is disabled unless `RYVRA_PAY_AUTH_TOKEN` is configured; UI always shows an explicit reason when claim is disabled.
 
 ## Pay source-of-truth linkage (`ryvra-protocol/pay`)
 

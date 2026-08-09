@@ -1,9 +1,11 @@
-import type { PayListRequest, PayoutFilters } from "@ryvra/domain-payments";
+import type { PayListRequest, PayoutDto, PayoutFilters } from "@ryvra/domain-payments";
 import { Card, Section, themeTokens } from "@ryvra/ui";
+import { ClaimFingerprintCardClient } from "../components/claim-fingerprint-card-client";
 import { ModeBadge } from "../components/mode-badge";
 import { EmptyState, ErrorState, UnauthorizedState } from "../components/page-states";
 import { PayoutsTableClient } from "../components/payouts-table-client";
 import { formatCurrencyMinor } from "../lib/format";
+import { resolveClaimAvailability, type ClaimPayoutCandidate } from "../lib/claim-ux";
 import {
   parseDateRange,
   parsePage,
@@ -20,6 +22,11 @@ interface PayPayoutsPageProps {
 }
 
 export const dynamic = "force-dynamic";
+
+function getOptionalEnvValue(key: string): string | undefined {
+  const value = process.env[key]?.trim();
+  return value && value.length > 0 ? value : undefined;
+}
 
 function buildPayoutRequest(searchParams: RouteSearchParams): PayListRequest<PayoutFilters> {
   const status = parsePayoutStatus(searchParams);
@@ -45,6 +52,22 @@ function buildPayoutRequest(searchParams: RouteSearchParams): PayListRequest<Pay
   };
 }
 
+function resolveClaimPayoutCandidate(items: PayoutDto[]): ClaimPayoutCandidate | null {
+  const preferred = items.find((item) => item.status === "SCHEDULED") ?? items.find((item) => item.status === "PROCESSING");
+
+  if (!preferred) {
+    return null;
+  }
+
+  return {
+    id: preferred.id,
+    amountMinor: preferred.amountMinor,
+    currency: preferred.currency,
+    destinationLabel: preferred.destinationLabel,
+    status: preferred.status,
+  };
+}
+
 export default async function PayPayoutsPage({ searchParams }: PayPayoutsPageProps) {
   const runtime = createPayRuntimeContext("pay-web:payouts");
 
@@ -60,15 +83,22 @@ export default async function PayPayoutsPage({ searchParams }: PayPayoutsPagePro
 
   try {
     const request = buildPayoutRequest(searchParams);
-    const [payoutList, summary] = await Promise.all([
-      runtime.payClient.listPayouts(request),
-      runtime.payClient.getPayoutSummary(),
-    ]);
+    const [payoutList, summary] = await Promise.all([runtime.payClient.listPayouts(request), runtime.payClient.getPayoutSummary()]);
+
+    const claimCandidate = resolveClaimPayoutCandidate(payoutList.items);
+    const claimAvailability = resolveClaimAvailability({
+      mode: runtime.config.mode,
+      hasEligiblePayout: Boolean(claimCandidate),
+      hasAuthToken: Boolean(getOptionalEnvValue("RYVRA_PAY_AUTH_TOKEN")),
+      endpointAvailable: runtime.config.mode === "mock" || runtime.config.mode === "http",
+    });
 
     runtime.logger.info("Loaded payouts data", {
       mode: runtime.config.mode,
       payoutCount: payoutList.items.length,
       totalPayouts: summary.scheduledCount + summary.processingCount + summary.completedCount + summary.failedCount,
+      claimEnabled: claimAvailability.enabled,
+      claimCandidateId: claimCandidate?.id,
     });
 
     return (
@@ -96,14 +126,12 @@ export default async function PayPayoutsPage({ searchParams }: PayPayoutsPagePro
             </Card>
           </div>
 
+          <ClaimFingerprintCardClient mode={runtime.config.mode} payout={claimCandidate} availability={claimAvailability} />
+
           <PayoutsTableClient items={payoutList.items} pagination={payoutList.pagination} />
 
           {payoutList.items.length === 0 ? (
-            <EmptyState
-              title="No payouts"
-              description="No payouts matched the current filters."
-              actionLink={{ href: "/payouts", label: "Reset filters" }}
-            />
+            <EmptyState title="No payouts" description="No payouts matched the current filters." actionLink={{ href: "/payouts", label: "Reset filters" }} />
           ) : null}
         </Section>
       </section>

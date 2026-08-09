@@ -9,12 +9,13 @@ export interface SectionProps {
 
 export function Section({ title, description, children }: SectionProps) {
   return (
-    <section style={{ display: "grid", gap: themeTokens.spacing.lg }}>
+    <section style={{ display: "grid", gap: themeTokens.spacing.xl }}>
       <header style={{ display: "grid", gap: themeTokens.spacing.sm }}>
         <h2
           style={{
             margin: 0,
             fontSize: themeTokens.typography.size.xl,
+            fontWeight: themeTokens.typography.weight.semibold,
             lineHeight: themeTokens.typography.lineHeight.tight,
           }}
         >
@@ -25,8 +26,9 @@ export function Section({ title, description, children }: SectionProps) {
             style={{
               margin: 0,
               color: themeTokens.color.textMuted,
-              fontSize: themeTokens.typography.size.md,
+              fontSize: themeTokens.typography.size.sm,
               lineHeight: themeTokens.typography.lineHeight.relaxed,
+              maxWidth: "80ch",
             }}
           >
             {description}

@@ -161,6 +161,11 @@ pnpm --filter @ryvra/api-client test:parity
 - `mock` for deterministic local development
 - `http` for live integration parity checks
 
+Phase 12A UX note:
+
+- `/pay/payouts` now includes a fingerprint-style **UI-only** claim confirmation flow (no WebAuthn).
+- Claim submission uses canonical pay client write path (`createPaymentIntent` -> `POST /pay/intents`) with idempotency + request/correlation IDs.
+
 ### Environment variables
 
 Core mode/base URL:
@@ -172,7 +177,7 @@ Core mode/base URL:
 
 Pay parity/auth/header controls:
 
-- `RYVRA_PAY_AUTH_TOKEN` (optional bearer token)
+- `RYVRA_PAY_AUTH_TOKEN` (optional for read routes, required for claim submission in `http` mode)
 - `RYVRA_PAY_AUTH_SCHEME` (default: `Bearer`)
 - `RYVRA_PAY_REQUEST_ID_HEADER` (default: `x-request-id`)
 - `RYVRA_PAY_CORRELATION_ID_HEADER` (default: `x-correlation-id`)
@@ -248,6 +253,7 @@ See `docs/architecture/` for boundaries, responsibilities, and integration mappi
 - `docs/architecture/markets-mvp-data-flow.md`
 - `docs/architecture/pay-mvp-data-flow.md`
 - `docs/architecture/pay-integration-parity.md`
+- `docs/architecture/claim-ux-fingerprint-phase-12a.md`
 - `docs/architecture/points-tasks-mvp-data-flow.md`
 - `docs/architecture/points-tasks-integration-parity.md`
 - `docs/architecture/release-readiness-checklist.md`
