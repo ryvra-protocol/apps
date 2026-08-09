@@ -8,7 +8,7 @@ import {
   TrustDisclosureCard,
   themeTokens,
 } from "@ryvra/ui";
-import { ClaimFingerprintCardClient } from "../components/claim-fingerprint-card-client";
+import nextDynamic from "next/dynamic";
 import { ModeBadge } from "../components/mode-badge";
 import { EmptyState, ErrorState, UnauthorizedState } from "../components/page-states";
 import { PayoutsTableClient } from "../components/payouts-table-client";
@@ -31,6 +31,24 @@ interface PayPayoutsPageProps {
 }
 
 export const dynamic = "force-dynamic";
+
+const ClaimFingerprintCardClient = nextDynamic(
+  () => import("../components/claim-fingerprint-card-client").then((module) => module.ClaimFingerprintCardClient),
+  {
+    ssr: false,
+    loading: () => (
+      <Card title="Claim">
+        <p style={{ marginTop: 0, marginBottom: themeTokens.spacing.xs, color: themeTokens.color.textMuted }}>
+          Loading claim module…
+        </p>
+        <div style={{ display: "grid", gap: themeTokens.spacing.sm }}>
+          <div style={{ height: "1rem", width: "45%", borderRadius: themeTokens.radius.sm, background: themeTokens.color.surfaceMuted }} />
+          <div style={{ height: "1rem", width: "70%", borderRadius: themeTokens.radius.sm, background: themeTokens.color.surfaceMuted }} />
+        </div>
+      </Card>
+    ),
+  },
+);
 
 function getOptionalEnvValue(key: string): string | undefined {
   const value = process.env[key]?.trim();

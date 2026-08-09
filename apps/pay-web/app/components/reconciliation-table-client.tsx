@@ -2,7 +2,7 @@
 
 import { reconciliationStatuses, type PayPaginationMeta, type ReconciliationItemDto } from "@ryvra/domain-payments";
 import { Button, Card, DataTable, themeTokens } from "@ryvra/ui";
-import { useMemo, useState } from "react";
+import { useDeferredValue, useState } from "react";
 import { formatCurrencyMinor, formatDateTime } from "../lib/format";
 import { StatusBadge } from "./status-badge";
 import { useQueryFilters } from "./use-query-filters";
@@ -28,9 +28,9 @@ export function ReconciliationTableClient({ items, pagination }: ReconciliationT
 
   const hasFilters = status !== "ALL" || exceptionOnly || from.length > 0 || to.length > 0;
 
-  const sortedItems = useMemo(() => {
-    return [...items].sort((left, right) => (left.updatedAt < right.updatedAt ? 1 : -1));
-  }, [items]);
+  const deferredItems = useDeferredValue(items);
+  const visibleRows = deferredItems;
+  const rowsPending = deferredItems !== items;
 
   const canGoPrev = pagination.page > 1;
   const canGoNext = pagination.page < pagination.totalPages;
@@ -148,7 +148,7 @@ export function ReconciliationTableClient({ items, pagination }: ReconciliationT
             render: (value) => formatDateTime(String(value)),
           },
         ]}
-        rows={sortedItems}
+        rows={visibleRows}
         getRowKey={(row) => row.id}
         rowLabel={(row) => `Reconciliation item ${row.id}`}
         onRowClick={(row) => setExpandedItemId((current) => (current === row.id ? null : row.id))}
@@ -167,7 +167,13 @@ export function ReconciliationTableClient({ items, pagination }: ReconciliationT
         emptyMessage="No reconciliation items match the selected filters."
       />
 
-      {sortedItems.length === 0 ? (
+      {rowsPending ? (
+        <p role="status" aria-live="polite" style={{ margin: 0, color: themeTokens.color.textMuted }}>
+          Refreshing table rows…
+        </p>
+      ) : null}
+
+      {visibleRows.length === 0 ? (
         <Card title="No reconciliation items found">
           <p style={{ marginTop: 0 }}>Try broadening filters or disable exceptions-only mode.</p>
           <Button type="button" variant="secondary" onClick={() => clearQuery(["status", "from", "to", "exceptionOnly", "page"])}>

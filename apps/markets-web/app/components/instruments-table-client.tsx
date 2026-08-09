@@ -8,7 +8,7 @@ import {
   type MarketsPaginationMeta,
 } from "@ryvra/domain-markets";
 import { Button, Card, DataTable, themeTokens } from "@ryvra/ui";
-import { useMemo } from "react";
+import { useDeferredValue } from "react";
 import { formatDateTime } from "../lib/format";
 import { StatusBadge } from "./status-badge";
 import { useQueryFilters } from "./use-query-filters";
@@ -50,7 +50,9 @@ export function InstrumentsTableClient({ items, pagination }: InstrumentsTableCl
     sortField !== "updated_at" ||
     sortDirection !== "desc";
 
-  const visibleRows = useMemo(() => [...items], [items]);
+  const deferredItems = useDeferredValue(items);
+  const visibleRows = deferredItems;
+  const rowsPending = deferredItems !== items;
 
   return (
     <section aria-labelledby="instruments-table-title" style={{ display: "grid", gap: themeTokens.spacing.md }}>
@@ -201,6 +203,12 @@ export function InstrumentsTableClient({ items, pagination }: InstrumentsTableCl
         getRowKey={(row) => row.id}
         emptyMessage="No instruments match the selected filters."
       />
+
+      {rowsPending ? (
+        <p role="status" aria-live="polite" style={{ margin: 0, color: themeTokens.color.textMuted }}>
+          Refreshing table rows…
+        </p>
+      ) : null}
 
       {visibleRows.length === 0 ? (
         <Card title="No instruments found">

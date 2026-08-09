@@ -11,9 +11,9 @@ import {
   TrustDisclosureCard,
   themeTokens,
 } from "@ryvra/ui";
+import nextDynamic from "next/dynamic";
 import { EmptyState, ErrorState, UnauthorizedState } from "../components/page-states";
 import { PointsTableClient } from "../components/points-table-client";
-import { DailyClaimCard } from "../components/daily-claim-card";
 import { ModeBadge } from "../components/mode-badge";
 import { formatNumber } from "../lib/format";
 import { buildDailyClaimViewModel } from "../lib/daily-claim";
@@ -41,6 +41,24 @@ interface PointsPageProps {
 }
 
 export const dynamic = "force-dynamic";
+
+const DailyClaimCard = nextDynamic(
+  () => import("../components/daily-claim-card").then((module) => module.DailyClaimCard),
+  {
+    ssr: false,
+    loading: () => (
+      <Card title="Daily claim">
+        <p style={{ marginTop: 0, marginBottom: themeTokens.spacing.xs, color: themeTokens.color.textMuted }}>
+          Loading daily claim module…
+        </p>
+        <div style={{ display: "grid", gap: themeTokens.spacing.sm }}>
+          <div style={{ height: "1rem", width: "45%", borderRadius: themeTokens.radius.sm, background: themeTokens.color.surfaceMuted }} />
+          <div style={{ height: "1rem", width: "60%", borderRadius: themeTokens.radius.sm, background: themeTokens.color.surfaceMuted }} />
+        </div>
+      </Card>
+    ),
+  },
+);
 
 function buildPointRequest(
   searchParams: RouteSearchParams,

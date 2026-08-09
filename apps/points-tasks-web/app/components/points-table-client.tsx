@@ -8,7 +8,7 @@ import {
   type PointsPaginationMeta,
 } from "@ryvra/domain-points";
 import { Button, Card, DataTable, themeTokens } from "@ryvra/ui";
-import { useMemo } from "react";
+import { useDeferredValue } from "react";
 import { formatDateTime, formatNumber, formatSignedPoints } from "../lib/format";
 import { StatusBadge } from "./status-badge";
 import { useQueryFilters } from "./use-query-filters";
@@ -60,7 +60,9 @@ export function PointsTableClient({ items, pagination }: PointsTableClientProps)
     sort.field !== "occurred_at" ||
     sort.direction !== "desc";
 
-  const visibleRows = useMemo(() => [...items], [items]);
+  const deferredItems = useDeferredValue(items);
+  const visibleRows = deferredItems;
+  const rowsPending = deferredItems !== items;
 
   const updateSort = (field: string, direction: string) => {
     const normalizedField = field === "created_at" ? "created_at" : "occurred_at";
@@ -253,6 +255,12 @@ export function PointsTableClient({ items, pagination }: PointsTableClientProps)
         getRowKey={(row) => row.entryId}
         emptyMessage="No points entries match the selected filters."
       />
+
+      {rowsPending ? (
+        <p role="status" aria-live="polite" style={{ margin: 0, color: themeTokens.color.textMuted }}>
+          Refreshing table rows…
+        </p>
+      ) : null}
 
       {visibleRows.length === 0 ? (
         <Card title="No points entries found">

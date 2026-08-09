@@ -10,15 +10,14 @@ import {
   OperationTimelineCard,
   themeTokens,
 } from "@ryvra/ui";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
-  buildClaimRequestContext,
   createClaimIdempotencyKey,
   createClaimSubmissionLock,
   createClientGeneratedId,
   formatClaimErrorMeta,
   getFingerprintAriaLabel,
-  normalizeClaimErrorEnvelope,
   resolveClaimConfirmationDelay,
   transitionClaimUiState,
   type ClaimAvailability,
@@ -26,6 +25,7 @@ import {
   type ClaimPayoutCandidate,
   type ClaimUiState,
 } from "../lib/claim-ux";
+import { executeClaimSubmission } from "../lib/claim-submission-client";
 import { formatCurrencyMinor } from "../lib/format";
 import { StatusBadge } from "./status-badge";
 
@@ -54,13 +54,16 @@ function createReference(label: string, value?: string | null) {
 }
 
 export function ClaimFingerprintCardClient({ mode, payout, availability }: ClaimFingerprintCardClientProps) {
+  const router = useRouter();
   const [panelOpen, setPanelOpen] = useState(false);
   const [uiState, setUiState] = useState<ClaimUiState>("idle");
   const [idempotencyKey, setIdempotencyKey] = useState(() => (payout ? createClaimIdempotencyKey(payout.id) : ""));
   const [error, setError] = useState<ClaimErrorEnvelope | null>(null);
   const [successData, setSuccessData] = useState<ClaimResponseData | null>(null);
+  const [submissionGuidance, setSubmissionGuidance] = useState<string | null>(null);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [timelineTimestamps, setTimelineTimestamps] = useState<ClaimTimelineTimestamps>({});
+  const [isRefreshing, startRefresh] = useTransition();
 
   const lockRef = useRef(createClaimSubmissionLock());
   const confirmationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -112,6 +115,7 @@ export function ClaimFingerprintCardClient({ mode, payout, availability }: Claim
     setUiState("idle");
     setError(null);
     setSuccessData(null);
+    setSubmissionGuidance(null);
     setTimelineTimestamps({});
 
     if (closePanel) {
@@ -130,7 +134,7 @@ export function ClaimFingerprintCardClient({ mode, payout, availability }: Claim
   };
 
   const submitClaim = async () => {
-    if (!payout || disabled) {
+    if (!payout || disabled || isRefreshing) {
       return;
     }
 
@@ -143,51 +147,50 @@ export function ClaimFingerprintCardClient({ mode, payout, availability }: Claim
       submittedAt: current.submittedAt ?? new Date().toISOString(),
     }));
     setUiState((current) => transitionClaimUiState(current, "SUBMIT"));
+    setSubmissionGuidance(null);
 
     const requestId = createClientGeneratedId("req");
     const correlationId = createClientGeneratedId("corr");
-    const requestContext = buildClaimRequestContext(idempotencyKey, requestId, correlationId);
 
     try {
-      const response = await fetch("/api/claims/payout", {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "x-request-id": requestContext.requestId,
-          "x-correlation-id": requestContext.correlationId,
-        },
-        body: JSON.stringify({
-          payout,
-          idempotencyKey: requestContext.idempotencyKey,
-        }),
+      const result = await executeClaimSubmission({
+        payout,
+        idempotencyKey,
+        requestId,
+        correlationId,
       });
 
-      const payload = (await response.json().catch(() => null)) as { data?: ClaimResponseData; error?: unknown } | null;
-
-      if (!response.ok) {
-        const normalizedError = normalizeClaimErrorEnvelope(payload?.error ?? payload ?? undefined, requestId, correlationId);
-        setError(normalizedError);
+      if (!result.ok) {
+        setError(result.error);
+        setSubmissionGuidance(result.retry.guidance);
         setTimelineTimestamps((current) => ({ ...current, resolvedAt: new Date().toISOString() }));
         setUiState((current) => transitionClaimUiState(current, "FAILURE"));
         return;
       }
 
-      setSuccessData(payload?.data ?? {});
+      setSuccessData({
+        ...result.data,
+        requestId: result.data.requestId ?? requestId,
+        correlationId: result.data.correlationId ?? correlationId,
+        idempotencyKey: result.data.idempotencyKey ?? idempotencyKey,
+      });
       setTimelineTimestamps((current) => ({ ...current, resolvedAt: new Date().toISOString() }));
       setUiState((current) => transitionClaimUiState(current, "SUCCESS"));
       setError(null);
-    } catch (submissionError) {
-      const normalizedError = normalizeClaimErrorEnvelope(submissionError, requestId, correlationId);
-      setError(normalizedError);
-      setTimelineTimestamps((current) => ({ ...current, resolvedAt: new Date().toISOString() }));
-      setUiState((current) => transitionClaimUiState(current, "FAILURE"));
+      setSubmissionGuidance("Claim submitted. Refreshing payout and status data.");
+
+      if (result.shouldRefresh) {
+        startRefresh(() => {
+          router.refresh();
+        });
+      }
     } finally {
       lockRef.current.release();
     }
   };
 
   const beginConfirmation = () => {
-    if (disabled || !payout || uiState === "submitting") {
+    if (disabled || !payout || uiState === "submitting" || isRefreshing) {
       return;
     }
 
@@ -220,7 +223,9 @@ export function ClaimFingerprintCardClient({ mode, payout, availability }: Claim
       : uiState === "submitting"
         ? "Submitting claim"
         : uiState === "success"
-          ? "Claim submitted"
+          ? isRefreshing
+            ? "Claim submitted, refreshing data"
+            : "Claim submitted"
           : uiState === "failure"
             ? "Claim failed"
             : "Awaiting confirmation";
@@ -356,7 +361,7 @@ export function ClaimFingerprintCardClient({ mode, payout, availability }: Claim
           <Button
             type="button"
             onClick={openPanel}
-            disabled={disabled}
+            disabled={disabled || isRefreshing}
             aria-describedby={disabled ? "pay-claim-disabled-reason" : undefined}
           >
             Claim
@@ -387,7 +392,7 @@ export function ClaimFingerprintCardClient({ mode, payout, availability }: Claim
                 type="button"
                 className="pay-claim-fingerprint"
                 onClick={beginConfirmation}
-                disabled={uiState === "submitting"}
+                disabled={uiState === "submitting" || isRefreshing}
                 aria-label={getFingerprintAriaLabel(uiState)}
                 aria-describedby="pay-claim-legal-copy pay-claim-hint pay-claim-state"
                 aria-busy={uiState === "submitting" ? "true" : "false"}
@@ -395,7 +400,12 @@ export function ClaimFingerprintCardClient({ mode, payout, availability }: Claim
                 Tap fingerprint
               </button>
 
-              <Button type="button" variant="secondary" onClick={() => resetFlow(true)} disabled={uiState === "submitting"}>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => resetFlow(true)}
+                disabled={uiState === "submitting" || isRefreshing}
+              >
                 Cancel
               </Button>
             </div>
@@ -437,7 +447,8 @@ export function ClaimFingerprintCardClient({ mode, payout, availability }: Claim
                     createReference("Correlation ID", successData?.correlationId),
                   ]}
                 />
-                <Button type="button" variant="secondary" onClick={() => resetFlow(true)}>
+                {submissionGuidance ? <p style={{ margin: 0, color: themeTokens.color.textMuted }}>{submissionGuidance}</p> : null}
+                <Button type="button" variant="secondary" onClick={() => resetFlow(true)} disabled={isRefreshing}>
                   Close
                 </Button>
               </div>
@@ -451,8 +462,13 @@ export function ClaimFingerprintCardClient({ mode, payout, availability }: Claim
                   retryable={error.retryable}
                   retryActionLabel="Retry claim"
                 />
+                {submissionGuidance ? (
+                  <p style={{ margin: 0, color: themeTokens.color.textMuted, fontSize: themeTokens.typography.size.sm }}>
+                    {submissionGuidance}
+                  </p>
+                ) : null}
                 {error.retryable ? (
-                  <Button type="button" variant="secondary" onClick={() => void submitClaim()}>
+                  <Button type="button" variant="secondary" disabled={isRefreshing} onClick={() => void submitClaim()}>
                     Retry claim
                   </Button>
                 ) : null}
