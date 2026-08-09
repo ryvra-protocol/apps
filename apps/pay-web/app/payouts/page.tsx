@@ -11,7 +11,6 @@ import {
 import nextDynamic from "next/dynamic";
 import { ModeBadge } from "../components/mode-badge";
 import { EmptyState, ErrorState, UnauthorizedState } from "../components/page-states";
-import { PayoutStatusNotificationBridge } from "../components/payout-status-notification-bridge";
 import { PayoutsTableClient } from "../components/payouts-table-client";
 import { formatCurrencyMinor } from "../lib/format";
 import { resolveClaimAvailability, type ClaimPayoutCandidate } from "../lib/claim-ux";
@@ -195,7 +194,6 @@ export default async function PayPayoutsPage({ searchParams }: PayPayoutsPagePro
           />
 
           <PayoutsTableClient items={payoutList.items} pagination={payoutList.pagination} />
-          <PayoutStatusNotificationBridge payouts={payoutList.items} />
 
           {payoutList.items.length === 0 ? (
             <EmptyState title="No payouts" description="No payouts matched the current filters." actionLink={{ href: "/payouts", label: "Reset filters" }} />
