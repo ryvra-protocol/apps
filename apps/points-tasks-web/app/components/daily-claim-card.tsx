@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Card, themeTokens } from "@ryvra/ui";
+import { Button, Card, mapClaimLifecycleNotification, themeTokens, useNotificationCenter } from "@ryvra/ui";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import {
@@ -21,6 +21,7 @@ interface DailyClaimCardProps {
 
 export function DailyClaimCard({ model, scope }: DailyClaimCardProps) {
   const router = useRouter();
+  const { addNotification } = useNotificationCenter();
   const lockRef = useRef(createClaimSubmissionLock());
   const [attempt, setAttempt] = useState<ClaimExecutionAttempt | null>(null);
   const [writeError, setWriteError] = useState<ClaimExecutionErrorEnvelope | null>(null);
@@ -43,6 +44,28 @@ export function DailyClaimCard({ model, scope }: DailyClaimCardProps) {
     setIsSubmitting(true);
     setWriteError(null);
     setWriteGuidance(null);
+    const startedAt = new Date().toISOString();
+    addNotification(
+      mapClaimLifecycleNotification({
+        stage: "submitted",
+        eventKey: `daily-claim:${nextAttempt.idempotencyKey}:submitted`,
+        timestamp: startedAt,
+        routeHref: `/points?account_id=${encodeURIComponent(scope.accountId)}&ref=notification&entity=claim`,
+        references: [
+          { label: "Account", value: scope.accountId },
+          { label: "Idempotency key", value: nextAttempt.idempotencyKey },
+        ],
+      }),
+    );
+    addNotification(
+      mapClaimLifecycleNotification({
+        stage: "processing",
+        eventKey: `daily-claim:${nextAttempt.idempotencyKey}:processing`,
+        timestamp: startedAt,
+        routeHref: `/points?account_id=${encodeURIComponent(scope.accountId)}&ref=notification&entity=claim`,
+        references: [{ label: "Account", value: scope.accountId }],
+      }),
+    );
 
     try {
       const result = await executeDailyClaimAttempt({
@@ -53,6 +76,19 @@ export function DailyClaimCard({ model, scope }: DailyClaimCardProps) {
       setAttempt(result.attempt);
 
       if (!result.ok) {
+        addNotification(
+          mapClaimLifecycleNotification({
+            stage: "failed",
+            retryable: result.error.retryable,
+            eventKey: `daily-claim:${nextAttempt.idempotencyKey}:failed:${result.error.code}`,
+            timestamp: new Date().toISOString(),
+            routeHref: `/points?account_id=${encodeURIComponent(scope.accountId)}&ref=notification&entity=claim`,
+            references: [
+              { label: "Request ID", value: result.error.requestId },
+              { label: "Correlation ID", value: result.error.correlationId },
+            ],
+          }),
+        );
         setDidSucceed(false);
         setWriteError(result.error);
         setWriteGuidance(result.retry.guidance);
@@ -62,6 +98,19 @@ export function DailyClaimCard({ model, scope }: DailyClaimCardProps) {
       setDidSucceed(true);
       setWriteError(null);
       setWriteGuidance("Claim submitted. Refreshing claim status and points balances.");
+      addNotification(
+        mapClaimLifecycleNotification({
+          stage: "completed",
+          eventKey: `daily-claim:${result.attempt.idempotencyKey}:completed:${result.attempt.intentId ?? "intent-unavailable"}`,
+          timestamp: new Date().toISOString(),
+          routeHref: `/points?account_id=${encodeURIComponent(scope.accountId)}&ref=notification&entity=claim`,
+          references: [
+            { label: "Intent ID", value: result.attempt.intentId },
+            { label: "Request ID", value: result.attempt.requestId },
+            { label: "Correlation ID", value: result.attempt.correlationId },
+          ],
+        }),
+      );
       startRefresh(() => {
         router.refresh();
       });

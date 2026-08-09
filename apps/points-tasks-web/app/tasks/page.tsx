@@ -10,6 +10,7 @@ import {
   themeTokens,
 } from "@ryvra/ui";
 import { EmptyState, ErrorState, UnauthorizedState } from "../components/page-states";
+import { TaskStatusNotificationBridge } from "../components/task-status-notification-bridge";
 import { TasksTableClient } from "../components/tasks-table-client";
 import { ModeBadge } from "../components/mode-badge";
 import { formatNumber } from "../lib/format";
@@ -196,6 +197,7 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
           />
 
           <TasksTableClient items={taskList.items} pagination={taskList.pagination} />
+          <TaskStatusNotificationBridge tasks={taskList.items} />
 
           {taskList.items.length === 0 ? (
             <EmptyState
