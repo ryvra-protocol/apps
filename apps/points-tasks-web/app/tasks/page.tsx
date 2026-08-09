@@ -1,11 +1,20 @@
 import type { TaskFilters, TasksAccountScopedListRequest, TasksAccountScopedRequest } from "@ryvra/domain-tasks";
 import type { PointsSummaryRequest } from "@ryvra/domain-points";
-import { Card, Section, themeTokens } from "@ryvra/ui";
+import {
+  Card,
+  ComplianceEvidencePanel,
+  OperationTimelineCard,
+  PolicyLinksCard,
+  Section,
+  TrustDisclosureCard,
+  themeTokens,
+} from "@ryvra/ui";
 import { EmptyState, ErrorState, UnauthorizedState } from "../components/page-states";
 import { TasksTableClient } from "../components/tasks-table-client";
 import { ModeBadge } from "../components/mode-badge";
 import { formatNumber } from "../lib/format";
 import { buildPointsSummaryRequest, resolvePointsBalance } from "../lib/points-balance";
+import { buildTaskEvidenceReferences, buildTaskTimelineStages, resolveTaskRetryable } from "../lib/trust-compliance";
 import {
   parseAccountId,
   parseCursor,
@@ -114,6 +123,8 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
       runtime.pointsTasksClient.getPointSummary(pointsSummaryRequest),
     ]);
     const pointsBalance = resolvePointsBalance(pointsSummary);
+    const leadTask = taskList.items[0] ?? null;
+    const taskTimelineStages = buildTaskTimelineStages(leadTask);
 
     runtime.logger.info("Loaded tasks queue data", {
       mode: runtime.config.mode,
@@ -150,6 +161,39 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
               <p style={{ margin: 0 }}>{formatNumber(pointsBalance)}</p>
             </Card>
           </div>
+
+          <TrustDisclosureCard
+            title="Task progression trust notice"
+            confirmationText="Task statuses represent the latest canonical task engine state for this account scope."
+            retryText="Retry task loading only when the error module indicates retry is safe."
+            processingText="Task progression timestamps may be partially unavailable and are labeled explicitly when absent."
+          />
+
+          <OperationTimelineCard
+            title="Latest task progression timeline"
+            state={taskTimelineStages.length > 0 ? "success" : "empty"}
+            stages={taskTimelineStages}
+            emptyMessage="No task timeline is available for the current scope."
+          />
+
+          <ComplianceEvidencePanel
+            title="Latest task compliance evidence"
+            summaryLabel="Details"
+            sourceSystem="tasks_engine"
+            retryable={resolveTaskRetryable(leadTask)}
+            references={buildTaskEvidenceReferences(leadTask)}
+            lastUpdated={leadTask?.updatedAt}
+          />
+
+          <PolicyLinksCard
+            title="Tasks policy and help"
+            description="Use these routes when validating task progression, scope, and diagnostics."
+            links={[
+              { href: "/status", label: "View points/tasks status diagnostics" },
+              { href: "/points", label: "Open points ledger context" },
+              { href: "/overview", label: "Open points/tasks operational overview" },
+            ]}
+          />
 
           <TasksTableClient items={taskList.items} pagination={taskList.pagination} />
 

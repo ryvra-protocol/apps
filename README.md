@@ -142,6 +142,8 @@ Contract behavior notes:
 - runtime config now fails fast in `http` mode if `RYVRA_POINTS_TASKS_AUTH_TOKEN` is missing
 - `/points` daily-claim module loads status from Points/Tasks and executes claims through Pay intent writes (`POST /pay/intents` + transitions) when invoke is available
 - claim writes in `/points` reuse per-attempt idempotency keys on safe retries and always emit request/correlation IDs
+- if claim execution endpoint is unavailable, daily-claim CTA stays disabled with explicit reason/retry guidance
+- `/points` and `/tasks` now surface trust timelines/evidence panels and policy/help links with explicit unavailable-state placeholders for missing references
 
 Optional smoke-test guard:
 
@@ -174,6 +176,11 @@ Phase 12B UI/data-flow note:
 - Pay dashboard/overview now render a shared **Unified Balance** card backed by read-only Markets positions data.
 - Unified balance scope in Pay uses `RYVRA_MARKETS_ACCOUNT_ID` (mock fallback supported).
 - No new pay write wiring was introduced for Points daily claim in this phase (deferred to Phase 12.5B).
+
+Phase 13 trust/security/compliance UX note:
+
+- `/pay/payouts` now includes timeline + evidence panels and policy/help links for payout/claim trust transparency.
+- Claim success now renders a confirmation receipt surface with intent/request/correlation references when available.
 
 ### Environment variables
 
@@ -267,6 +274,7 @@ See `docs/architecture/` for boundaries, responsibilities, and integration mappi
 - `docs/architecture/claim-ux-fingerprint-phase-12a.md`
 - `docs/architecture/points-tasks-mvp-data-flow.md`
 - `docs/architecture/unified-balance-and-daily-claim-phase-12b.md`
+- `docs/architecture/trust-security-compliance-phase-13.md`
 - `docs/architecture/claim-execution-phase-12-5b.md`
 - `docs/architecture/points-tasks-integration-parity.md`
 - `docs/architecture/release-readiness-checklist.md`

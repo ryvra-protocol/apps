@@ -144,6 +144,32 @@
 - `@ryvra/api-client` normalizes canonical error envelopes more consistently on fallback paths.
 - Status routes across apps now keep retry-oriented UX and aligned diagnostics error handling behavior.
 
+## Phase 13 trust/security/compliance UX map
+
+- Shared trust primitives now live in `@ryvra/ui`:
+  - `OperationTimelineCard`
+  - `ComplianceEvidencePanel`
+  - `TrustDisclosureCard`
+  - `ErrorTransparencySummary`
+  - `PolicyLinksCard`
+  - `ConfirmationReceiptCard`
+- Shared evidence sanitization redacts sensitive trust fields and renders explicit unavailable placeholders.
+- App integration points:
+  - `apps/markets-web/app/orders/page.tsx`
+    - latest order timeline + compliance evidence + policy/help links
+    - references: order/reference/correlation/route IDs
+  - `apps/pay-web/app/payouts/page.tsx` and `app/components/claim-fingerprint-card-client.tsx`
+    - payout timeline + claim submission timeline
+    - claim confirmation receipt and evidence panel with intent/request/correlation/idempotency references
+  - `apps/points-tasks-web/app/points/page.tsx` and `app/tasks/page.tsx`
+    - daily-claim and task progression timelines
+    - evidence panels with explicit unavailable states where request/correlation IDs are not present
+- Error UX across app-level `page-states.tsx` now uses `ErrorTransparencySummary` to standardize:
+  - what happened
+  - retry safety
+  - next-step guidance
+  - source/retryability trust metadata
+
 ## Placement guidance for future business logic
 
 - Domain-specific orchestration belongs in app-level features unless shared by multiple apps.

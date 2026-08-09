@@ -1,11 +1,20 @@
 import type { PayListRequest, PayoutDto, PayoutFilters } from "@ryvra/domain-payments";
-import { Card, Section, themeTokens } from "@ryvra/ui";
+import {
+  Card,
+  ComplianceEvidencePanel,
+  OperationTimelineCard,
+  PolicyLinksCard,
+  Section,
+  TrustDisclosureCard,
+  themeTokens,
+} from "@ryvra/ui";
 import { ClaimFingerprintCardClient } from "../components/claim-fingerprint-card-client";
 import { ModeBadge } from "../components/mode-badge";
 import { EmptyState, ErrorState, UnauthorizedState } from "../components/page-states";
 import { PayoutsTableClient } from "../components/payouts-table-client";
 import { formatCurrencyMinor } from "../lib/format";
 import { resolveClaimAvailability, type ClaimPayoutCandidate } from "../lib/claim-ux";
+import { buildPayoutEvidenceReferences, buildPayoutTimelineStages, resolvePayoutRetryable } from "../lib/trust-compliance";
 import {
   parseDateRange,
   parsePage,
@@ -68,6 +77,10 @@ function resolveClaimPayoutCandidate(items: PayoutDto[]): ClaimPayoutCandidate |
   };
 }
 
+function resolveTrustPayout(items: PayoutDto[]): PayoutDto | null {
+  return items.find((item) => item.status === "SCHEDULED") ?? items.find((item) => item.status === "PROCESSING") ?? items[0] ?? null;
+}
+
 export default async function PayPayoutsPage({ searchParams }: PayPayoutsPageProps) {
   const runtime = createPayRuntimeContext("pay-web:payouts");
 
@@ -86,6 +99,8 @@ export default async function PayPayoutsPage({ searchParams }: PayPayoutsPagePro
     const [payoutList, summary] = await Promise.all([runtime.payClient.listPayouts(request), runtime.payClient.getPayoutSummary()]);
 
     const claimCandidate = resolveClaimPayoutCandidate(payoutList.items);
+    const trustPayout = resolveTrustPayout(payoutList.items);
+    const payoutTimelineStages = buildPayoutTimelineStages(trustPayout);
     const claimAvailability = resolveClaimAvailability({
       mode: runtime.config.mode,
       hasEligiblePayout: Boolean(claimCandidate),
@@ -126,7 +141,40 @@ export default async function PayPayoutsPage({ searchParams }: PayPayoutsPagePro
             </Card>
           </div>
 
+          <TrustDisclosureCard
+            title="Claim and payout trust notice"
+            confirmationText="Fingerprint-style confirmation is a local UI confirmation step and does not capture biometric data."
+            retryText="Retry only when an operation is marked retryable in the error details."
+            processingText="Payout and claim processing may continue after this page refreshes; check timeline and status routes for updates."
+          />
+
           <ClaimFingerprintCardClient mode={runtime.config.mode} payout={claimCandidate} availability={claimAvailability} />
+
+          <OperationTimelineCard
+            title="Latest payout operation timeline"
+            state={payoutTimelineStages.length > 0 ? "success" : "empty"}
+            emptyMessage="No payout timeline is available for the current filters."
+            stages={payoutTimelineStages}
+          />
+
+          <ComplianceEvidencePanel
+            title="Latest payout compliance evidence"
+            summaryLabel="Details"
+            sourceSystem="pay"
+            retryable={resolvePayoutRetryable(trustPayout)}
+            references={buildPayoutEvidenceReferences(trustPayout)}
+            lastUpdated={trustPayout?.completedAt ?? trustPayout?.scheduledFor ?? trustPayout?.createdAt}
+          />
+
+          <PolicyLinksCard
+            title="Payout policy and help"
+            description="Use these references for payout processing expectations and diagnostics."
+            links={[
+              { href: "/status", label: "View pay status diagnostics" },
+              { href: "/reconciliation", label: "Review reconciliation exceptions" },
+              { href: "/overview", label: "Open pay operational overview" },
+            ]}
+          />
 
           <PayoutsTableClient items={payoutList.items} pagination={payoutList.pagination} />
 
