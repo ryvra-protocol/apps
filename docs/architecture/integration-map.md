@@ -11,6 +11,11 @@
 - `@ryvra/config` exposes canonical global + product navigation maps and deep-link helpers.
 - `@ryvra/ui` provides shared shell/navigation primitives consumed by all three apps.
 - Cross-app context handoff uses query params (`ref`, `entity`, `id`, `ctx`) validated by shared schema utilities.
+- Phase 12.5A shell map in `@ryvra/ui`:
+  - shared sidebar defaults to collapsed (icon-only) until the user toggles it
+  - sidebar collapse preference is persisted in client storage and reused across app loads
+  - top product nav destinations now route through a centered floating bottom icon dock (non-full-width)
+  - icon-only nav controls preserve accessibility with labels/tooltips/focus states and active-route `aria-current`
 
 ## Markets integration map (Phase 9.5 v2 strict parity)
 

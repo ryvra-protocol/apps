@@ -37,8 +37,21 @@ export type { CommandPaletteTriggerProps } from "./CommandPaletteTrigger";
 export { ContextualNav } from "./ContextualNav";
 export type { ContextualNavProps } from "./ContextualNav";
 
+export { ShellNavList } from "./ShellNavList";
+export type { ShellNavListProps } from "./ShellNavList";
+
+export { BottomIconDock } from "./BottomIconDock";
+export type { BottomIconDockProps } from "./BottomIconDock";
+
 export { NavItemIcon } from "./NavItemIcon";
 export type { NavItemIconProps } from "./NavItemIcon";
+export {
+  SIDEBAR_COLLAPSE_STORAGE_KEY,
+  readSidebarCollapsedPreference,
+  writeSidebarCollapsedPreference,
+  toggleSidebarCollapsed,
+} from "./sidebar-preferences";
+
 export {
   NAV_ICON_SIZE,
   NAV_ICON_STROKE_WIDTH,

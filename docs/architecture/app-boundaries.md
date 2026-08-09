@@ -52,6 +52,11 @@ Define clear responsibility boundaries between the three frontend apps and share
 - Shared shell, navigation, and reusable presentational components.
 - No backend integration or product-specific business decisions.
 - Owns unified nav iconography and interaction styling semantics across products.
+- Enforces Phase 12.5A navigation policy across Markets, Pay, and Points/Tasks:
+  - sidebar is collapsed by default on first load and expands only by user action
+  - sidebar preference persists via client storage after user interaction
+  - icon-only controls always retain accessible labels, tooltips, and `aria-current` semantics
+  - top product navigation is rendered as a centered bottom icon dock with safe-area-aware spacing
 
 ### `@ryvra/auth`
 

@@ -1,7 +1,6 @@
 import type { ShellNavItem } from "./navigation";
-import { isCurrentRoute } from "./route-utils";
 import { ContextualNav } from "./ContextualNav";
-import { NavItemIcon } from "./NavItemIcon";
+import { ShellNavList } from "./ShellNavList";
 
 export interface GlobalSidebarProps {
   globalNavItems: ShellNavItem[];
@@ -9,6 +8,8 @@ export interface GlobalSidebarProps {
   localNavTitle?: string;
   localNavAriaLabel?: string;
   currentPath?: string | undefined;
+  collapsed?: boolean;
+  onToggleCollapsed?: () => void;
 }
 
 export function GlobalSidebar({
@@ -17,37 +18,56 @@ export function GlobalSidebar({
   localNavTitle = "Module",
   localNavAriaLabel = "Module navigation",
   currentPath,
+  collapsed = true,
+  onToggleCollapsed,
 }: GlobalSidebarProps) {
+  const toggleLabel = collapsed ? "Expand sidebar navigation" : "Collapse sidebar navigation";
+
   return (
-    <aside className="ryvra-sidebar" aria-label="Application navigation">
-      <nav className="ryvra-nav-group" aria-label="Global navigation">
-        <p className="ryvra-nav-title">Global</p>
-        <ul className="ryvra-nav-list">
-          {globalNavItems.map((item) => {
-            const current = isCurrentRoute(item, currentPath);
-            return (
-              <li key={item.id}>
-                <a
-                  className="ryvra-nav-link"
-                  href={item.href}
-                  aria-current={current ? "page" : undefined}
-                  aria-label={item.ariaLabel}
-                  aria-disabled={item.disabled ? "true" : undefined}
-                  target={item.external ? "_blank" : undefined}
-                  rel={item.external ? "noreferrer" : undefined}
-                >
-                  <span className="ryvra-nav-link-content">
-                    <NavItemIcon itemId={item.id} />
-                    <span className="ryvra-nav-link-label">{item.label}</span>
-                  </span>
-                  {item.badge ? <span className="ryvra-nav-badge">{item.badge}</span> : null}
-                </a>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
-      <ContextualNav title={localNavTitle} ariaLabel={localNavAriaLabel} items={localNavItems} currentPath={currentPath} />
+    <aside
+      className={collapsed ? "ryvra-sidebar ryvra-sidebar--collapsed" : "ryvra-sidebar"}
+      aria-label="Application navigation"
+      data-sidebar-collapsed={collapsed ? "true" : "false"}
+    >
+      <button
+        type="button"
+        className="ryvra-sidebar-toggle"
+        aria-controls="ryvra-sidebar-sections"
+        aria-expanded={!collapsed}
+        aria-label={toggleLabel}
+        title={toggleLabel}
+        onClick={onToggleCollapsed}
+      >
+        <span className="ryvra-sidebar-toggle-glyph" aria-hidden="true">
+          <svg
+            className="ryvra-sidebar-toggle-icon"
+            viewBox="0 0 24 24"
+            width="16"
+            height="16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            focusable="false"
+          >
+            {collapsed ? <path d="M9 6l6 6-6 6" /> : <path d="M15 6l-6 6 6 6" />}
+          </svg>
+        </span>
+      </button>
+      <div id="ryvra-sidebar-sections" className="ryvra-sidebar-sections">
+        <nav className="ryvra-nav-group" aria-label="Global navigation">
+          <p className={collapsed ? "ryvra-nav-title ryvra-visually-hidden" : "ryvra-nav-title"}>Global</p>
+          <ShellNavList items={globalNavItems} currentPath={currentPath} iconOnly={collapsed} />
+        </nav>
+        <ContextualNav
+          title={localNavTitle}
+          ariaLabel={localNavAriaLabel}
+          items={localNavItems}
+          currentPath={currentPath}
+          collapsed={collapsed}
+        />
+      </div>
     </aside>
   );
 }
