@@ -8,13 +8,13 @@ Phase 12B delivers:
 - points balance surfaces on `/points` and `/tasks` in `points-tasks-web`
 - daily-claim read/status UX on `/points`
 
-Out of scope for this phase:
+Out of scope for this phase baseline:
 
 - pay write-intent wiring for daily claim (`POST /pay/intents`)
 - pay transition write execution (`/pay/intents/{id}/transitions`)
 - new idempotent write-request generation for points daily claim
 
-These write paths are deferred to **Phase 12.5B**.
+These write paths were deferred in 12B and are now implemented in **Phase 12.5B** (`docs/architecture/claim-execution-phase-12-5b.md`).
 
 ## Unified balance data flow (Markets + Pay)
 
@@ -51,10 +51,11 @@ Implemented in `packages/api-client/src/unified-balance.ts`:
 - `/tasks` now also calls `getPointSummary` (same account/user/workspace scope) for a page-level **Points balance** card.
 - Shared request builder (`buildPointsSummaryRequest`) keeps scope handling aligned and avoids per-page drift.
 
-### Daily claim (read/invoke-safe in Phase 12B)
+### Daily claim (12B baseline + 12.5B extension)
 
 - `/points` loads daily claim status with `pointsTasksClient.getDailyClaimStatus(...)`.
 - Current status route is provisional and read-only (`GET /points-tasks/eligibility`).
+- Phase 12.5B adds claim execution via pay intents/transitions behind `/api/claims/daily`.
 - UI supports:
   - `available`
   - `already_claimed`
@@ -63,10 +64,11 @@ Implemented in `packages/api-client/src/unified-balance.ts`:
 - CTA is always explicit:
   - enabled only if backend marks invoke endpoint available
   - disabled with concrete reason otherwise
+- claim submit path is idempotent + retry-safe and surfaces request/correlation IDs on failures
 - cooldown/already-claimed states render next-eligible timestamp when provided.
 
 ## Security/parity posture
 
 - No direct `fetch` bypasses were added; all reads flow through `@ryvra/api-client`.
 - Existing auth/header/scope guardrails remain enforced.
-- No new pay write execution path was added in this phase.
+- Pay write execution path is documented separately in Phase 12.5B and preserves canonical parity/security guards.

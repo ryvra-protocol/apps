@@ -1,4 +1,4 @@
-import { ApiClientError, createApiClient, type PointsTasksClient } from "@ryvra/api-client";
+import { ApiClientError, createApiClient, type PayClient, type PointsTasksClient } from "@ryvra/api-client";
 import { createStubAuthGuard, Role, type AuthDecision, type Session } from "@ryvra/auth";
 import { loadPointsTasksIntegrationConfig, type PointsTasksIntegrationConfig } from "@ryvra/config";
 import { createConsoleLogger, mapErrorToTaxonomy, type Logger } from "@ryvra/observability";
@@ -8,6 +8,8 @@ export interface PointsTasksRuntimeContext {
   logger: Logger;
   authDecision: AuthDecision;
   pointsTasksClient: PointsTasksClient;
+  payClient: PayClient;
+  payAuthTokenConfigured: boolean;
   defaultAccountId?: string;
 }
 
@@ -31,30 +33,47 @@ export function createPointsTasksRuntimeContext(scope: string): PointsTasksRunti
   const authScheme = getOptionalEnvValue("RYVRA_POINTS_TASKS_AUTH_SCHEME");
   const requestIdHeader = getOptionalEnvValue("RYVRA_POINTS_TASKS_REQUEST_ID_HEADER");
   const correlationIdHeader = getOptionalEnvValue("RYVRA_POINTS_TASKS_CORRELATION_ID_HEADER");
+  const payAuthToken = getOptionalEnvValue("RYVRA_PAY_AUTH_TOKEN");
+  const payAuthScheme = getOptionalEnvValue("RYVRA_PAY_AUTH_SCHEME");
+  const payRequestIdHeader = getOptionalEnvValue("RYVRA_PAY_REQUEST_ID_HEADER") ?? requestIdHeader;
+  const payCorrelationIdHeader = getOptionalEnvValue("RYVRA_PAY_CORRELATION_ID_HEADER") ?? correlationIdHeader;
+  const payIdempotencyHeader = getOptionalEnvValue("RYVRA_PAY_IDEMPOTENCY_HEADER");
+  const payConnectivityPath = getOptionalEnvValue("RYVRA_PAY_CONNECTIVITY_PATH");
   const session: Session = {
     user: { id: "local-member", roles: [Role.Member] },
     issuedAt: new Date().toISOString(),
   };
   const defaultAccountId = config.accountId ?? (config.mode === "mock" ? "acct-core-1" : undefined);
+  const apiClient = createApiClient({
+    mode: config.mode,
+    baseUrl: config.apiBaseUrl,
+    pointsTasks: {
+      ...(authToken ? { authToken } : {}),
+      ...(authScheme ? { authScheme } : {}),
+      ...(requestIdHeader ? { requestIdHeader } : {}),
+      ...(correlationIdHeader ? { correlationIdHeader } : {}),
+      ...(config.connectivityPath ? { connectivityPath: config.connectivityPath } : {}),
+      ...(defaultAccountId ? { defaultAccountId } : {}),
+    },
+    pay: {
+      ...(payAuthToken ? { authToken: payAuthToken } : {}),
+      ...(payAuthScheme ? { authScheme: payAuthScheme } : {}),
+      ...(payRequestIdHeader ? { requestIdHeader: payRequestIdHeader } : {}),
+      ...(payCorrelationIdHeader ? { correlationIdHeader: payCorrelationIdHeader } : {}),
+      ...(payIdempotencyHeader ? { idempotencyHeader: payIdempotencyHeader } : {}),
+      ...(payConnectivityPath ? { connectivityPath: payConnectivityPath } : {}),
+    },
+    ...(config.compatibilityVersion ? { pointsTasksCompatibilityVersion: config.compatibilityVersion } : {}),
+    ...(config.parityCheckMarker ? { pointsTasksParityCheckMarker: config.parityCheckMarker } : {}),
+  });
 
   return {
     config,
     logger,
     authDecision: authGuard.authorize(session),
-    pointsTasksClient: createApiClient({
-      mode: config.mode,
-      baseUrl: config.apiBaseUrl,
-      pointsTasks: {
-        ...(authToken ? { authToken } : {}),
-        ...(authScheme ? { authScheme } : {}),
-        ...(requestIdHeader ? { requestIdHeader } : {}),
-        ...(correlationIdHeader ? { correlationIdHeader } : {}),
-        ...(config.connectivityPath ? { connectivityPath: config.connectivityPath } : {}),
-        ...(defaultAccountId ? { defaultAccountId } : {}),
-      },
-      ...(config.compatibilityVersion ? { pointsTasksCompatibilityVersion: config.compatibilityVersion } : {}),
-      ...(config.parityCheckMarker ? { pointsTasksParityCheckMarker: config.parityCheckMarker } : {}),
-    }).pointsTasks,
+    pointsTasksClient: apiClient.pointsTasks,
+    payClient: apiClient.pay,
+    payAuthTokenConfigured: Boolean(payAuthToken),
     ...(defaultAccountId ? { defaultAccountId } : {}),
   };
 }

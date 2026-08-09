@@ -21,7 +21,8 @@ Canonical references (`ryvra-protocol/protocol-core`, default branch):
 - `/points`
   - `pointsTasksClient.listPointEntries({ accountId, userId?, workspaceId?, filters?, pagination?, sort? })`
   - `pointsTasksClient.getPointSummary({ accountId, userId?, workspaceId?, window?, dateRange? })`
-  - `pointsTasksClient.getDailyClaimStatus({ accountId, userId?, workspaceId? })` (read-only status, provisional route)
+  - `pointsTasksClient.getDailyClaimStatus({ accountId, userId?, workspaceId? })` (read/status route)
+  - `POST /api/claims/daily` (server route that executes Pay intent + transition workflow for claim writes)
 - `/tasks`
   - `pointsTasksClient.listTasks({ accountId, userId?, workspaceId?, filters?, pagination?, sort? })`
   - `pointsTasksClient.getTaskSummary({ accountId, userId?, workspaceId? })`
@@ -54,7 +55,7 @@ In HTTP mode:
 - bearer auth required for canonical routes by default
 - only `/points-tasks/status/health` remains auth-optional
 - `x-request-id` and `x-correlation-id` are always emitted
-- canonical v1 read-only surface does not require idempotency headers
+- claim write path emits idempotency keys on Pay write requests (`POST /pay/intents`, `POST /pay/intents/{id}/transitions`)
 
 ### Pagination
 
@@ -77,11 +78,16 @@ Normalized Points/Tasks errors are canonical-only:
 - `/tasks` renders tasks summary plus account-scoped points balance card via shared points-summary request builder
 - status route renders canonical contract provenance (OpenAPI path/changelog/SHA/commit/version) plus connectivity probe behavior
 
-## Daily claim Phase 12B guardrails
+## Daily claim Phase 12B baseline + 12.5B execution guardrails
 
-- Daily claim in this phase is read/invoke-safe only:
-  - status comes from provisional read endpoint (`GET /points-tasks/eligibility`)
-  - no pay-intent write submission is introduced from Points/Tasks (`POST /pay/intents` not wired here)
+- Daily claim status remains sourced from provisional read endpoint (`GET /points-tasks/eligibility`).
+- Claim execution is now wired through Pay intent APIs via `/api/claims/daily`:
+  - create intent (`POST /pay/intents`)
+  - transition chain (`POST /pay/intents/{intentId}/transitions`)
+- Retry-safe behavior:
+  - same logical retry reuses attempt idempotency key
+  - partial failures reuse existing `intentId` and continue transitions
+  - terminal failures require explicit new attempt
 - Endpoint unavailability is surfaced with explicit disabled CTA reason + retry when retryable.
 - Cooldown/already-claimed states include next-eligible timestamp when provided.
 
@@ -93,4 +99,4 @@ Normalized Points/Tasks errors are canonical-only:
 
 ## Remaining limitations
 
-- canonical v1 does not expose write/transition routes; future write parity and idempotency enforcement will be added when published upstream
+- Pay claim transition sequence is still provisional pending a pay-owned claim-specific HTTP contract publication.
