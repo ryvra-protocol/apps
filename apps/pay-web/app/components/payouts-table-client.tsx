@@ -7,7 +7,7 @@ import {
   type PayoutDto,
 } from "@ryvra/domain-payments";
 import { Button, Card, DataTable, themeTokens } from "@ryvra/ui";
-import { useMemo } from "react";
+import { useDeferredValue } from "react";
 import { formatCurrencyMinor, formatDateTime } from "../lib/format";
 import { StatusBadge } from "./status-badge";
 import { useQueryFilters } from "./use-query-filters";
@@ -34,9 +34,9 @@ export function PayoutsTableClient({ items, pagination }: PayoutsTableClientProp
 
   const hasFilters = status !== "ALL" || destinationType !== "ALL" || from.length > 0 || to.length > 0;
 
-  const sortedItems = useMemo(() => {
-    return [...items].sort((left, right) => (left.createdAt < right.createdAt ? 1 : -1));
-  }, [items]);
+  const deferredItems = useDeferredValue(items);
+  const visibleRows = deferredItems;
+  const rowsPending = deferredItems !== items;
 
   const canGoPrev = pagination.page > 1;
   const canGoNext = pagination.page < pagination.totalPages;
@@ -161,12 +161,18 @@ export function PayoutsTableClient({ items, pagination }: PayoutsTableClientProp
             render: (value) => formatDateTime(String(value)),
           },
         ]}
-        rows={sortedItems}
+        rows={visibleRows}
         getRowKey={(row) => row.id}
         emptyMessage="No payouts match the selected filters."
       />
 
-      {sortedItems.length === 0 ? (
+      {rowsPending ? (
+        <p role="status" aria-live="polite" style={{ margin: 0, color: themeTokens.color.textMuted }}>
+          Refreshing table rows…
+        </p>
+      ) : null}
+
+      {visibleRows.length === 0 ? (
         <Card title="No payouts found">
           <p style={{ marginTop: 0 }}>Try changing status, destination type, or date filters.</p>
           <Button type="button" variant="secondary" onClick={() => clearQuery(["status", "destinationType", "from", "to", "page"])}>

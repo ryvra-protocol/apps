@@ -57,6 +57,7 @@
 - `pnpm typecheck`
 - `pnpm build`
 - `pnpm test`
+- `pnpm perf:guard` (Phase 17 bundle budget + critical route artifact guard)
 
 ## Smoke validation commands
 
@@ -72,6 +73,7 @@ pnpm --filter @ryvra/markets-web build
 pnpm --filter @ryvra/pay-web build
 pnpm --filter @ryvra/points-tasks-web build
 pnpm --filter @ryvra/api-client test
+pnpm perf:guard
 ```
 
 Optional guarded connectivity probes:
@@ -79,6 +81,12 @@ Optional guarded connectivity probes:
 - `RYVRA_MARKETS_CONNECTIVITY_SMOKE_URL`
 - `RYVRA_PAY_CONNECTIVITY_SMOKE_URL`
 - `RYVRA_POINTS_TASKS_CONNECTIVITY_SMOKE_URL`
+
+Performance/reliability transport defaults in HTTP mode:
+
+- Request timeout: 12s (`@ryvra/api-client` fetch transport)
+- Retry policy: bounded retries for retryable reads and idempotency-safe writes
+- GET dedupe/cache: short TTL with automatic invalidation after writes
 
 ## Known acceptable warnings
 

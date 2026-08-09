@@ -44,8 +44,14 @@ interface ExecuteDailyClaimAttemptInput {
   attempt: ClaimExecutionAttempt;
   endpoint?: string;
   timeoutMs?: number;
+  maxRetries?: number;
+  retryDelayMs?: number;
   fetchImpl?: typeof fetch;
 }
+
+const DEFAULT_TIMEOUT_MS = 15_000;
+const DEFAULT_MAX_RETRIES = 1;
+const DEFAULT_RETRY_DELAY_MS = 200;
 
 function withIntentFromPayload(attempt: ClaimExecutionAttempt, payload: ClaimExecutionResponsePayload | null): ClaimExecutionAttempt {
   const intentId = payload?.data?.intentId?.trim();
@@ -67,71 +73,139 @@ function parsePayload(value: unknown): ClaimExecutionResponsePayload | null {
   return value as ClaimExecutionResponsePayload;
 }
 
+function sleep(delayMs: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, delayMs);
+  });
+}
+
+function isLikelyOfflineError(error: unknown): boolean {
+  if (typeof navigator !== "undefined" && "onLine" in navigator && navigator.onLine === false) {
+    return true;
+  }
+
+  if (!(error instanceof TypeError)) {
+    return false;
+  }
+
+  return /network|fetch|offline|failed/i.test(error.message);
+}
+
 export async function executeDailyClaimAttempt(input: ExecuteDailyClaimAttemptInput): Promise<ExecuteDailyClaimAttemptResult> {
   const fetchImpl = input.fetchImpl ?? fetch;
   const endpoint = input.endpoint ?? "/api/claims/daily";
-  const timeoutMs = input.timeoutMs ?? 15_000;
-  const abortController = new AbortController();
-  const timeout = setTimeout(() => abortController.abort(), timeoutMs);
+  const timeoutMs = input.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const maxRetries = Math.max(0, input.maxRetries ?? DEFAULT_MAX_RETRIES);
+  const retryDelayMs = Math.max(0, input.retryDelayMs ?? DEFAULT_RETRY_DELAY_MS);
 
-  try {
-    const response = await fetchImpl(endpoint, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-request-id": input.attempt.requestId,
-        "x-correlation-id": input.attempt.correlationId,
-      },
-      body: JSON.stringify({
-        accountId: input.scope.accountId,
-        ...(input.scope.userId ? { userId: input.scope.userId } : {}),
-        ...(input.scope.workspaceId ? { workspaceId: input.scope.workspaceId } : {}),
-        idempotencyKey: input.attempt.idempotencyKey,
-        ...(input.attempt.intentId ? { intentId: input.attempt.intentId } : {}),
-      }),
-      signal: abortController.signal,
-    });
+  let currentAttempt = input.attempt;
 
-    const payload = parsePayload(await response.json().catch(() => null));
-    const attempt = withIntentFromPayload(input.attempt, payload);
+  for (let attemptIndex = 0; attemptIndex <= maxRetries; attemptIndex += 1) {
+    const abortController = new AbortController();
+    const timeout = setTimeout(() => abortController.abort(), timeoutMs);
 
-    if (!response.ok || !payload?.ok) {
-      const error = normalizeClaimExecutionErrorEnvelope(payload?.error ?? payload ?? undefined, attempt.requestId, attempt.correlationId);
-      return {
-        ok: false,
-        attempt,
-        error,
-        retry: resolveClaimFailurePresentation(error),
-      };
-    }
+    try {
+      const response = await fetchImpl(endpoint, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-request-id": currentAttempt.requestId,
+          "x-correlation-id": currentAttempt.correlationId,
+        },
+        body: JSON.stringify({
+          accountId: input.scope.accountId,
+          ...(input.scope.userId ? { userId: input.scope.userId } : {}),
+          ...(input.scope.workspaceId ? { workspaceId: input.scope.workspaceId } : {}),
+          idempotencyKey: currentAttempt.idempotencyKey,
+          ...(currentAttempt.intentId ? { intentId: currentAttempt.intentId } : {}),
+        }),
+        signal: abortController.signal,
+      });
 
-    return {
-      ok: true,
-      attempt,
-      state: payload.data?.state ?? "settled",
-      shouldRefresh: true,
-      syncTargets: payload.data?.syncTargets && payload.data.syncTargets.length > 0 ? payload.data.syncTargets : claimExecutionSyncTargets,
-    };
-  } catch (error) {
-    const isAbort = error instanceof Error && error.name === "AbortError";
-    const normalized = isAbort
-      ? {
-          code: "request_timeout",
-          message: "Daily claim request timed out. Retry to continue safely.",
-          retryable: true,
-          source: "runtime",
-          requestId: input.attempt.requestId,
-          correlationId: input.attempt.correlationId,
+      const payload = parsePayload(await response.json().catch(() => null));
+      currentAttempt = withIntentFromPayload(currentAttempt, payload);
+
+      if (!response.ok || !payload?.ok) {
+        const error = normalizeClaimExecutionErrorEnvelope(
+          payload?.error ?? payload ?? undefined,
+          currentAttempt.requestId,
+          currentAttempt.correlationId,
+        );
+        const canRetry = attemptIndex < maxRetries && error.retryable;
+
+        if (!canRetry) {
+          return {
+            ok: false,
+            attempt: currentAttempt,
+            error,
+            retry: resolveClaimFailurePresentation(error),
+          };
         }
-      : normalizeClaimExecutionErrorEnvelope(error, input.attempt.requestId, input.attempt.correlationId);
 
-    return {
-      ok: false,
-      attempt: input.attempt,
-      error: normalized,
-      retry: resolveClaimFailurePresentation(normalized),
-    };
-  } finally {
-    clearTimeout(timeout);
+        await sleep(retryDelayMs * (attemptIndex + 1));
+        continue;
+      }
+
+      return {
+        ok: true,
+        attempt: currentAttempt,
+        state: payload.data?.state ?? "settled",
+        shouldRefresh: true,
+        syncTargets: payload.data?.syncTargets && payload.data.syncTargets.length > 0 ? payload.data.syncTargets : claimExecutionSyncTargets,
+      };
+    } catch (error) {
+      const isAbort = error instanceof Error && error.name === "AbortError";
+      const normalized = isAbort
+        ? {
+            code: "request_timeout",
+            message: "Daily claim request timed out. Retry to continue safely.",
+            retryable: true,
+            source: "runtime",
+            requestId: currentAttempt.requestId,
+            correlationId: currentAttempt.correlationId,
+          }
+        : isLikelyOfflineError(error)
+          ? {
+              code: "network_offline",
+              message: "Network appears offline. Reconnect and retry daily claim.",
+              retryable: true,
+              source: "runtime",
+              requestId: currentAttempt.requestId,
+              correlationId: currentAttempt.correlationId,
+            }
+          : normalizeClaimExecutionErrorEnvelope(error, currentAttempt.requestId, currentAttempt.correlationId);
+      const canRetry = attemptIndex < maxRetries && normalized.retryable;
+
+      if (!canRetry) {
+        return {
+          ok: false,
+          attempt: currentAttempt,
+          error: normalized,
+          retry: resolveClaimFailurePresentation(normalized),
+        };
+      }
+
+      await sleep(retryDelayMs * (attemptIndex + 1));
+    } finally {
+      clearTimeout(timeout);
+    }
   }
+
+  const exhausted = normalizeClaimExecutionErrorEnvelope(
+    {
+      code: "retry_exhausted",
+      message: "Daily claim retries were exhausted. Try again.",
+      retryable: true,
+      source: "runtime",
+    },
+    currentAttempt.requestId,
+    currentAttempt.correlationId,
+  );
+
+  return {
+    ok: false,
+    attempt: currentAttempt,
+    error: exhausted,
+    retry: resolveClaimFailurePresentation(exhausted),
+  };
 }

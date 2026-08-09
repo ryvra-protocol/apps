@@ -170,6 +170,25 @@
   - next-step guidance
   - source/retryability trust metadata
 
+## Phase 17 reliability + performance hardening map
+
+- `@ryvra/api-client` HTTP transport (`packages/api-client/src/transport.ts`) now centralizes:
+  - bounded request timeouts
+  - retry policy for retry-safe reads and idempotency-keyed writes
+  - concurrent GET in-flight dedupe + short TTL cache
+  - deterministic cache invalidation after writes
+  - timing markers for hot-path diagnostics (`error.details.transport` + optional request metric callback)
+- Claim execution reliability alignment:
+  - `apps/pay-web/app/lib/claim-submission-client.ts` adds timeout/offline handling + bounded retries for payout claim submissions
+  - `apps/points-tasks-web/app/lib/claim-execution-client.ts` now retries retryable failures and preserves `intentId` across attempts
+  - both claim flows trigger deterministic data revalidation after successful writes (route refresh)
+- UI responsiveness hardening:
+  - table clients now avoid redundant row cloning/sorting and use deferred row rendering updates under filter/load churn
+  - missing route-level loading skeletons were added in Markets and Points/Tasks to match Pay route behavior
+- Bundle/runtime hardening:
+  - non-critical claim modules are lazy-loaded on `/pay/payouts` and `/points`
+  - performance guard command `pnpm perf:guard` validates chunk budgets and critical route build artifacts after builds
+
 ## Placement guidance for future business logic
 
 - Domain-specific orchestration belongs in app-level features unless shared by multiple apps.

@@ -2,7 +2,7 @@
 
 import { invoiceStatuses, type InvoiceDto, type PayPaginationMeta } from "@ryvra/domain-payments";
 import { Button, Card, DataTable, themeTokens } from "@ryvra/ui";
-import { useMemo, useState } from "react";
+import { useDeferredValue, useState } from "react";
 import { formatCurrencyMinor, formatDateTime } from "../lib/format";
 import { StatusBadge } from "./status-badge";
 import { useQueryFilters } from "./use-query-filters";
@@ -28,9 +28,9 @@ export function InvoicesTableClient({ items, pagination }: InvoicesTableClientPr
 
   const hasFilters = status !== "ALL" || search.length > 0 || from.length > 0 || to.length > 0;
 
-  const sortedItems = useMemo(() => {
-    return [...items].sort((left, right) => (left.issuedAt < right.issuedAt ? 1 : -1));
-  }, [items]);
+  const deferredItems = useDeferredValue(items);
+  const visibleRows = deferredItems;
+  const rowsPending = deferredItems !== items;
 
   const canGoPrev = pagination.page > 1;
   const canGoNext = pagination.page < pagination.totalPages;
@@ -149,7 +149,7 @@ export function InvoicesTableClient({ items, pagination }: InvoicesTableClientPr
             render: (value) => formatDateTime(String(value)),
           },
         ]}
-        rows={sortedItems}
+        rows={visibleRows}
         getRowKey={(row) => row.id}
         rowLabel={(row) => `Invoice ${row.invoiceNumber}`}
         onRowClick={(row) => {
@@ -169,7 +169,13 @@ export function InvoicesTableClient({ items, pagination }: InvoicesTableClientPr
         emptyMessage="No invoices match the selected filters."
       />
 
-      {sortedItems.length === 0 ? (
+      {rowsPending ? (
+        <p role="status" aria-live="polite" style={{ margin: 0, color: themeTokens.color.textMuted }}>
+          Refreshing table rows…
+        </p>
+      ) : null}
+
+      {visibleRows.length === 0 ? (
         <Card title="No invoices found">
           <p style={{ marginTop: 0 }}>Try changing filters or clearing the date range to broaden results.</p>
           <Button type="button" variant="secondary" onClick={() => clearQuery(["status", "search", "from", "to", "page"])}>

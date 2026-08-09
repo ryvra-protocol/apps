@@ -12,6 +12,7 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
+    "perf:guard": "node tools/perf/phase17-guard.mjs",
     "dev:markets": "pnpm --filter @ryvra/markets-web dev",
     "dev:pay": "pnpm --filter @ryvra/pay-web dev",
     "dev:points": "pnpm --filter @ryvra/points-tasks-web dev",

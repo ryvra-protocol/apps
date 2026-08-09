@@ -27,6 +27,12 @@ This repository hosts the unified-shell baseline with Pay, Markets, and Points/T
 - ESLint now applies `eslint-config-next` (`next/core-web-vitals`) across all Next.js apps in the monorepo.
 - Verified that app-router status routes compile in `markets-web`, `pay-web`, and `points-tasks-web`, and Pay parity transport checks remain green (`mock` and `http` compatibility paths).
 
+## Phase 17 reliability + performance notes
+
+- `@ryvra/api-client` HTTP transport now includes bounded timeout/retry behavior, short-lived GET dedupe/cache, and write-triggered cache invalidation.
+- Non-critical claim modules on `/pay/payouts` and `/points` are lazy-loaded to reduce initial client payload.
+- Added performance guard command: `pnpm perf:guard` (bundle budget + critical route artifact checks after build).
+
 ## Setup
 
 ```bash
@@ -44,6 +50,7 @@ pnpm lint
 pnpm typecheck
 pnpm build
 pnpm test
+pnpm perf:guard
 ```
 
 ## Run apps
@@ -243,6 +250,7 @@ Pull requests into `main` must pass:
 - `pnpm typecheck`
 - `pnpm build`
 - `pnpm test`
+- `pnpm perf:guard`
 - runtime policy verification (`Node 24.x`, `pnpm 10.16.0`)
 
 > Contributor caveat: keep Corepack pinned to `pnpm@10.16.0` when regenerating `pnpm-lock.yaml` to avoid lockfile churn.
@@ -278,3 +286,4 @@ See `docs/architecture/` for boundaries, responsibilities, and integration mappi
 - `docs/architecture/claim-execution-phase-12-5b.md`
 - `docs/architecture/points-tasks-integration-parity.md`
 - `docs/architecture/release-readiness-checklist.md`
+- `docs/architecture/reliability-performance-phase-17.md`

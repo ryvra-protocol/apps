@@ -52,7 +52,11 @@ export function parsePage(searchParams: RouteSearchParams): number {
 
 export function parsePageSize(searchParams: RouteSearchParams, fallback = 20): number {
   const pageSizeValue = Number.parseInt(getFirstParam(searchParams, "pageSize") ?? String(fallback), 10);
-  return Number.isFinite(pageSizeValue) && pageSizeValue > 0 ? pageSizeValue : fallback;
+  if (!Number.isFinite(pageSizeValue) || pageSizeValue <= 0) {
+    return fallback;
+  }
+
+  return Math.min(pageSizeValue, 100);
 }
 
 export function parseInvoiceStatus(searchParams: RouteSearchParams): InvoiceStatus | undefined {
