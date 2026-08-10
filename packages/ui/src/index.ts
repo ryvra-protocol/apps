@@ -81,6 +81,28 @@ export type { GlobalSidebarProps } from "./GlobalSidebar";
 export { ProductSwitcher } from "./ProductSwitcher";
 export type { ProductSwitcherProps } from "./ProductSwitcher";
 
+export { DelegationProvenanceChips, delegationViewFilters, matchesDelegationView } from "./DelegationContext";
+export type { DelegatedOperationContext, DelegationViewFilter } from "./DelegationContext";
+
+export { WorkspaceScopeSwitcher } from "./WorkspaceScopeSwitcher";
+export type { WorkspaceScopeSwitcherProps } from "./WorkspaceScopeSwitcher";
+export {
+  buildWorkspaceScopeOptions,
+  resolveWorkspaceScope,
+  applyScopeToQuery,
+  appendScopeToHref,
+  buildScopePersistenceStorageKey,
+  parseStoredScope,
+  isValidScopeValue,
+} from "./workspace-scope";
+export type {
+  WorkspaceScopeOption,
+  WorkspaceScopeSelection,
+  WorkspaceScopeDefaults,
+  ResolveWorkspaceScopeInput,
+  ResolveWorkspaceScopeResult,
+} from "./workspace-scope";
+
 export { UserMenu } from "./UserMenu";
 export type { UserMenuProps } from "./UserMenu";
 

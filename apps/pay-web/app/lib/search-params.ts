@@ -27,9 +27,22 @@ export function getFirstParam(searchParams: RouteSearchParams, key: string): str
   return raw;
 }
 
+function normalizeParam(value: string | undefined): string | undefined {
+  const normalized = value?.trim();
+  return normalized && normalized.length > 0 ? normalized : undefined;
+}
+
+export function parseAccountId(searchParams: RouteSearchParams): string | undefined {
+  return normalizeParam(getFirstParam(searchParams, "account_id") ?? getFirstParam(searchParams, "accountId"));
+}
+
+export function parseWorkspaceId(searchParams: RouteSearchParams): string | undefined {
+  return normalizeParam(getFirstParam(searchParams, "workspace_id") ?? getFirstParam(searchParams, "workspaceId"));
+}
+
 export function parseDateRange(searchParams: RouteSearchParams): PayDateRangeFilter | undefined {
-  const from = getFirstParam(searchParams, "from")?.trim();
-  const to = getFirstParam(searchParams, "to")?.trim();
+  const from = normalizeParam(getFirstParam(searchParams, "from"));
+  const to = normalizeParam(getFirstParam(searchParams, "to"));
 
   if (!from && !to) {
     return undefined;

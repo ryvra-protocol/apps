@@ -1,5 +1,13 @@
 import { ApiClientError, createApiClient, type PayClient, type PointsTasksClient } from "@ryvra/api-client";
-import { createStubAuthGuard, Role, type AuthDecision, type Session } from "@ryvra/auth";
+import {
+  createStubAuthGuard,
+  Role,
+  resolveStubSessionFromEnv,
+  resolveWorkspaceRoleView,
+  roleClaimsFromSession,
+  type AuthDecision,
+  type WorkspaceRoleView,
+} from "@ryvra/auth";
 import { loadPointsTasksIntegrationConfig, type PointsTasksIntegrationConfig } from "@ryvra/config";
 import { createConsoleLogger, mapErrorToTaxonomy, type Logger } from "@ryvra/observability";
 
@@ -10,6 +18,9 @@ export interface PointsTasksRuntimeContext {
   pointsTasksClient: PointsTasksClient;
   payClient: PayClient;
   payAuthTokenConfigured: boolean;
+  sessionUserId: string;
+  sessionRoleClaims: string[];
+  workspaceRole: WorkspaceRoleView;
   defaultAccountId?: string;
 }
 
@@ -28,7 +39,7 @@ function getOptionalEnvValue(key: string): string | undefined {
 export function createPointsTasksRuntimeContext(scope: string): PointsTasksRuntimeContext {
   const config = loadPointsTasksIntegrationConfig(process.env);
   const logger = createConsoleLogger(scope);
-  const authGuard = createStubAuthGuard([Role.Member, Role.Admin]);
+  const authGuard = createStubAuthGuard([Role.Support, Role.Member, Role.Admin]);
   const authToken = getOptionalEnvValue("RYVRA_POINTS_TASKS_AUTH_TOKEN");
   const authScheme = getOptionalEnvValue("RYVRA_POINTS_TASKS_AUTH_SCHEME");
   const requestIdHeader = getOptionalEnvValue("RYVRA_POINTS_TASKS_REQUEST_ID_HEADER");
@@ -39,10 +50,13 @@ export function createPointsTasksRuntimeContext(scope: string): PointsTasksRunti
   const payCorrelationIdHeader = getOptionalEnvValue("RYVRA_PAY_CORRELATION_ID_HEADER") ?? correlationIdHeader;
   const payIdempotencyHeader = getOptionalEnvValue("RYVRA_PAY_IDEMPOTENCY_HEADER");
   const payConnectivityPath = getOptionalEnvValue("RYVRA_PAY_CONNECTIVITY_PATH");
-  const session: Session = {
-    user: { id: "local-member", roles: [Role.Member] },
-    issuedAt: new Date().toISOString(),
-  };
+  const session = resolveStubSessionFromEnv({
+    defaultUserId: "user-core-1",
+    defaultRoles: [Role.Member],
+  });
+  const sessionRoleClaims = roleClaimsFromSession(session);
+  const workspaceRole = resolveWorkspaceRoleView(sessionRoleClaims);
+  const authDecision = authGuard.authorize(session);
   const defaultAccountId = config.accountId ?? (config.mode === "mock" ? "acct-core-1" : undefined);
   const apiClient = createApiClient({
     mode: config.mode,
@@ -70,10 +84,13 @@ export function createPointsTasksRuntimeContext(scope: string): PointsTasksRunti
   return {
     config,
     logger,
-    authDecision: authGuard.authorize(session),
+    authDecision,
     pointsTasksClient: apiClient.pointsTasks,
     payClient: apiClient.pay,
     payAuthTokenConfigured: Boolean(payAuthToken),
+    sessionUserId: session.user?.id ?? "unknown-user",
+    sessionRoleClaims,
+    workspaceRole,
     ...(defaultAccountId ? { defaultAccountId } : {}),
   };
 }

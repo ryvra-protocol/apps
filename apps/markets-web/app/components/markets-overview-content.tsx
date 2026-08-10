@@ -36,9 +36,19 @@ interface MarketsOverviewContentProps {
   mode: RuntimeMode;
   overview: MarketsOverviewDto;
   unifiedBalanceCard: MarketsUnifiedBalanceCardModel;
+  workspaceId?: string;
+  roleLabel: string;
 }
 
-export function MarketsOverviewContent({ title, description, mode, overview, unifiedBalanceCard }: MarketsOverviewContentProps) {
+export function MarketsOverviewContent({
+  title,
+  description,
+  mode,
+  overview,
+  unifiedBalanceCard,
+  workspaceId,
+  roleLabel,
+}: MarketsOverviewContentProps) {
   const portfolioInsights = buildMarketsPortfolioInsights({
     overview,
     unifiedBalanceCard,
@@ -86,6 +96,12 @@ export function MarketsOverviewContent({ title, description, mode, overview, uni
           <div style={{ display: "grid", gap: themeTokens.spacing.sm }}>
             <p style={{ margin: 0 }}>
               Account: <strong>{overview.accountId}</strong>
+            </p>
+            <p style={{ margin: 0 }}>
+              Workspace: <strong>{workspaceId ?? "workspace-core-1"}</strong>
+            </p>
+            <p style={{ margin: 0 }}>
+              Role: <strong>{roleLabel}</strong>
             </p>
             <p style={{ margin: 0 }}>
               API version: <strong>{overview.apiVersion}</strong>

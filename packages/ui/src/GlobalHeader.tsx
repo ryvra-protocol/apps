@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { BreadcrumbItem, UserMenuItem } from "./navigation";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { CommandPaletteTrigger } from "./CommandPaletteTrigger";
@@ -9,6 +10,7 @@ export interface GlobalHeaderProps {
   breadcrumbs: BreadcrumbItem[];
   userMenuItems?: UserMenuItem[];
   commandTriggerLabel?: string;
+  scopeSwitcher?: ReactNode;
 }
 
 export function GlobalHeader({
@@ -16,11 +18,15 @@ export function GlobalHeader({
   breadcrumbs,
   userMenuItems = [],
   commandTriggerLabel = "Command Palette",
+  scopeSwitcher,
 }: GlobalHeaderProps) {
   return (
     <header className="ryvra-header">
       <div className="ryvra-header-row">
-        <h1 className="ryvra-header-title">{appName}</h1>
+        <div className="ryvra-header-identity">
+          <h1 className="ryvra-header-title">{appName}</h1>
+          {scopeSwitcher ? <div className="ryvra-header-scope">{scopeSwitcher}</div> : null}
+        </div>
         <div className="ryvra-header-actions">
           <CommandPaletteTrigger label={commandTriggerLabel} />
           <NotificationCenter />

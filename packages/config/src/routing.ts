@@ -32,6 +32,11 @@ export interface RouteResolutionOptions {
   baseUrls?: Partial<ProductBaseUrls>;
 }
 
+export interface RoutePermissionDecision {
+  allowed: boolean;
+  reason?: string;
+}
+
 const defaultProductBaseUrls: ProductBaseUrls = {
   markets: process.env.NEXT_PUBLIC_MARKETS_APP_URL ?? "http://localhost:3000",
   pay: process.env.NEXT_PUBLIC_PAY_APP_URL ?? "http://localhost:3001",
@@ -321,6 +326,39 @@ export function getProductNav(
   options: Omit<RouteResolutionOptions, "currentProduct"> = {},
 ): ResolvedRouteDefinition[] {
   return resolveRoutes(productRoutes[productId], options);
+}
+
+function normalizeRoleClaims(roleClaims: readonly string[]): string[] {
+  return [...new Set(roleClaims.map((claim) => claim.trim().toLowerCase()).filter((claim) => claim.length > 0))];
+}
+
+export function evaluateRoutePermission(
+  permission: RoutePermissionMeta | undefined,
+  roleClaims: readonly string[],
+): RoutePermissionDecision {
+  if (!permission?.roles || permission.roles.length === 0) {
+    return { allowed: true };
+  }
+
+  const normalizedClaims = normalizeRoleClaims(roleClaims);
+  const normalizedRequiredRoles = permission.roles.map((role) => role.trim().toLowerCase());
+  const allowed = normalizedRequiredRoles.some((requiredRole) => normalizedClaims.includes(requiredRole));
+
+  if (allowed) {
+    return { allowed: true };
+  }
+
+  const requiredRoleLabel = permission.roles.length === 1 ? permission.roles[0] : permission.roles.join(" or ");
+  return {
+    allowed: false,
+    reason: `Requires ${requiredRoleLabel} role.`,
+  };
+}
+
+export function resolveRoutePermissionMeta(productId: ProductId, path: string): RoutePermissionMeta | undefined {
+  const normalizedPath = normalizePath(path);
+  const localMatch = productRoutes[productId].find((route) => normalizePath(route.path) === normalizedPath);
+  return localMatch && "permission" in localMatch ? localMatch.permission : undefined;
 }
 
 function toSearchParams(searchParams: DeepLinkSearchParams): URLSearchParams {

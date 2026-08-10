@@ -27,6 +27,7 @@ export interface AppShellProps {
   userMenuItems?: UserMenuItem[];
   commandTriggerLabel?: string;
   notificationScopeKey?: string;
+  scopeSwitcher?: ReactNode;
 }
 
 export function AppShell({
@@ -43,6 +44,7 @@ export function AppShell({
   userMenuItems = [],
   commandTriggerLabel = "Command Palette",
   notificationScopeKey,
+  scopeSwitcher,
 }: AppShellProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const resolvedNotificationScopeKey = notificationScopeKey && notificationScopeKey.trim().length > 0
@@ -76,6 +78,7 @@ export function AppShell({
           breadcrumbs={breadcrumbs}
           userMenuItems={userMenuItems}
           commandTriggerLabel={commandTriggerLabel}
+          scopeSwitcher={scopeSwitcher}
         />
         <div className="ryvra-shell-layout">
           <GlobalSidebar

@@ -8,15 +8,25 @@ import {
   type MarketsPaginationMeta,
   type OrderDto,
 } from "@ryvra/domain-markets";
-import { Button, Card, DataTable, themeTokens } from "@ryvra/ui";
+import {
+  Button,
+  Card,
+  DataTable,
+  DelegationProvenanceChips,
+  delegationViewFilters,
+  matchesDelegationView,
+  themeTokens,
+} from "@ryvra/ui";
 import { useDeferredValue } from "react";
 import { formatDateTime } from "../lib/format";
+import { buildOrderDelegationContext, supportsOrderDelegationVisibility } from "../lib/delegation-context";
 import { StatusBadge } from "./status-badge";
 import { useQueryFilters } from "./use-query-filters";
 
 interface OrdersTableClientProps {
   items: OrderDto[];
   pagination: MarketsPaginationMeta;
+  currentUserId?: string;
 }
 
 const statusOptions = ["ALL", ...marketOrderStatuses] as const;
@@ -29,7 +39,7 @@ const sortFieldOptions = [
   { value: "status", label: "Status" },
 ] as const;
 
-export function OrdersTableClient({ items, pagination }: OrdersTableClientProps) {
+export function OrdersTableClient({ items, pagination, currentUserId }: OrdersTableClientProps) {
   const { searchParams, updateQuery, clearQuery } = useQueryFilters();
 
   const statusParam = (searchParams.get("status") ?? "ALL").toLowerCase();
@@ -41,11 +51,17 @@ export function OrdersTableClient({ items, pagination }: OrdersTableClientProps)
   const createdBefore = searchParams.get("createdBefore") ?? searchParams.get("to") ?? "";
   const sortField = searchParams.get("sortBy") ?? "updated_at";
   const sortDirection = searchParams.get("sortOrder") === "asc" ? "asc" : "desc";
+  const delegationParam = (searchParams.get("delegation") ?? "all").toLowerCase();
 
   const status = statusOptions.includes(statusParam as (typeof statusOptions)[number]) ? statusParam : "ALL";
   const side = sideOptions.includes(sideParam as (typeof sideOptions)[number]) ? sideParam : "ALL";
   const type = typeOptions.includes(typeParam as (typeof typeOptions)[number]) ? typeParam : "ALL";
   const policyDecision = policyOptions.includes(policyParam as (typeof policyOptions)[number]) ? policyParam : "ALL";
+  const delegationFilter = delegationViewFilters.includes(delegationParam as (typeof delegationViewFilters)[number])
+    ? (delegationParam as (typeof delegationViewFilters)[number])
+    : "all";
+  const delegationAvailable = supportsOrderDelegationVisibility(items);
+  const appliedDelegationFilter = delegationAvailable ? delegationFilter : "all";
 
   const hasFilters =
     status !== "ALL" ||
@@ -56,10 +72,13 @@ export function OrdersTableClient({ items, pagination }: OrdersTableClientProps)
     createdAfter.length > 0 ||
     createdBefore.length > 0 ||
     sortField !== "updated_at" ||
-    sortDirection !== "desc";
+    sortDirection !== "desc" ||
+    delegationFilter !== "all";
 
   const deferredItems = useDeferredValue(items);
-  const visibleRows = deferredItems;
+  const visibleRows = deferredItems.filter((item) =>
+    matchesDelegationView(buildOrderDelegationContext(item), appliedDelegationFilter, currentUserId),
+  );
   const rowsPending = deferredItems !== items;
 
   return (
@@ -143,6 +162,22 @@ export function OrdersTableClient({ items, pagination }: OrdersTableClientProps)
           </label>
 
           <label style={{ display: "grid", gap: themeTokens.spacing.xs }}>
+            <span>Delegation view</span>
+            <select
+              className="markets-filter-control"
+              value={delegationFilter}
+              aria-label="Delegation filter"
+              disabled={!delegationAvailable}
+              onChange={(event) => updateQuery({ delegation: event.currentTarget.value === "all" ? undefined : event.currentTarget.value })}
+            >
+              <option value="all">All operations</option>
+              <option value="mine">Mine</option>
+              <option value="delegated_to_me">Delegated to me</option>
+              <option value="delegated_by_me">Delegated by me</option>
+            </select>
+          </label>
+
+          <label style={{ display: "grid", gap: themeTokens.spacing.xs }}>
             <span>Reference ID</span>
             <input
               className="markets-filter-control"
@@ -210,6 +245,7 @@ export function OrdersTableClient({ items, pagination }: OrdersTableClientProps)
                   "to",
                   "sortBy",
                   "sortOrder",
+                  "delegation",
                   "cursor",
                   "page",
                 ])
@@ -224,6 +260,11 @@ export function OrdersTableClient({ items, pagination }: OrdersTableClientProps)
         {!hasFilters ? (
           <p id="orders-reset-hint" style={{ marginBottom: 0, color: themeTokens.color.textMuted }}>
             Reset is disabled because no filters are currently applied.
+          </p>
+        ) : null}
+        {!delegationAvailable ? (
+          <p style={{ marginBottom: 0, color: themeTokens.color.textMuted }}>
+            Delegated actor metadata: Not available in current environment.
           </p>
         ) : null}
       </Card>
@@ -250,6 +291,11 @@ export function OrdersTableClient({ items, pagination }: OrdersTableClientProps)
             render: (value) => <StatusBadge status={String(value)} />,
           },
           {
+            key: "accountId",
+            header: "Provenance",
+            render: (_value, row) => <DelegationProvenanceChips context={buildOrderDelegationContext(row)} />,
+          },
+          {
             key: "updatedAt",
             header: "Updated",
             render: (value) => formatDateTime(String(value)),
@@ -272,7 +318,9 @@ export function OrdersTableClient({ items, pagination }: OrdersTableClientProps)
           <Button
             type="button"
             variant="secondary"
-            onClick={() => clearQuery(["status", "side", "type", "policyDecision", "referenceId", "createdAfter", "createdBefore", "cursor", "page"])}
+            onClick={() =>
+              clearQuery(["status", "side", "type", "policyDecision", "referenceId", "createdAfter", "createdBefore", "delegation", "cursor", "page"])
+            }
           >
             Clear filters
           </Button>

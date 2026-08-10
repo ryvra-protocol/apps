@@ -59,6 +59,19 @@
 - `pnpm test`
 - `pnpm perf:guard` (Phase 17 bundle budget + critical route artifact guard)
 
+## Phase 16 team/workspace controls go-live gates
+
+- Role model parity:
+  - Viewer/Operator/Admin capability mapping is sourced from `@ryvra/auth` only.
+  - Role-gated controls render explicit disabled/denied reasons (no silent failure).
+- Scope switcher parity:
+  - canonical query keys (`account_id`, `workspace_id`, optional `user_id`) are enforced in all shells.
+  - malformed scope values reset to safe defaults with explicit notice.
+  - scope persistence (`ryvra.scope.<product>`) restores without SSR hydration mismatch.
+- Delegated visibility parity:
+  - operation lists/details render provenance when metadata exists.
+  - missing delegation metadata renders explicit `Not available in current environment` state.
+
 ## Smoke validation commands
 
 ```bash

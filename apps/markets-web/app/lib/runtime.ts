@@ -1,5 +1,13 @@
 import { ApiClientError, createApiClient, resolveUnifiedBalanceAccountId, type MarketsClient } from "@ryvra/api-client";
-import { createStubAuthGuard, Role, type AuthDecision, type Session } from "@ryvra/auth";
+import {
+  createStubAuthGuard,
+  Role,
+  resolveStubSessionFromEnv,
+  resolveWorkspaceRoleView,
+  roleClaimsFromSession,
+  type AuthDecision,
+  type WorkspaceRoleView,
+} from "@ryvra/auth";
 import { loadMarketsIntegrationConfig, type MarketsIntegrationConfig } from "@ryvra/config";
 import { createConsoleLogger, mapErrorToTaxonomy, type Logger } from "@ryvra/observability";
 
@@ -8,6 +16,9 @@ export interface MarketsRuntimeContext {
   logger: Logger;
   authDecision: AuthDecision;
   marketsClient: MarketsClient;
+  sessionUserId: string;
+  sessionRoleClaims: string[];
+  workspaceRole: WorkspaceRoleView;
   defaultAccountId?: string;
 }
 
@@ -26,7 +37,7 @@ function getOptionalEnvValue(key: string): string | undefined {
 export function createMarketsRuntimeContext(scope: string): MarketsRuntimeContext {
   const config = loadMarketsIntegrationConfig(process.env);
   const logger = createConsoleLogger(scope);
-  const authGuard = createStubAuthGuard([Role.Member, Role.Admin]);
+  const authGuard = createStubAuthGuard([Role.Support, Role.Member, Role.Admin]);
   const authToken = getOptionalEnvValue("RYVRA_MARKETS_AUTH_TOKEN");
   const authScheme = getOptionalEnvValue("RYVRA_MARKETS_AUTH_SCHEME");
   const requestIdHeader = getOptionalEnvValue("RYVRA_MARKETS_REQUEST_ID_HEADER");
@@ -35,15 +46,18 @@ export function createMarketsRuntimeContext(scope: string): MarketsRuntimeContex
     mode: config.mode,
     ...(config.accountId ? { configuredAccountId: config.accountId } : {}),
   });
-  const session: Session = {
-    user: { id: "local-member", roles: [Role.Member] },
-    issuedAt: new Date().toISOString(),
-  };
+  const session = resolveStubSessionFromEnv({
+    defaultUserId: "user-core-1",
+    defaultRoles: [Role.Member],
+  });
+  const sessionRoleClaims = roleClaimsFromSession(session);
+  const workspaceRole = resolveWorkspaceRoleView(sessionRoleClaims);
+  const authDecision = authGuard.authorize(session);
 
   return {
     config,
     logger,
-    authDecision: authGuard.authorize(session),
+    authDecision,
     marketsClient: createApiClient({
       mode: config.mode,
       baseUrl: config.apiBaseUrl,
@@ -58,6 +72,9 @@ export function createMarketsRuntimeContext(scope: string): MarketsRuntimeContex
       ...(config.compatibilityVersion ? { marketsCompatibilityVersion: config.compatibilityVersion } : {}),
       ...(config.parityCheckMarker ? { marketsParityCheckMarker: config.parityCheckMarker } : {}),
     }).markets,
+    sessionUserId: session.user?.id ?? "unknown-user",
+    sessionRoleClaims,
+    workspaceRole,
     ...(defaultAccountId ? { defaultAccountId } : {}),
   };
 }

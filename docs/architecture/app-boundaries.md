@@ -17,6 +17,9 @@ Define clear responsibility boundaries between the three frontend apps and share
 - Consumes shared in-app notification center + communication preference surfaces from `@ryvra/ui` without introducing product-specific notification persistence contracts.
 - Owns Markets-specific portfolio insight KPI composition while using shared insight primitives and existing read-only markets data.
 - Must keep Unified Balance in the top-priority dashboard/overview zone ahead of secondary analytics.
+- Uses shared scope switcher primitives to enforce canonical account/workspace query state and persistence.
+- Applies Viewer/Operator/Admin UI gating for operational controls and evidence panels using shared capability helpers (no backend auth invention).
+- Surfaces delegated-operation provenance in orders list/detail surfaces with explicit fallback messaging when backend metadata is unavailable.
 
 ### `apps/pay-web`
 
@@ -31,6 +34,9 @@ Define clear responsibility boundaries between the three frontend apps and share
 - Owns payout-claim client orchestration while enforcing timeout/offline-safe UX and deterministic post-success revalidation.
 - Owns claim/payout notification producer mappings for Phase 14 while keeping persistence/deep-link shell behavior inside shared UI primitives.
 - Owns Pay-specific portfolio/operational trend KPI composition while keeping Unified Balance in the top-priority zone.
+- Uses shared scope switcher primitives to enforce canonical account/workspace query state and persistence.
+- Applies Viewer/Operator/Admin gating for claim actions, reconciliation access, and sensitive operational evidence panels with explicit denied reasons.
+- Surfaces delegated-operation provenance in payouts/invoices/reconciliation surfaces; when delegation metadata is absent, renders explicit unavailable state (never silent/blank).
 
 ### `apps/points-tasks-web`
 
@@ -44,6 +50,9 @@ Define clear responsibility boundaries between the three frontend apps and share
 - Owns task + daily-claim notification producer mappings for Phase 14 while consuming shared notification center/preference UX from `@ryvra/ui`.
 - Must keep points balance + daily-claim surfaces in top-priority zones on both `/points` and `/tasks`.
 - Owns points/tasks portfolio insight composition using canonical overview reads and explicit history-window fallback messaging.
+- Uses shared scope switcher primitives to enforce canonical account/workspace/user query state and persistence.
+- Applies Viewer/Operator/Admin gating for claim actions, task route permissions, and operational evidence visibility.
+- Surfaces delegated-operation provenance in points/task list/detail surfaces, using metadata where present and explicit unavailable state when absent.
 
 ## Shared packages
 
@@ -67,6 +76,7 @@ Define clear responsibility boundaries between the three frontend apps and share
 
 - Source of navigation maps, deep-link helpers, and environment/runtime config parsing.
 - Fails fast with variable-level messages for invalid env values and missing HTTP-mode auth tokens on Markets/Points-Tasks integration paths.
+- Owns route permission metadata evaluation and product/path permission lookup used by app-level permission-denied rendering.
 
 ### `@ryvra/ui`
 
@@ -76,6 +86,10 @@ Define clear responsibility boundaries between the three frontend apps and share
 - Owns reusable trust/compliance presentation primitives (timelines, disclosures, evidence panels, receipts, policy links, standardized error transparency copy).
 - Owns the reusable in-app notification center, scoped notification state provider, read/unread interactions, category/sort controls, and communication preference surfaces (email/webhook UI-first mode labeling).
 - Owns reusable portfolio/insight presentation primitives (window controls, module state rendering, compact trend visuals, and shared formatting helpers).
+- Owns shared team/workspace controls primitives:
+  - scope parsing/canonicalization/persistence helpers
+  - global role/scope switcher component
+  - delegated provenance chips and delegation-filter matching helpers
 - Enforces Phase 12.5A navigation policy across Markets, Pay, and Points/Tasks:
   - sidebar is collapsed by default on first load and expands only by user action
   - sidebar preference persists via client storage after user interaction
@@ -86,6 +100,7 @@ Define clear responsibility boundaries between the three frontend apps and share
 ### `@ryvra/auth`
 
 - Auth/session abstractions for HTTP mode integration and account context propagation.
+- Owns workspace role model (`Viewer`/`Operator`/`Admin`) and capability checks used for consistent cross-app UI gating.
 
 ### `@ryvra/observability`
 

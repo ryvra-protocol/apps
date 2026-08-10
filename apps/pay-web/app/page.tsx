@@ -1,10 +1,15 @@
 import { Section, themeTokens } from "@ryvra/ui";
 import { ErrorState, UnauthorizedState } from "./components/page-states";
 import { PayOverviewContent } from "./components/pay-overview-content";
+import { parseAccountId, parseWorkspaceId, type RouteSearchParams } from "./lib/search-params";
 import { createPayRuntimeContext, capturePayPageError } from "./lib/runtime";
 import { loadPayUnifiedBalanceCard } from "./lib/unified-balance";
 
-export default async function PayHomePage() {
+interface PayHomePageProps {
+  searchParams?: Record<string, string | string[] | undefined>;
+}
+
+export default async function PayHomePage({ searchParams }: PayHomePageProps) {
   const runtime = createPayRuntimeContext("pay-web:dashboard");
 
   if (!runtime.authDecision.allowed) {
@@ -18,23 +23,27 @@ export default async function PayHomePage() {
   }
 
   try {
+    const accountId = parseAccountId(searchParams as RouteSearchParams) ?? runtime.marketsAccountId ?? "acct-core-1";
+    const workspaceId = parseWorkspaceId(searchParams as RouteSearchParams);
     const [overview, unifiedBalanceCard] = await Promise.all([
       runtime.payClient.getPayOverview(),
       loadPayUnifiedBalanceCard({
         marketsClient: runtime.marketsClient,
         logger: runtime.logger,
         route: "/",
-        ...(runtime.marketsAccountId ? { accountId: runtime.marketsAccountId } : {}),
+        accountId,
       }),
     ]);
 
     runtime.logger.info("Loaded unified balance for pay dashboard", {
-      accountId: runtime.marketsAccountId ?? "missing",
+      accountId,
       state: unifiedBalanceCard.state,
     });
 
     runtime.logger.info("Loaded pay dashboard overview", {
       mode: runtime.config.mode,
+      workspaceId: workspaceId ?? "workspace-core-1",
+      role: runtime.workspaceRole.role,
       activityCount: overview.recentActivity.length,
     });
 
@@ -45,6 +54,9 @@ export default async function PayHomePage() {
         mode={runtime.config.mode}
         overview={overview}
         unifiedBalanceCard={unifiedBalanceCard}
+        accountId={accountId}
+        {...(workspaceId ? { workspaceId } : {})}
+        roleLabel={runtime.workspaceRole.label}
       />
     );
   } catch (error) {

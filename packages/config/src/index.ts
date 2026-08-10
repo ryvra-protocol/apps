@@ -18,6 +18,8 @@ export {
   routeRegistry,
   getGlobalNavItems,
   getProductNav,
+  evaluateRoutePermission,
+  resolveRoutePermissionMeta,
   buildDeepLink,
   parseDeepLink,
 } from "./routing";
@@ -28,6 +30,7 @@ export type {
   ResolvedRouteDefinition,
   RoutePermissionMeta,
   RouteResolutionOptions,
+  RoutePermissionDecision,
   DeepLinkContract,
   BuildDeepLinkInput,
   ParsedDeepLink,

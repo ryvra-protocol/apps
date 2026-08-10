@@ -21,9 +21,11 @@ import { StatusBadge } from "./status-badge";
 interface DailyClaimCardProps {
   model: DailyClaimViewModel;
   scope: DailyClaimScope;
+  canOperate: boolean;
+  operateDeniedReason?: string;
 }
 
-export function DailyClaimCard({ model, scope }: DailyClaimCardProps) {
+export function DailyClaimCard({ model, scope, canOperate, operateDeniedReason }: DailyClaimCardProps) {
   const router = useRouter();
   const { addNotification } = useNotificationCenter();
   const lockRef = useRef(createClaimSubmissionLock());
@@ -35,7 +37,7 @@ export function DailyClaimCard({ model, scope }: DailyClaimCardProps) {
   const [isRefreshing, startRefresh] = useTransition();
 
   const submitClaim = async (mode: "new" | "retry") => {
-    if (!model.cta.enabled || isSubmitting || isRefreshing) {
+    if (!canOperate || !model.cta.enabled || isSubmitting || isRefreshing) {
       return;
     }
 
@@ -121,7 +123,8 @@ export function DailyClaimCard({ model, scope }: DailyClaimCardProps) {
 
   const status = didSucceed ? "already_claimed" : model.status;
   const statusLabel = didSucceed ? "Already claimed" : model.statusLabel;
-  const ctaEnabled = model.cta.enabled && !didSucceed;
+  const ctaEnabled = canOperate && model.cta.enabled && !didSucceed;
+  const ctaDisabledReason = !canOperate ? operateDeniedReason ?? "Operator workspace access is required." : model.cta.reason;
   const ctaLabel = isSubmitting ? "Submitting claim..." : isRefreshing ? "Refreshing claim..." : didSucceed ? "Claim submitted" : model.cta.label;
 
   return (
@@ -146,12 +149,12 @@ export function DailyClaimCard({ model, scope }: DailyClaimCardProps) {
             onClick={() => {
               void submitClaim("new");
             }}
-            aria-label={ctaEnabled ? "Claim daily points" : `Claim disabled: ${model.cta.reason ?? "Unavailable"}`}
+            aria-label={ctaEnabled ? "Claim daily points" : `Claim disabled: ${ctaDisabledReason ?? "Unavailable"}`}
           >
             {ctaLabel}
           </Button>
-          {!ctaEnabled && model.cta.reason ? (
-            <p style={{ margin: 0, color: themeTokens.color.textMuted, fontSize: themeTokens.typography.size.sm }}>{model.cta.reason}</p>
+          {!ctaEnabled && ctaDisabledReason ? (
+            <p style={{ margin: 0, color: themeTokens.color.textMuted, fontSize: themeTokens.typography.size.sm }}>{ctaDisabledReason}</p>
           ) : null}
         </div>
 
@@ -185,7 +188,7 @@ export function DailyClaimCard({ model, scope }: DailyClaimCardProps) {
               <Button
                 type="button"
                 variant="secondary"
-                disabled={isSubmitting || isRefreshing || !model.cta.enabled}
+                disabled={isSubmitting || isRefreshing || !model.cta.enabled || !canOperate}
                 onClick={() => {
                   void submitClaim("new");
                 }}

@@ -9,6 +9,9 @@
     "lint": "eslint --max-warnings 0 --ext .ts src",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "build": "tsc -p tsconfig.json",
-    "test": "node -e \"console.log('No tests configured for @ryvra/auth')\""
+    "test": "tsx --test src/__tests__/**/*.spec.mjs"
+  },
+  "devDependencies": {
+    "tsx": "4.23.9"
   }
 }

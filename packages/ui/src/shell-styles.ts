@@ -66,10 +66,22 @@ export const shellStyles = `
   line-height: ${themeTokens.typography.lineHeight.tight};
 }
 
+.ryvra-header-identity {
+  display: grid;
+  gap: ${themeTokens.spacing.sm};
+  min-width: 0;
+}
+
+.ryvra-header-scope {
+  min-width: min(100%, 52rem);
+}
+
 .ryvra-header-actions {
   display: flex;
   align-items: center;
   gap: ${themeTokens.spacing.sm};
+  justify-content: flex-end;
+  flex-wrap: wrap;
 }
 
 .ryvra-notification-center {
@@ -786,6 +798,10 @@ export const shellStyles = `
     padding-right: ${themeTokens.spacing.lg};
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .ryvra-header-actions {
+    justify-content: flex-start;
   }
 
   .ryvra-shell-layout {

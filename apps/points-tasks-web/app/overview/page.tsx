@@ -75,6 +75,8 @@ export default async function PointsOverviewPage({ searchParams }: PointsTasksOv
     runtime.logger.info("Loaded points/tasks overview route", {
       mode: runtime.config.mode,
       accountId,
+      workspaceId: workspaceId ?? "workspace-core-1",
+      role: runtime.workspaceRole.role,
       currentBalance: pointsOverview.currentBalance,
       tasksCreated: tasksOverview.tasksCreated,
     });
@@ -86,6 +88,8 @@ export default async function PointsOverviewPage({ searchParams }: PointsTasksOv
         mode={runtime.config.mode}
         baseUrl={runtime.config.apiBaseUrl}
         accountId={accountId}
+        {...(workspaceId ? { workspaceId } : {})}
+        roleLabel={runtime.workspaceRole.label}
         pointsOverview={pointsOverview}
         tasksOverview={tasksOverview}
       />

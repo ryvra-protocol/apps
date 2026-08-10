@@ -17,6 +17,26 @@
   - top product nav destinations now route through a centered floating bottom icon dock (non-full-width)
   - icon-only nav controls preserve accessibility with labels/tooltips/focus states and active-route `aria-current`
 
+## Phase 16 additions: team/workspace controls and delegated visibility
+
+- Shared role model and capability mapping now live in `@ryvra/auth` (`workspace-access.ts`):
+  - role view: `Viewer` | `Operator` | `Admin`
+  - capability checks: `read`, `operate`, `admin`
+  - explicit user-facing denied-reason messaging helpers for disabled controls
+- Shared scope switcher/state logic now lives in `@ryvra/ui`:
+  - canonical scope query keys: `account_id`, `workspace_id`, optional `user_id`
+  - alias normalization (`accountId`, `workspaceId`, `userId`) with canonical URL rewrite
+  - malformed/unsupported scope fallback to safe defaults with explicit notices
+  - per-product scope persistence keys (`ryvra.scope.<product>`) for Markets, Pay, Points/Tasks
+  - shared `WorkspaceScopeSwitcher` shell surface with consistent role badge + keyboard/ARIA semantics
+- Shared delegated visibility primitives now live in `@ryvra/ui`:
+  - provenance chips (`initiated by`, `acting for`, `account`, `workspace`)
+  - common delegation filters (`all`, `mine`, `delegated_to_me`, `delegated_by_me`)
+  - explicit unavailable state: `Not available in current environment`
+- Route metadata from `@ryvra/config` is now consumed at runtime for deterministic UI gating:
+  - disabled navigation labels include explicit role requirements when route permissions fail
+  - route-level permission-denied rendering is enforced on restricted surfaces (for example Pay reconciliation and Points/Tasks tasks access)
+
 ## Markets integration map (Phase 9.5 v2 strict parity)
 
 - `apps/markets-web` runtime (`app/lib/runtime.ts`) loads mode/API config and constructs `createApiClient(...).markets`.

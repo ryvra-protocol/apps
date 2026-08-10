@@ -95,6 +95,10 @@ export function parseAccountId(searchParams: RouteSearchParams): string | undefi
   return normalizeParam(getFirstParam(searchParams, "account_id") ?? getFirstParam(searchParams, "accountId"));
 }
 
+export function parseWorkspaceId(searchParams: RouteSearchParams): string | undefined {
+  return normalizeParam(getFirstParam(searchParams, "workspace_id") ?? getFirstParam(searchParams, "workspaceId"));
+}
+
 export function parseInstrumentStatus(searchParams: RouteSearchParams): InstrumentFilters["status"] | undefined {
   const status = normalizeParam(getFirstParam(searchParams, "status"))?.toLowerCase();
   return status && instrumentStatusSet.has(status as (typeof marketInstrumentStatuses)[number])

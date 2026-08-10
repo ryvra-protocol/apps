@@ -1,8 +1,17 @@
 "use client";
 
 import { invoiceStatuses, type InvoiceDto, type PayPaginationMeta } from "@ryvra/domain-payments";
-import { Button, Card, DataTable, themeTokens } from "@ryvra/ui";
+import {
+  Button,
+  Card,
+  DataTable,
+  DelegationProvenanceChips,
+  delegationViewFilters,
+  matchesDelegationView,
+  themeTokens,
+} from "@ryvra/ui";
 import { useDeferredValue, useState } from "react";
+import { buildInvoiceDelegationContext, supportsInvoiceDelegationVisibility } from "../lib/delegation-context";
 import { formatCurrencyMinor, formatDateTime } from "../lib/format";
 import { StatusBadge } from "./status-badge";
 import { useQueryFilters } from "./use-query-filters";
@@ -10,11 +19,12 @@ import { useQueryFilters } from "./use-query-filters";
 interface InvoicesTableClientProps {
   items: InvoiceDto[];
   pagination: PayPaginationMeta;
+  currentUserId?: string;
 }
 
 const invoiceStatusOptions = ["ALL", ...invoiceStatuses] as const;
 
-export function InvoicesTableClient({ items, pagination }: InvoicesTableClientProps) {
+export function InvoicesTableClient({ items, pagination, currentUserId }: InvoicesTableClientProps) {
   const { searchParams, updateQuery, clearQuery } = useQueryFilters();
   const [expandedInvoiceId, setExpandedInvoiceId] = useState<string | null>(null);
 
@@ -25,11 +35,19 @@ export function InvoicesTableClient({ items, pagination }: InvoicesTableClientPr
   const search = searchParams.get("search") ?? "";
   const from = searchParams.get("from") ?? "";
   const to = searchParams.get("to") ?? "";
+  const delegationParam = (searchParams.get("delegation") ?? "all").toLowerCase();
+  const delegationFilter = delegationViewFilters.includes(delegationParam as (typeof delegationViewFilters)[number])
+    ? (delegationParam as (typeof delegationViewFilters)[number])
+    : "all";
+  const delegationAvailable = supportsInvoiceDelegationVisibility();
+  const appliedDelegationFilter = delegationAvailable ? delegationFilter : "all";
 
-  const hasFilters = status !== "ALL" || search.length > 0 || from.length > 0 || to.length > 0;
+  const hasFilters = status !== "ALL" || search.length > 0 || from.length > 0 || to.length > 0 || delegationFilter !== "all";
 
   const deferredItems = useDeferredValue(items);
-  const visibleRows = deferredItems;
+  const visibleRows = deferredItems.filter((invoice) =>
+    matchesDelegationView(buildInvoiceDelegationContext(invoice), appliedDelegationFilter, currentUserId),
+  );
   const rowsPending = deferredItems !== items;
 
   const canGoPrev = pagination.page > 1;
@@ -109,11 +127,27 @@ export function InvoicesTableClient({ items, pagination }: InvoicesTableClientPr
             />
           </label>
 
+          <label style={{ display: "grid", gap: themeTokens.spacing.xs }}>
+            <span>Delegation view</span>
+            <select
+              className="pay-filter-control"
+              value={delegationFilter}
+              aria-label="Delegation filter"
+              disabled={!delegationAvailable}
+              onChange={(event) => updateQuery({ delegation: event.currentTarget.value === "all" ? undefined : event.currentTarget.value })}
+            >
+              <option value="all">All operations</option>
+              <option value="mine">Mine</option>
+              <option value="delegated_to_me">Delegated to me</option>
+              <option value="delegated_by_me">Delegated by me</option>
+            </select>
+          </label>
+
           <div style={{ display: "flex", alignItems: "flex-end" }}>
             <Button
               type="button"
               variant="secondary"
-              onClick={() => clearQuery(["status", "search", "from", "to", "page"])}
+              onClick={() => clearQuery(["status", "search", "from", "to", "delegation", "page"])}
               disabled={!hasFilters}
               aria-describedby={!hasFilters ? "invoice-reset-hint" : undefined}
             >
@@ -124,6 +158,11 @@ export function InvoicesTableClient({ items, pagination }: InvoicesTableClientPr
         {!hasFilters ? (
           <p id="invoice-reset-hint" style={{ marginBottom: 0, color: themeTokens.color.textMuted }}>
             Reset is disabled because no filters are currently applied.
+          </p>
+        ) : null}
+        {!delegationAvailable ? (
+          <p style={{ marginBottom: 0, color: themeTokens.color.textMuted }}>
+            Delegated actor metadata: Not available in current environment.
           </p>
         ) : null}
       </Card>
@@ -147,6 +186,11 @@ export function InvoicesTableClient({ items, pagination }: InvoicesTableClientPr
             key: "issuedAt",
             header: "Issued",
             render: (value) => formatDateTime(String(value)),
+          },
+          {
+            key: "id",
+            header: "Provenance",
+            render: (_value, row) => <DelegationProvenanceChips context={buildInvoiceDelegationContext(row)} />,
           },
         ]}
         rows={visibleRows}
@@ -178,7 +222,7 @@ export function InvoicesTableClient({ items, pagination }: InvoicesTableClientPr
       {visibleRows.length === 0 ? (
         <Card title="No invoices found">
           <p style={{ marginTop: 0 }}>Try changing filters or clearing the date range to broaden results.</p>
-          <Button type="button" variant="secondary" onClick={() => clearQuery(["status", "search", "from", "to", "page"])}>
+          <Button type="button" variant="secondary" onClick={() => clearQuery(["status", "search", "from", "to", "delegation", "page"])}>
             Clear filters
           </Button>
         </Card>

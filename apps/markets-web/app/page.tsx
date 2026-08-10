@@ -1,10 +1,15 @@
 import { Section, themeTokens } from "@ryvra/ui";
 import { ErrorState, UnauthorizedState } from "./components/page-states";
 import { MarketsOverviewContent } from "./components/markets-overview-content";
+import { parseAccountId, parseWorkspaceId, type RouteSearchParams } from "./lib/search-params";
 import { captureMarketsPageError, createMarketsRuntimeContext } from "./lib/runtime";
 import { loadMarketsUnifiedBalanceCard } from "./lib/unified-balance";
 
-export default async function MarketsHomePage() {
+interface MarketsHomePageProps {
+  searchParams?: Record<string, string | string[] | undefined>;
+}
+
+export default async function MarketsHomePage({ searchParams }: MarketsHomePageProps) {
   const runtime = createMarketsRuntimeContext("markets-web:dashboard");
 
   if (!runtime.authDecision.allowed) {
@@ -18,14 +23,15 @@ export default async function MarketsHomePage() {
   }
 
   try {
-    const accountId = runtime.defaultAccountId ?? "";
+    const accountId = parseAccountId(searchParams as RouteSearchParams) ?? runtime.defaultAccountId ?? "";
+    const workspaceId = parseWorkspaceId(searchParams as RouteSearchParams);
     if (!accountId) {
       return (
         <section style={{ display: "grid", gap: themeTokens.spacing.lg }}>
           <Section title="Markets Dashboard" description="MVP market metrics and recent execution activity.">
             <ErrorState
               title="Account scope is required"
-              message="Set RYVRA_MARKETS_ACCOUNT_ID before loading the unified balance and markets overview."
+              message="Set account_id in the URL or configure RYVRA_MARKETS_ACCOUNT_ID before loading the unified balance and markets overview."
               source="runtime"
               retryable={false}
               retryLink={{ href: "/", label: "Retry dashboard" }}
@@ -55,6 +61,8 @@ export default async function MarketsHomePage() {
     runtime.logger.info("Loaded markets dashboard overview", {
       mode: runtime.config.mode,
       accountId: overview.accountId,
+      workspaceId: workspaceId ?? "workspace-core-1",
+      role: runtime.workspaceRole.role,
       totalOrders: overview.orders.totalOrders,
     });
 
@@ -65,6 +73,8 @@ export default async function MarketsHomePage() {
         mode={runtime.config.mode}
         overview={overview}
         unifiedBalanceCard={unifiedBalanceCard}
+        {...(workspaceId ? { workspaceId } : {})}
+        roleLabel={runtime.workspaceRole.label}
       />
     );
   } catch (error) {
