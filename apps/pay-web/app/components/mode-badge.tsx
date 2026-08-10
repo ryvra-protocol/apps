@@ -1,12 +1,12 @@
 import type { RuntimeMode } from "@ryvra/config";
-import { themeTokens } from "@ryvra/ui";
+import { themeTokens, translateRuntime } from "@ryvra/ui";
 
 interface ModeBadgeProps {
   mode: RuntimeMode;
 }
 
 export function ModeBadge({ mode }: ModeBadgeProps) {
-  const label = mode === "mock" ? "Mock data mode" : "HTTP mode";
+  const label = mode === "mock" ? translateRuntime("mode.mock", "Mock data mode") : translateRuntime("mode.http", "HTTP mode");
 
   return (
     <span

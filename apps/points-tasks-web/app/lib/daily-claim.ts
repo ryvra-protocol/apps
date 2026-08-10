@@ -1,3 +1,5 @@
+import { formatLocalizedDateTime, formatLocalizedRelativeTime } from "@ryvra/ui";
+
 export type DailyClaimUiStatus = "available" | "already_claimed" | "cooldown" | "unavailable";
 
 interface DailyClaimStateDto {
@@ -69,30 +71,23 @@ function toStatusLabel(status: DailyClaimUiStatus): string {
   return "Unavailable";
 }
 
-function formatUtcDateTime(isoTimestamp: string): string {
-  return new Intl.DateTimeFormat("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "UTC",
-    timeZoneName: "short",
-  }).format(new Date(isoTimestamp));
+function formatLocalizedClaimDateTime(isoTimestamp: string): string {
+  return formatLocalizedDateTime(isoTimestamp, {
+    fallback: "n/a",
+  });
 }
 
 export function formatDailyClaimCooldown(nextEligibleAt: string, nowIso: string): string {
   const now = Date.parse(nowIso);
   const nextEligible = Date.parse(nextEligibleAt);
   if (!Number.isFinite(now) || !Number.isFinite(nextEligible) || nextEligible <= now) {
-    return `Next eligible now (${formatUtcDateTime(nextEligibleAt)})`;
+    return `Next eligible now (${formatLocalizedClaimDateTime(nextEligibleAt)})`;
   }
 
-  const totalMinutes = Math.ceil((nextEligible - now) / 60000);
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  const remaining = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
-  return `${remaining} remaining (${formatUtcDateTime(nextEligibleAt)})`;
+  const relativeLabel = formatLocalizedRelativeTime(nextEligibleAt, {
+    now: nowIso,
+  });
+  return `${relativeLabel} (${formatLocalizedClaimDateTime(nextEligibleAt)})`;
 }
 
 export function buildDailyClaimViewModel(input: {
@@ -158,7 +153,7 @@ export function buildDailyClaimViewModel(input: {
         label: "Claim daily points",
         enabled: false,
         reason: nextEligibleAt
-          ? `Cooldown active until ${formatUtcDateTime(nextEligibleAt)}.`
+          ? `Cooldown active until ${formatLocalizedClaimDateTime(nextEligibleAt)}.`
           : "Cooldown is active. Next eligibility time was not provided by the backend.",
       },
       retryable: false,

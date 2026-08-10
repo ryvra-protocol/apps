@@ -1,4 +1,5 @@
 import { themeTokens } from "./theme";
+import { translateRuntime } from "./i18n-runtime";
 
 type StatusTone = "success" | "warning" | "danger" | "neutral";
 
@@ -81,6 +82,9 @@ export interface StatusBadgeProps {
 export function StatusBadge({ status, minWidth = "5.25rem", textTransform = "uppercase" }: StatusBadgeProps) {
   const tone = resolveStatusTone(status);
   const palette = resolvePalette(tone);
+  const statusKey = status.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_");
+  const fallbackLabel = textTransform === "capitalize" ? status.replace(/_/g, " ") : status;
+  const translatedStatus = translateRuntime(`status.${statusKey}`, fallbackLabel);
 
   return (
     <span
@@ -100,7 +104,7 @@ export function StatusBadge({ status, minWidth = "5.25rem", textTransform = "upp
         minWidth,
       }}
     >
-      {textTransform === "capitalize" ? status.replace(/_/g, " ") : status}
+      {translatedStatus}
     </span>
   );
 }

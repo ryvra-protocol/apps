@@ -1,5 +1,6 @@
 import { themeTokens } from "./theme";
 import type { WorkspaceScopeOption, WorkspaceScopeSelection } from "./workspace-scope";
+import { useI18n } from "./I18nProvider";
 
 export interface WorkspaceScopeSwitcherProps {
   scope: WorkspaceScopeSelection;
@@ -33,11 +34,15 @@ export function WorkspaceScopeSwitcher({
   notices = [],
   onScopeChange,
 }: WorkspaceScopeSwitcherProps) {
+  const { t } = useI18n();
   const resolvedAccountOptions = ensureOptions(scope.accountId, accountOptions);
   const resolvedWorkspaceOptions = ensureOptions(scope.workspaceId, workspaceOptions);
   const resolvedUserOptions = ensureOptions(scope.userId, userOptions);
   const accountLabel = scope.accountId;
   const workspaceLabel = scope.workspaceId ?? "workspace-unset";
+  const accountText = t("shell.scopeAccount", "Account");
+  const workspaceText = t("shell.scopeWorkspace", "Workspace");
+  const userText = t("shell.scopeUser", "User");
 
   return (
     <div className="ryvra-scope-switcher" aria-live="polite">
@@ -122,17 +127,17 @@ export function WorkspaceScopeSwitcher({
           {roleLabel}
         </span>
         <p className="ryvra-scope-summary">
-          Scope: <strong>{accountLabel}</strong> • <strong>{workspaceLabel}</strong>
+          {t("shell.scope", "Scope")}: <strong>{accountLabel}</strong> • <strong>{workspaceLabel}</strong>
         </p>
       </div>
 
       <div className="ryvra-scope-controls">
         <label className="ryvra-scope-field">
-          <span className="ryvra-scope-field-label">Account</span>
+          <span className="ryvra-scope-field-label">{accountText}</span>
           <select
             className="ryvra-scope-select"
             value={scope.accountId}
-            aria-label="Account scope selector"
+            aria-label={t("shell.scopeAccountSelector", "Account scope selector")}
             onChange={(event) =>
               onScopeChange({
                 ...scope,
@@ -149,11 +154,11 @@ export function WorkspaceScopeSwitcher({
         </label>
 
         <label className="ryvra-scope-field">
-          <span className="ryvra-scope-field-label">Workspace</span>
+          <span className="ryvra-scope-field-label">{workspaceText}</span>
           <select
             className="ryvra-scope-select"
             value={scope.workspaceId ?? ""}
-            aria-label="Workspace scope selector"
+            aria-label={t("shell.scopeWorkspaceSelector", "Workspace scope selector")}
             onChange={(event) => {
               const workspaceId = event.currentTarget.value || undefined;
               onScopeChange({
@@ -173,11 +178,11 @@ export function WorkspaceScopeSwitcher({
 
         {includeUserScope ? (
           <label className="ryvra-scope-field">
-            <span className="ryvra-scope-field-label">User</span>
+            <span className="ryvra-scope-field-label">{userText}</span>
             <select
               className="ryvra-scope-select"
               value={scope.userId ?? ""}
-              aria-label="User scope selector"
+              aria-label={t("shell.scopeUserSelector", "User scope selector")}
               onChange={(event) => {
                 const userId = event.currentTarget.value || undefined;
                 onScopeChange({
@@ -198,7 +203,7 @@ export function WorkspaceScopeSwitcher({
       </div>
 
       {notices.length > 0 ? (
-        <ul className="ryvra-scope-notices" aria-label="Scope validation notices">
+        <ul className="ryvra-scope-notices" aria-label={t("shell.scopeValidationNotices", "Scope validation notices")}>
           {notices.map((notice) => (
             <li key={notice}>{notice}</li>
           ))}

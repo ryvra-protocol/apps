@@ -4,6 +4,7 @@ import { Breadcrumbs } from "./Breadcrumbs";
 import { CommandPaletteTrigger } from "./CommandPaletteTrigger";
 import { NotificationCenter } from "./NotificationCenter";
 import { UserMenu } from "./UserMenu";
+import { LocalePreferences } from "./LocalePreferences";
 
 export interface GlobalHeaderProps {
   appName: string;
@@ -29,6 +30,7 @@ export function GlobalHeader({
         </div>
         <div className="ryvra-header-actions">
           <CommandPaletteTrigger label={commandTriggerLabel} />
+          <LocalePreferences />
           <NotificationCenter />
           <UserMenu items={userMenuItems} />
         </div>

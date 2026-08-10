@@ -33,12 +33,24 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 const productId: ProductId = "points";
 const scopePreserveKeys = ["ref", "entity", "id", "ctx", "window"] as const;
 
-const breadcrumbLabelMap: Record<string, string> = {
-  "/": "Dashboard",
-  "/overview": "Overview",
-  "/points": "Points",
-  "/tasks": "Tasks",
-  "/status": "Status",
+const routeLabelKeyMap: Record<string, string> = {
+  overview: "nav.overview",
+  pay: "nav.pay",
+  markets: "nav.markets",
+  points: "nav.points",
+  tasks: "nav.tasks",
+  "points-dashboard": "nav.dashboard",
+  "points-ledger": "nav.points",
+  "points-tasks": "nav.tasks",
+  "points-status": "nav.status",
+};
+
+const breadcrumbLabelMap: Record<string, { key: string; label: string }> = {
+  "/": { key: "nav.dashboard", label: "Dashboard" },
+  "/overview": { key: "nav.overview", label: "Overview" },
+  "/points": { key: "nav.points", label: "Points" },
+  "/tasks": { key: "nav.tasks", label: "Tasks" },
+  "/status": { key: "nav.status", label: "Status" },
 };
 
 interface ShellFrameProps {
@@ -68,13 +80,15 @@ function sameScope(left: WorkspaceScopeSelection, right: WorkspaceScopeSelection
 function toShellNavItem(route: ResolvedRouteDefinition, scope: WorkspaceScopeSelection, roleClaims: readonly string[]): ShellNavItem {
   const permission = evaluateRoutePermission(route.permission, roleClaims);
   const restrictedLabel = permission.allowed ? route.label : `${route.label} (${permission.reason ?? "Permission required."})`;
+  const routeLabelKey = permission.allowed ? routeLabelKeyMap[route.id] : undefined;
 
   return {
     id: route.id,
     label: restrictedLabel,
+    ...(routeLabelKey ? { labelKey: routeLabelKey, ariaLabelKey: routeLabelKey } : {}),
     href: appendScopeToHref(route.href, scope, { includeUserScope: true }),
     ariaLabel: restrictedLabel,
-    ...(permission.allowed ? {} : { disabled: true, badge: "Restricted" }),
+    ...(permission.allowed ? {} : { disabled: true, badge: "Restricted", badgeKey: "nav.restricted" }),
   };
 }
 
@@ -90,10 +104,12 @@ function toProductSwitcherItems(
     .map((item) => {
       const permission = evaluateRoutePermission(item.permission, roleClaims);
       const restrictedLabel = permission.allowed ? item.label : `${item.label} (${permission.reason ?? "Permission required."})`;
+      const routeLabelKey = permission.allowed ? routeLabelKeyMap[item.id] : undefined;
 
       return {
         productId: item.product,
         label: restrictedLabel,
+        ...(routeLabelKey ? { labelKey: routeLabelKey } : {}),
         href: appendScopeToHref(item.href, scope, { includeUserScope: true }),
         current: item.product === productId,
         ...(permission.allowed ? {} : { disabled: true }),
@@ -103,16 +119,16 @@ function toProductSwitcherItems(
 
 function buildBreadcrumbs(pathname: string, scope: WorkspaceScopeSelection): BreadcrumbItem[] {
   const normalizedPath = normalizePath(pathname);
-  const currentLabel = breadcrumbLabelMap[normalizedPath] ?? "Page";
+  const currentLabel = breadcrumbLabelMap[normalizedPath] ?? { key: "common.page", label: "Page" };
   const homeHref = appendScopeToHref("/", scope, { includeUserScope: true });
 
   if (normalizedPath === "/") {
-    return [{ label: currentLabel, current: true }];
+    return [{ label: currentLabel.label, labelKey: currentLabel.key, current: true }];
   }
 
   return [
-    { label: "Dashboard", href: homeHref },
-    { label: currentLabel, current: true },
+    { label: "Dashboard", labelKey: "nav.dashboard", href: homeHref },
+    { label: currentLabel.label, labelKey: currentLabel.key, current: true },
   ];
 }
 
@@ -120,10 +136,11 @@ function buildUserMenuItems(canManageWorkspace: boolean): UserMenuItem[] {
   const settingsDisabledReason = "Admin role required";
 
   return [
-    { id: "profile", label: "Profile", href: "/overview" },
+    { id: "profile", label: "Profile", labelKey: "shell.userMenu.profile", href: "/overview" },
     {
       id: "settings",
       label: canManageWorkspace ? "Workspace Settings" : `Workspace Settings (${settingsDisabledReason})`,
+      ...(canManageWorkspace ? { labelKey: "shell.userMenu.workspaceSettings" } : {}),
       href: "/status",
       disabled: !canManageWorkspace,
     },

@@ -1,5 +1,6 @@
 import type { ProductSwitcherItem, ShellNavItem } from "./navigation";
 import { ShellNavList } from "./ShellNavList";
+import { useI18n } from "./I18nProvider";
 
 export interface BottomIconDockProps {
   items: ProductSwitcherItem[];
@@ -10,8 +11,10 @@ function toDockNavItem(item: ProductSwitcherItem): ShellNavItem {
   const navItem: ShellNavItem = {
     id: item.productId,
     label: item.label,
+    ...(item.labelKey ? { labelKey: item.labelKey } : {}),
     href: item.href,
     ariaLabel: item.label,
+    ...(item.labelKey ? { ariaLabelKey: item.labelKey } : {}),
   };
 
   if (typeof item.current === "boolean") {
@@ -26,12 +29,14 @@ function toDockNavItem(item: ProductSwitcherItem): ShellNavItem {
 }
 
 export function BottomIconDock({ items, ariaLabel = "Product navigation dock" }: BottomIconDockProps) {
+  const { t } = useI18n();
+
   if (items.length === 0) {
     return null;
   }
 
   return (
-    <nav className="ryvra-bottom-dock" aria-label={ariaLabel}>
+    <nav className="ryvra-bottom-dock" aria-label={t("shell.productNavigationDock", ariaLabel)}>
       <ShellNavList
         items={items.map(toDockNavItem)}
         iconOnly

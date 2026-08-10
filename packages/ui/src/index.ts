@@ -143,6 +143,57 @@ export type { ShellNavItem, ProductSwitcherItem, BreadcrumbItem, UserMenuItem } 
 
 export { themeTokens } from "./theme";
 export type { ThemeTokens } from "./theme";
+export { I18nProvider, useI18n } from "./I18nProvider";
+export type { I18nProviderProps, I18nContextValue, LocaleOption, TimeZoneOption } from "./I18nProvider";
+export { LocalePreferences } from "./LocalePreferences";
+export {
+  browserTimeZonePreference,
+  clearMissingKeyDiagnostics,
+  createTranslationResolver,
+  defaultLocale,
+  defaultTimeZone,
+  defaultTimeZoneChoices,
+  fallbackLocale,
+  formatLocalizedCurrency,
+  formatLocalizedDateTime,
+  formatLocalizedNumber,
+  formatLocalizedRelativeTime,
+  getLocaleDirection,
+  getRuntimeI18nState,
+  isValidTimeZone,
+  localeStorageKey,
+  mergeLocaleResources,
+  normalizeTimeZonePreference,
+  readStoredLocale,
+  readStoredTimeZonePreference,
+  resolveBrowserLocale,
+  resolveBrowserTimeZone,
+  resolveSupportedLocale,
+  resolveTimeZoneFromPreference,
+  setRuntimeI18nState,
+  sharedLocaleResources,
+  shouldEmitMissingKeyDiagnostics,
+  supportedLocales,
+  timeZonePreferenceStorageKey,
+  translateRuntime,
+  writeStoredLocale,
+  writeStoredTimeZonePreference,
+} from "./i18n-runtime";
+export type {
+  I18nRuntimeState,
+  LocaleResources,
+  LocalizedCurrencyFormatOptions,
+  LocalizedDateTimeFormatOptions,
+  LocalizedNumberFormatOptions,
+  LocalizedRelativeTimeOptions,
+  StorageLike,
+  SupportedLocale,
+  TextDirection,
+  TranslationDictionary,
+  TranslationParams,
+  TranslationResolver,
+  TranslationResolverOptions,
+} from "./i18n-runtime";
 export {
   formatInsightCurrency,
   formatInsightNumber,

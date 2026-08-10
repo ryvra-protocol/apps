@@ -1,4 +1,4 @@
-import { Card, ErrorTransparencySummary, themeTokens } from "@ryvra/ui";
+import { Card, ErrorTransparencySummary, themeTokens, translateRuntime } from "@ryvra/ui";
 
 interface RetryLinkProps {
   href: string;
@@ -41,13 +41,24 @@ function ActionLink({ href, label, primary }: RetryLinkProps & { primary?: boole
 
 export function UnauthorizedState() {
   return (
-    <Card title="Access required">
-      <p style={{ margin: 0 }}>You do not have permission to view this page. Confirm your workspace role and try again.</p>
+    <Card title={translateRuntime("state.accessRequired", "Access required")}>
+      <p style={{ margin: 0 }}>
+        {translateRuntime(
+          "state.noPermissionMessage",
+          "You do not have permission to view this page. Confirm your workspace role and try again.",
+        )}
+      </p>
     </Card>
   );
 }
 
-export function PermissionDeniedState({ title = "Permission required", message }: { title?: string; message: string }) {
+export function PermissionDeniedState({
+  title = translateRuntime("state.permissionRequired", "Permission required"),
+  message,
+}: {
+  title?: string;
+  message: string;
+}) {
   return (
     <Card title={title}>
       <p style={{ margin: 0 }}>{message}</p>

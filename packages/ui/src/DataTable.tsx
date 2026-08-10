@@ -1,5 +1,6 @@
 import { Fragment, type KeyboardEvent, type ReactNode } from "react";
 import { themeTokens } from "./theme";
+import { translateRuntime } from "./i18n-runtime";
 
 export interface DataTableColumn<Row extends object, Key extends keyof Row = keyof Row> {
   key: Key;
@@ -26,7 +27,7 @@ function defaultRowKey<Row extends object>(_row: Row, rowIndex: number): string 
 export function DataTable<Row extends object>({
   columns,
   rows,
-  emptyMessage = "No data available",
+  emptyMessage = translateRuntime("table.noDataAvailable", "No data available"),
   caption,
   getRowKey = defaultRowKey,
   onRowClick,
@@ -84,7 +85,7 @@ export function DataTable<Row extends object>({
 
         .ryvra-data-table th,
         .ryvra-data-table td {
-          text-align: left;
+          text-align: start;
           padding: ${themeTokens.spacing.sm} ${themeTokens.spacing.md};
           border-bottom: 1px solid ${themeTokens.color.border};
           font-size: ${themeTokens.typography.size.sm};
@@ -126,7 +127,7 @@ export function DataTable<Row extends object>({
         {caption ? (
           <caption
             style={{
-              textAlign: "left",
+              textAlign: "start",
               padding: `${themeTokens.spacing.sm} ${themeTokens.spacing.md}`,
               color: themeTokens.color.textMuted,
               fontSize: themeTokens.typography.size.sm,

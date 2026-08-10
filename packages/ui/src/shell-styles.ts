@@ -745,6 +745,35 @@ export const shellStyles = `
   padding: ${themeTokens.spacing.sm};
 }
 
+.ryvra-locale-panel {
+  min-width: min(320px, calc(100vw - ${themeTokens.spacing["2xl"]}));
+  display: grid;
+  gap: ${themeTokens.spacing.sm};
+}
+
+.ryvra-locale-controls {
+  display: grid;
+  gap: ${themeTokens.spacing.sm};
+}
+
+.ryvra-locale-field {
+  display: grid;
+  gap: ${themeTokens.spacing.xxs};
+}
+
+.ryvra-locale-field-label {
+  color: ${themeTokens.color.textMuted};
+  font-size: ${themeTokens.typography.size.xs};
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.ryvra-locale-helper {
+  margin: 0;
+  color: ${themeTokens.color.textMuted};
+  font-size: ${themeTokens.typography.size.sm};
+}
+
 .ryvra-bottom-dock {
   position: fixed;
   left: 50%;
@@ -776,6 +805,40 @@ export const shellStyles = `
   padding: 0 ${themeTokens.spacing.xl} calc(${themeTokens.spacing.xl} + var(--ryvra-bottom-dock-offset));
   color: ${themeTokens.color.textMuted};
   font-size: ${themeTokens.typography.size.sm};
+}
+
+.ryvra-shell-root[dir=\"rtl\"] .ryvra-skip-link {
+  left: auto;
+  right: ${themeTokens.spacing.lg};
+}
+
+.ryvra-shell-root[dir=\"rtl\"] .ryvra-sidebar-toggle {
+  justify-self: start;
+}
+
+.ryvra-shell-root[dir=\"rtl\"] .ryvra-nav-link--icon-only {
+  --ryvra-tooltip-hidden-transform: translateY(-50%) translateX(4px);
+  --ryvra-tooltip-visible-transform: translateY(-50%) translateX(0);
+}
+
+.ryvra-shell-root[dir=\"rtl\"] .ryvra-nav-link--icon-only::after {
+  left: auto;
+  right: calc(100% + ${themeTokens.spacing.sm});
+}
+
+.ryvra-shell-root[dir=\"rtl\"] .ryvra-notification-panel {
+  left: 0;
+  right: auto;
+}
+
+.ryvra-shell-root[dir=\"rtl\"] .ryvra-menu-panel {
+  left: 0;
+  right: auto;
+}
+
+.ryvra-shell-root[dir=\"rtl\"] .ryvra-data-table th,
+.ryvra-shell-root[dir=\"rtl\"] .ryvra-data-table td {
+  text-align: start;
 }
 
 @media (max-width: 1024px) {
@@ -832,6 +895,11 @@ export const shellStyles = `
     right: auto;
     left: 0;
     width: min(560px, calc(100vw - ${themeTokens.spacing.lg}));
+  }
+
+  .ryvra-shell-root[dir=\"rtl\"] .ryvra-notification-panel {
+    right: 0;
+    left: auto;
   }
 }
 

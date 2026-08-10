@@ -269,7 +269,9 @@ test("formatting helpers keep timestamp and unit conventions aligned across apps
   assert.equal(marketsLabel, payLabel);
   assert.equal(payLabel, pointsLabel);
   assert.match(marketsLabel, /UTC/);
-  assert.equal(payFormat.formatCurrencyMinor(125000, "usd"), "1,250 USD");
+  const currencyLabel = payFormat.formatCurrencyMinor(125000, "usd");
+  assert.match(currencyLabel, /1,250/);
+  assert.match(currencyLabel, /(USD|\$)/);
 });
 
 test("interaction helpers preserve window selection and daily claim CTA safety states", async () => {
