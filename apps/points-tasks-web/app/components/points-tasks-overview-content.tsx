@@ -12,6 +12,8 @@ interface PointsTasksOverviewContentProps {
   mode: RuntimeMode;
   baseUrl: string;
   accountId: string;
+  workspaceId?: string;
+  roleLabel: string;
   pointsOverview: PointsOverviewDto;
   tasksOverview: TasksOverviewDto;
 }
@@ -56,6 +58,8 @@ export function PointsTasksOverviewContent({
   mode,
   baseUrl,
   accountId,
+  workspaceId,
+  roleLabel,
   pointsOverview,
   tasksOverview,
 }: PointsTasksOverviewContentProps) {
@@ -99,6 +103,12 @@ export function PointsTasksOverviewContent({
         <Card title="Runtime context">
           <p style={{ marginTop: 0, marginBottom: themeTokens.spacing.xs }}>
             Account: <strong>{accountId}</strong>
+          </p>
+          <p style={{ margin: 0 }}>
+            Workspace: <strong>{workspaceId ?? "workspace-core-1"}</strong>
+          </p>
+          <p style={{ marginTop: themeTokens.spacing.xs, marginBottom: 0 }}>
+            Role: <strong>{roleLabel}</strong>
           </p>
           <p style={{ margin: 0 }}>Points window: {formatDateTime(pointsOverview.windowStart)} → {formatDateTime(pointsOverview.windowEnd)}</p>
           <p style={{ marginTop: themeTokens.spacing.xs, marginBottom: 0 }}>

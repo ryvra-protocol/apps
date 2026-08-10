@@ -7,8 +7,17 @@ import {
   type PointEntryDto,
   type PointsPaginationMeta,
 } from "@ryvra/domain-points";
-import { Button, Card, DataTable, themeTokens } from "@ryvra/ui";
+import {
+  Button,
+  Card,
+  DataTable,
+  DelegationProvenanceChips,
+  delegationViewFilters,
+  matchesDelegationView,
+  themeTokens,
+} from "@ryvra/ui";
 import { useDeferredValue } from "react";
+import { buildPointEntryDelegationContext, supportsPointsDelegationVisibility } from "../lib/delegation-context";
 import { formatDateTime, formatNumber, formatSignedPoints } from "../lib/format";
 import { StatusBadge } from "./status-badge";
 import { useQueryFilters } from "./use-query-filters";
@@ -16,6 +25,7 @@ import { useQueryFilters } from "./use-query-filters";
 interface PointsTableClientProps {
   items: PointEntryDto[];
   pagination: PointsPaginationMeta;
+  currentUserId?: string;
 }
 
 const statusOptions = ["ALL", ...pointEntryStatuses] as const;
@@ -37,7 +47,7 @@ function parseSortParam(sortValue: string | null): { field: "occurred_at" | "cre
   };
 }
 
-export function PointsTableClient({ items, pagination }: PointsTableClientProps) {
+export function PointsTableClient({ items, pagination, currentUserId }: PointsTableClientProps) {
   const { searchParams, updateQuery, clearQuery } = useQueryFilters();
 
   const statusParam = (searchParams.get("entry_status") ?? searchParams.get("status") ?? "ALL").toLowerCase();
@@ -46,10 +56,16 @@ export function PointsTableClient({ items, pagination }: PointsTableClientProps)
   const occurredFrom = searchParams.get("occurred_from") ?? "";
   const occurredTo = searchParams.get("occurred_to") ?? "";
   const sort = parseSortParam(searchParams.get("sort"));
+  const delegationParam = (searchParams.get("delegation") ?? "all").toLowerCase();
 
   const status = statusOptions.includes(statusParam as (typeof statusOptions)[number]) ? statusParam : "ALL";
   const type = typeOptions.includes(typeParam as (typeof typeOptions)[number]) ? typeParam : "ALL";
   const source = sourceOptions.includes(sourceParam as (typeof sourceOptions)[number]) ? sourceParam : "ALL";
+  const delegationFilter = delegationViewFilters.includes(delegationParam as (typeof delegationViewFilters)[number])
+    ? (delegationParam as (typeof delegationViewFilters)[number])
+    : "all";
+  const delegationAvailable = supportsPointsDelegationVisibility(items);
+  const appliedDelegationFilter = delegationAvailable ? delegationFilter : "all";
 
   const hasFilters =
     status !== "ALL" ||
@@ -58,10 +74,13 @@ export function PointsTableClient({ items, pagination }: PointsTableClientProps)
     occurredFrom.length > 0 ||
     occurredTo.length > 0 ||
     sort.field !== "occurred_at" ||
-    sort.direction !== "desc";
+    sort.direction !== "desc" ||
+    delegationFilter !== "all";
 
   const deferredItems = useDeferredValue(items);
-  const visibleRows = deferredItems;
+  const visibleRows = deferredItems.filter((item) =>
+    matchesDelegationView(buildPointEntryDelegationContext(item), appliedDelegationFilter, currentUserId),
+  );
   const rowsPending = deferredItems !== items;
 
   const updateSort = (field: string, direction: string) => {
@@ -188,6 +207,22 @@ export function PointsTableClient({ items, pagination }: PointsTableClientProps)
             </select>
           </label>
 
+          <label style={{ display: "grid", gap: themeTokens.spacing.xs }}>
+            <span>Delegation view</span>
+            <select
+              className="points-filter-control"
+              value={delegationFilter}
+              aria-label="Delegation filter"
+              disabled={!delegationAvailable}
+              onChange={(event) => updateQuery({ delegation: event.currentTarget.value === "all" ? undefined : event.currentTarget.value })}
+            >
+              <option value="all">All operations</option>
+              <option value="mine">Mine</option>
+              <option value="delegated_to_me">Delegated to me</option>
+              <option value="delegated_by_me">Delegated by me</option>
+            </select>
+          </label>
+
           <div style={{ display: "flex", alignItems: "flex-end" }}>
             <Button
               type="button"
@@ -209,6 +244,7 @@ export function PointsTableClient({ items, pagination }: PointsTableClientProps)
                   "sortOrder",
                   "sortField",
                   "sortDirection",
+                  "delegation",
                   "cursor",
                   "page",
                 ])
@@ -223,6 +259,11 @@ export function PointsTableClient({ items, pagination }: PointsTableClientProps)
         {!hasFilters ? (
           <p id="points-reset-hint" style={{ marginBottom: 0, color: themeTokens.color.textMuted }}>
             Reset is disabled because no filters are currently applied.
+          </p>
+        ) : null}
+        {!delegationAvailable ? (
+          <p style={{ marginBottom: 0, color: themeTokens.color.textMuted }}>
+            Delegated actor metadata: Not available in current environment.
           </p>
         ) : null}
       </Card>
@@ -250,6 +291,11 @@ export function PointsTableClient({ items, pagination }: PointsTableClientProps)
             render: (value) => formatDateTime(String(value)),
           },
           { key: "entryStatus", header: "Status", render: (value) => <StatusBadge status={String(value)} /> },
+          {
+            key: "entryId",
+            header: "Provenance",
+            render: (_value, row) => <DelegationProvenanceChips context={buildPointEntryDelegationContext(row)} />,
+          },
         ]}
         rows={visibleRows}
         getRowKey={(row) => row.entryId}
@@ -268,7 +314,9 @@ export function PointsTableClient({ items, pagination }: PointsTableClientProps)
           <Button
             type="button"
             variant="secondary"
-            onClick={() => clearQuery(["entry_status", "entry_type", "entry_source", "occurred_from", "occurred_to", "cursor", "page"])}
+            onClick={() =>
+              clearQuery(["entry_status", "entry_type", "entry_source", "occurred_from", "occurred_to", "delegation", "cursor", "page"])
+            }
           >
             Clear filters
           </Button>

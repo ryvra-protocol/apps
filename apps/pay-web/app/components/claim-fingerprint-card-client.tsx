@@ -49,13 +49,21 @@ interface ClaimFingerprintCardClientProps {
   mode: RuntimeMode;
   payout: ClaimPayoutCandidate | null;
   availability: ClaimAvailability;
+  canOperate: boolean;
+  operateDeniedReason?: string;
 }
 
 function createReference(label: string, value?: string | null) {
   return value && value.trim().length > 0 ? { label, value } : { label };
 }
 
-export function ClaimFingerprintCardClient({ mode, payout, availability }: ClaimFingerprintCardClientProps) {
+export function ClaimFingerprintCardClient({
+  mode,
+  payout,
+  availability,
+  canOperate,
+  operateDeniedReason,
+}: ClaimFingerprintCardClientProps) {
   const router = useRouter();
   const { addNotification } = useNotificationCenter();
   const [panelOpen, setPanelOpen] = useState(false);
@@ -98,7 +106,8 @@ export function ClaimFingerprintCardClient({ mode, payout, availability }: Claim
     };
   }, []);
 
-  const disabled = !availability.enabled || !payout;
+  const disabledReason = !canOperate ? operateDeniedReason ?? "Operator workspace access is required." : availability.reason;
+  const disabled = !canOperate || !availability.enabled || !payout;
 
   const confirmationHint = useMemo(
     () =>
@@ -405,9 +414,9 @@ export function ClaimFingerprintCardClient({ mode, payout, availability }: Claim
           </Button>
         </div>
 
-        {disabled && availability.reason ? (
+        {disabled && disabledReason ? (
           <p id="pay-claim-disabled-reason" className="pay-claim-disabled-note">
-            {availability.reason}
+            {disabledReason}
           </p>
         ) : null}
 

@@ -1,4 +1,5 @@
 import type { MarketsAccountScopedListRequest, OrderFilters } from "@ryvra/domain-markets";
+import { canAccessWorkspaceCapability, describeWorkspaceCapabilityRequirement } from "@ryvra/auth";
 import {
   Card,
   ComplianceEvidencePanel,
@@ -13,6 +14,7 @@ import { OrdersTableClient } from "../components/orders-table-client";
 import { EmptyState, ErrorState, UnauthorizedState } from "../components/page-states";
 import {
   parseAccountId,
+  parseWorkspaceId,
   parseCursor,
   getFirstParam,
   parseDateRange,
@@ -96,6 +98,9 @@ export default async function MarketsOrdersPage({ searchParams }: MarketsOrdersP
 
   try {
     const request = buildOrderRequest(searchParams, runtime.defaultAccountId);
+    const workspaceId = parseWorkspaceId(searchParams) ?? "workspace-core-1";
+    const canOperate = canAccessWorkspaceCapability(runtime.workspaceRole, "operate");
+    const panelDeniedReason = describeWorkspaceCapabilityRequirement("operate", runtime.workspaceRole, "Operational evidence panels");
     const [orderList, summary] = await Promise.all([
       runtime.marketsClient.listOrders(request),
       runtime.marketsClient.getOrderSummary({
@@ -108,6 +113,9 @@ export default async function MarketsOrdersPage({ searchParams }: MarketsOrdersP
 
     runtime.logger.info("Loaded orders data", {
       mode: runtime.config.mode,
+      accountId: request.accountId,
+      workspaceId,
+      role: runtime.workspaceRole.role,
       orderCount: orderList.items.length,
       openOrders: summary.openOrders,
     });
@@ -118,6 +126,18 @@ export default async function MarketsOrdersPage({ searchParams }: MarketsOrdersP
           <div style={{ display: "flex", justifyContent: "flex-end" }}>
             <ModeBadge mode={runtime.config.mode} />
           </div>
+
+          <Card title="Runtime context">
+            <p style={{ marginTop: 0, marginBottom: themeTokens.spacing.xs }}>
+              Account: <strong>{request.accountId}</strong>
+            </p>
+            <p style={{ margin: 0 }}>
+              Workspace: <strong>{workspaceId}</strong>
+            </p>
+            <p style={{ marginTop: themeTokens.spacing.xs, marginBottom: 0 }}>
+              Role: <strong>{runtime.workspaceRole.label}</strong>
+            </p>
+          </Card>
 
           <div style={{ display: "grid", gap: themeTokens.spacing.md, gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))" }}>
             <Card title="Open">
@@ -141,21 +161,29 @@ export default async function MarketsOrdersPage({ searchParams }: MarketsOrdersP
             processingText="Route and correlation references are surfaced for auditability when available."
           />
 
-          <OperationTimelineCard
-            title="Latest order operation timeline"
-            state={orderTimelineStages.length > 0 ? "success" : "empty"}
-            stages={orderTimelineStages}
-            emptyMessage="No order timeline is available for the current account scope."
-          />
+          {canOperate ? (
+            <>
+              <OperationTimelineCard
+                title="Latest order operation timeline"
+                state={orderTimelineStages.length > 0 ? "success" : "empty"}
+                stages={orderTimelineStages}
+                emptyMessage="No order timeline is available for the current account scope."
+              />
 
-          <ComplianceEvidencePanel
-            title="Latest order compliance evidence"
-            summaryLabel="Details"
-            sourceSystem="markets-api"
-            retryable={resolveOrderRetryable(leadOrder)}
-            references={buildOrderEvidenceReferences(leadOrder)}
-            lastUpdated={leadOrder?.updatedAt}
-          />
+              <ComplianceEvidencePanel
+                title="Latest order compliance evidence"
+                summaryLabel="Details"
+                sourceSystem="markets-api"
+                retryable={resolveOrderRetryable(leadOrder)}
+                references={buildOrderEvidenceReferences(leadOrder)}
+                lastUpdated={leadOrder?.updatedAt}
+              />
+            </>
+          ) : (
+            <Card title="Operational evidence">
+              <p style={{ margin: 0 }}>{panelDeniedReason}</p>
+            </Card>
+          )}
 
           <PolicyLinksCard
             title="Markets policy and help"
@@ -167,7 +195,7 @@ export default async function MarketsOrdersPage({ searchParams }: MarketsOrdersP
             ]}
           />
 
-          <OrdersTableClient items={orderList.items} pagination={orderList.pagination} />
+          <OrdersTableClient items={orderList.items} pagination={orderList.pagination} currentUserId={runtime.sessionUserId} />
 
           {orderList.items.length === 0 ? (
             <EmptyState

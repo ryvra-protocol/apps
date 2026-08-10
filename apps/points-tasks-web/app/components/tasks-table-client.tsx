@@ -7,8 +7,18 @@ import {
   type TaskDto,
   type TasksPaginationMeta,
 } from "@ryvra/domain-tasks";
-import { Button, Card, DataTable, useNotificationCenter, themeTokens } from "@ryvra/ui";
+import {
+  Button,
+  Card,
+  DataTable,
+  DelegationProvenanceChips,
+  delegationViewFilters,
+  matchesDelegationView,
+  useNotificationCenter,
+  themeTokens,
+} from "@ryvra/ui";
 import { useDeferredValue, useEffect } from "react";
+import { buildTaskDelegationContext, supportsTasksDelegationVisibility } from "../lib/delegation-context";
 import { formatDateTime, formatNumber } from "../lib/format";
 import { buildTaskStatusNotification } from "../lib/notification-comms";
 import { StatusBadge } from "./status-badge";
@@ -17,6 +27,7 @@ import { useQueryFilters } from "./use-query-filters";
 interface TasksTableClientProps {
   items: TaskDto[];
   pagination: TasksPaginationMeta;
+  currentUserId?: string;
 }
 
 const statusOptions = ["ALL", ...taskStatuses] as const;
@@ -39,7 +50,7 @@ function parseSortParam(sortValue: string | null): { field: "updated_at" | "crea
   };
 }
 
-export function TasksTableClient({ items, pagination }: TasksTableClientProps) {
+export function TasksTableClient({ items, pagination, currentUserId }: TasksTableClientProps) {
   const { searchParams, updateQuery, clearQuery } = useQueryFilters();
   const { addNotification } = useNotificationCenter();
 
@@ -49,12 +60,18 @@ export function TasksTableClient({ items, pagination }: TasksTableClientProps) {
   const dueAfter = searchParams.get("due_after") ?? "";
   const dueBefore = searchParams.get("due_before") ?? "";
   const sort = parseSortParam(searchParams.get("sort"));
+  const delegationParam = (searchParams.get("delegation") ?? "all").toLowerCase();
 
   const status = statusOptions.includes(statusParam as (typeof statusOptions)[number]) ? statusParam : "ALL";
   const type = typeOptions.includes(typeParam as (typeof typeOptions)[number]) ? typeParam : "ALL";
   const progressState = progressStateOptions.includes(progressStateParam as (typeof progressStateOptions)[number])
     ? progressStateParam
     : "ALL";
+  const delegationFilter = delegationViewFilters.includes(delegationParam as (typeof delegationViewFilters)[number])
+    ? (delegationParam as (typeof delegationViewFilters)[number])
+    : "all";
+  const delegationAvailable = supportsTasksDelegationVisibility(items);
+  const appliedDelegationFilter = delegationAvailable ? delegationFilter : "all";
 
   const hasFilters =
     status !== "ALL" ||
@@ -63,10 +80,13 @@ export function TasksTableClient({ items, pagination }: TasksTableClientProps) {
     dueAfter.length > 0 ||
     dueBefore.length > 0 ||
     sort.field !== "updated_at" ||
-    sort.direction !== "desc";
+    sort.direction !== "desc" ||
+    delegationFilter !== "all";
 
   const deferredItems = useDeferredValue(items);
-  const visibleRows = deferredItems;
+  const visibleRows = deferredItems.filter((task) =>
+    matchesDelegationView(buildTaskDelegationContext(task), appliedDelegationFilter, currentUserId),
+  );
   const rowsPending = deferredItems !== items;
 
   useEffect(() => {
@@ -199,6 +219,22 @@ export function TasksTableClient({ items, pagination }: TasksTableClientProps) {
             </select>
           </label>
 
+          <label style={{ display: "grid", gap: themeTokens.spacing.xs }}>
+            <span>Delegation view</span>
+            <select
+              className="tasks-filter-control"
+              value={delegationFilter}
+              aria-label="Delegation filter"
+              disabled={!delegationAvailable}
+              onChange={(event) => updateQuery({ delegation: event.currentTarget.value === "all" ? undefined : event.currentTarget.value })}
+            >
+              <option value="all">All operations</option>
+              <option value="mine">Mine</option>
+              <option value="delegated_to_me">Delegated to me</option>
+              <option value="delegated_by_me">Delegated by me</option>
+            </select>
+          </label>
+
           <div style={{ display: "flex", alignItems: "flex-end" }}>
             <Button
               type="button"
@@ -219,6 +255,7 @@ export function TasksTableClient({ items, pagination }: TasksTableClientProps) {
                   "sortOrder",
                   "sortField",
                   "sortDirection",
+                  "delegation",
                   "cursor",
                   "page",
                 ])
@@ -235,6 +272,11 @@ export function TasksTableClient({ items, pagination }: TasksTableClientProps) {
             Reset is disabled because no filters are currently applied.
           </p>
         ) : null}
+        {!delegationAvailable ? (
+          <p style={{ marginBottom: 0, color: themeTokens.color.textMuted }}>
+            Delegated actor metadata: Not available in current environment.
+          </p>
+        ) : null}
       </Card>
 
       <DataTable<TaskDto>
@@ -249,6 +291,11 @@ export function TasksTableClient({ items, pagination }: TasksTableClientProps) {
           { key: "pointsReward", header: "Points reward", render: (value) => formatNumber(Number(value)) },
           { key: "dueAt", header: "Due", render: (value) => (value ? formatDateTime(String(value)) : "n/a") },
           { key: "completedAt", header: "Completed", render: (value) => (value ? formatDateTime(String(value)) : "n/a") },
+          {
+            key: "taskId",
+            header: "Provenance",
+            render: (_value, row) => <DelegationProvenanceChips context={buildTaskDelegationContext(row)} />,
+          },
         ]}
         rows={visibleRows}
         getRowKey={(row) => row.taskId}
@@ -267,7 +314,9 @@ export function TasksTableClient({ items, pagination }: TasksTableClientProps) {
           <Button
             type="button"
             variant="secondary"
-            onClick={() => clearQuery(["task_status", "task_type", "progress_state", "due_after", "due_before", "cursor", "page"])}
+            onClick={() =>
+              clearQuery(["task_status", "task_type", "progress_state", "due_after", "due_before", "delegation", "cursor", "page"])
+            }
           >
             Clear filters
           </Button>

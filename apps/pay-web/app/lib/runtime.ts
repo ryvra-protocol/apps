@@ -5,7 +5,15 @@ import {
   type MarketsClient,
   type PayClient,
 } from "@ryvra/api-client";
-import { createStubAuthGuard, Role, type AuthDecision, type Session } from "@ryvra/auth";
+import {
+  createStubAuthGuard,
+  Role,
+  resolveStubSessionFromEnv,
+  resolveWorkspaceRoleView,
+  roleClaimsFromSession,
+  type AuthDecision,
+  type WorkspaceRoleView,
+} from "@ryvra/auth";
 import { loadPayConfig, type AppConfig } from "@ryvra/config";
 import { createConsoleLogger, mapErrorToTaxonomy, type Logger } from "@ryvra/observability";
 
@@ -15,6 +23,9 @@ export interface PayRuntimeContext {
   authDecision: AuthDecision;
   payClient: PayClient;
   marketsClient: MarketsClient;
+  sessionUserId: string;
+  sessionRoleClaims: string[];
+  workspaceRole: WorkspaceRoleView;
   marketsAccountId?: string;
 }
 
@@ -33,7 +44,7 @@ function getOptionalEnvValue(key: string): string | undefined {
 export function createPayRuntimeContext(scope: string): PayRuntimeContext {
   const config = loadPayConfig(process.env);
   const logger = createConsoleLogger(scope);
-  const authGuard = createStubAuthGuard([Role.Member, Role.Admin]);
+  const authGuard = createStubAuthGuard([Role.Support, Role.Member, Role.Admin]);
   const authToken = getOptionalEnvValue("RYVRA_PAY_AUTH_TOKEN");
   const authScheme = getOptionalEnvValue("RYVRA_PAY_AUTH_SCHEME");
   const requestIdHeader = getOptionalEnvValue("RYVRA_PAY_REQUEST_ID_HEADER");
@@ -52,10 +63,13 @@ export function createPayRuntimeContext(scope: string): PayRuntimeContext {
     mode: config.mode,
     ...(configuredMarketsAccountId ? { configuredAccountId: configuredMarketsAccountId } : {}),
   });
-  const session: Session = {
-    user: { id: "local-member", roles: [Role.Member] },
-    issuedAt: new Date().toISOString(),
-  };
+  const session = resolveStubSessionFromEnv({
+    defaultUserId: "user-core-1",
+    defaultRoles: [Role.Member],
+  });
+  const sessionRoleClaims = roleClaimsFromSession(session);
+  const workspaceRole = resolveWorkspaceRoleView(sessionRoleClaims);
+  const authDecision = authGuard.authorize(session);
   const apiClient = createApiClient({
     mode: config.mode,
     baseUrl: config.apiBaseUrl,
@@ -82,9 +96,12 @@ export function createPayRuntimeContext(scope: string): PayRuntimeContext {
   return {
     config,
     logger,
-    authDecision: authGuard.authorize(session),
+    authDecision,
     payClient: apiClient.pay,
     marketsClient: apiClient.markets,
+    sessionUserId: session.user?.id ?? "unknown-user",
+    sessionRoleClaims,
+    workspaceRole,
     ...(marketsAccountId ? { marketsAccountId } : {}),
   };
 }

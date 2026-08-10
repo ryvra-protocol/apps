@@ -1,5 +1,7 @@
 import type { TaskFilters, TasksAccountScopedListRequest, TasksAccountScopedRequest } from "@ryvra/domain-tasks";
 import type { PointsSummaryRequest } from "@ryvra/domain-points";
+import { canAccessWorkspaceCapability, describeWorkspaceCapabilityRequirement } from "@ryvra/auth";
+import { evaluateRoutePermission, resolveRoutePermissionMeta } from "@ryvra/config";
 import {
   Card,
   ComplianceEvidencePanel,
@@ -11,7 +13,7 @@ import {
   themeTokens,
 } from "@ryvra/ui";
 import nextDynamic from "next/dynamic";
-import { EmptyState, ErrorState, UnauthorizedState } from "../components/page-states";
+import { EmptyState, ErrorState, PermissionDeniedState, UnauthorizedState } from "../components/page-states";
 import { PointsTasksPortfolioInsightsCard } from "../components/points-tasks-portfolio-insights-card";
 import { PointsTasksTopPrioritySection } from "../components/points-tasks-top-priority-section";
 import { TasksTableClient } from "../components/tasks-table-client";
@@ -114,6 +116,17 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
     );
   }
 
+  const routePermission = evaluateRoutePermission(resolveRoutePermissionMeta("points", "/tasks"), runtime.sessionRoleClaims);
+  if (!routePermission.allowed) {
+    return (
+      <section style={{ display: "grid", gap: themeTokens.spacing.lg }}>
+        <Section title="Tasks" description="Canonical tasks view with scope and cursor pagination.">
+          <PermissionDeniedState message={routePermission.reason ?? "You do not have permission to view tasks."} />
+        </Section>
+      </section>
+    );
+  }
+
   try {
     const request = buildTaskRequest(searchParams, runtime.defaultAccountId);
 
@@ -138,6 +151,9 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
       ...(request.userId ? { userId: request.userId } : {}),
       ...(request.workspaceId ? { workspaceId: request.workspaceId } : {}),
     };
+    const canOperate = canAccessWorkspaceCapability(runtime.workspaceRole, "operate");
+    const operateDeniedReason = describeWorkspaceCapabilityRequirement("operate", runtime.workspaceRole, "Claim submission");
+    const panelDeniedReason = describeWorkspaceCapabilityRequirement("operate", runtime.workspaceRole, "Operational evidence panels");
     const selectedInsightWindow = resolvePointsTasksInsightWindow(searchParams);
     const pointsSummaryRequest: PointsSummaryRequest = buildPointsSummaryRequest({
       accountId: request.accountId,
@@ -243,6 +259,8 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
     runtime.logger.info("Loaded tasks queue data", {
       mode: runtime.config.mode,
       accountId: request.accountId,
+      workspaceId: request.workspaceId ?? "workspace-core-1",
+      role: runtime.workspaceRole.role,
       taskCount: taskList.items.length,
       totalTasks: summary.totalTasks,
       completedTasks: summary.completedTasks,
@@ -254,7 +272,8 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: themeTokens.spacing.sm }}>
             <ModeBadge mode={runtime.config.mode} />
             <span style={{ color: themeTokens.color.textMuted, fontSize: themeTokens.typography.size.sm }}>
-              Base URL: {runtime.config.apiBaseUrl} • Account: {request.accountId}
+              Base URL: {runtime.config.apiBaseUrl} • Account: {request.accountId} • Workspace:{" "}
+              {request.workspaceId ?? "workspace-core-1"} • Role: {runtime.workspaceRole.label}
             </span>
           </div>
 
@@ -269,6 +288,8 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
                   ...(request.userId ? { userId: request.userId } : {}),
                   ...(request.workspaceId ? { workspaceId: request.workspaceId } : {}),
                 }}
+                canOperate={canOperate}
+                operateDeniedReason={operateDeniedReason}
               />
             }
           />
@@ -301,21 +322,29 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
             processingText="Task progression timestamps may be partially unavailable and are labeled explicitly when absent."
           />
 
-          <OperationTimelineCard
-            title="Latest task progression timeline"
-            state={taskTimelineStages.length > 0 ? "success" : "empty"}
-            stages={taskTimelineStages}
-            emptyMessage="No task timeline is available for the current scope."
-          />
+          {canOperate ? (
+            <>
+              <OperationTimelineCard
+                title="Latest task progression timeline"
+                state={taskTimelineStages.length > 0 ? "success" : "empty"}
+                stages={taskTimelineStages}
+                emptyMessage="No task timeline is available for the current scope."
+              />
 
-          <ComplianceEvidencePanel
-            title="Latest task compliance evidence"
-            summaryLabel="Details"
-            sourceSystem="tasks_engine"
-            retryable={resolveTaskRetryable(leadTask)}
-            references={buildTaskEvidenceReferences(leadTask)}
-            lastUpdated={leadTask?.updatedAt}
-          />
+              <ComplianceEvidencePanel
+                title="Latest task compliance evidence"
+                summaryLabel="Details"
+                sourceSystem="tasks_engine"
+                retryable={resolveTaskRetryable(leadTask)}
+                references={buildTaskEvidenceReferences(leadTask)}
+                lastUpdated={leadTask?.updatedAt}
+              />
+            </>
+          ) : (
+            <Card title="Operational evidence">
+              <p style={{ margin: 0 }}>{panelDeniedReason}</p>
+            </Card>
+          )}
 
           <PolicyLinksCard
             title="Tasks policy and help"
@@ -327,7 +356,7 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
             ]}
           />
 
-          <TasksTableClient items={taskList.items} pagination={taskList.pagination} />
+          <TasksTableClient items={taskList.items} pagination={taskList.pagination} currentUserId={runtime.sessionUserId} />
 
           {taskList.items.length === 0 ? (
             <EmptyState

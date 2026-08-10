@@ -1,16 +1,19 @@
 import type { PayListRequest, ReconciliationFilters } from "@ryvra/domain-payments";
+import { evaluateRoutePermission, resolveRoutePermissionMeta } from "@ryvra/config";
 import { Card, Section, themeTokens } from "@ryvra/ui";
 import { ModeBadge } from "../components/mode-badge";
-import { EmptyState, ErrorState, UnauthorizedState } from "../components/page-states";
+import { EmptyState, ErrorState, PermissionDeniedState, UnauthorizedState } from "../components/page-states";
 import { ReconciliationTableClient } from "../components/reconciliation-table-client";
 import { formatDateTime } from "../lib/format";
 import {
+  parseAccountId,
   parseDateRange,
   parseExceptionOnly,
   parsePage,
   parsePageSize,
   parseReconciliationStatus,
   parseSortDirection,
+  parseWorkspaceId,
   type RouteSearchParams,
 } from "../lib/search-params";
 import { capturePayPageError, createPayRuntimeContext } from "../lib/runtime";
@@ -58,7 +61,20 @@ export default async function PayReconciliationPage({ searchParams }: PayReconci
     );
   }
 
+  const routePermission = evaluateRoutePermission(resolveRoutePermissionMeta("pay", "/reconciliation"), runtime.sessionRoleClaims);
+  if (!routePermission.allowed) {
+    return (
+      <section style={{ display: "grid", gap: themeTokens.spacing.lg }}>
+        <Section title="Reconciliation" description="Batch and exception tracking for settlements and payouts.">
+          <PermissionDeniedState message={routePermission.reason ?? "You do not have permission to view reconciliation."} />
+        </Section>
+      </section>
+    );
+  }
+
   try {
+    const accountId = parseAccountId(searchParams) ?? runtime.marketsAccountId ?? "acct-core-1";
+    const workspaceId = parseWorkspaceId(searchParams) ?? "workspace-core-1";
     const request = buildReconciliationRequest(searchParams);
     const [reconciliationList, summary] = await Promise.all([
       runtime.payClient.listReconciliationItems(request),
@@ -67,6 +83,9 @@ export default async function PayReconciliationPage({ searchParams }: PayReconci
 
     runtime.logger.info("Loaded reconciliation data", {
       mode: runtime.config.mode,
+      accountId,
+      workspaceId,
+      role: runtime.workspaceRole.role,
       itemCount: reconciliationList.items.length,
       mismatchCount: summary.mismatchCount,
       exceptionCount: summary.exceptionCount,
@@ -78,6 +97,18 @@ export default async function PayReconciliationPage({ searchParams }: PayReconci
           <div style={{ display: "flex", justifyContent: "flex-end" }}>
             <ModeBadge mode={runtime.config.mode} />
           </div>
+
+          <Card title="Runtime context">
+            <p style={{ marginTop: 0, marginBottom: themeTokens.spacing.xs }}>
+              Account: <strong>{accountId}</strong>
+            </p>
+            <p style={{ margin: 0 }}>
+              Workspace: <strong>{workspaceId}</strong>
+            </p>
+            <p style={{ marginTop: themeTokens.spacing.xs, marginBottom: 0 }}>
+              Role: <strong>{runtime.workspaceRole.label}</strong>
+            </p>
+          </Card>
 
           <div style={{ display: "grid", gap: themeTokens.spacing.md, gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))" }}>
             <Card title="Runs">
@@ -101,7 +132,11 @@ export default async function PayReconciliationPage({ searchParams }: PayReconci
             </Card>
           </div>
 
-          <ReconciliationTableClient items={reconciliationList.items} pagination={reconciliationList.pagination} />
+          <ReconciliationTableClient
+            items={reconciliationList.items}
+            pagination={reconciliationList.pagination}
+            currentUserId={runtime.sessionUserId}
+          />
 
           {reconciliationList.items.length === 0 ? (
             <EmptyState

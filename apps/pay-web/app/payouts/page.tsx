@@ -1,7 +1,10 @@
 import type { PayListRequest, PayoutDto, PayoutFilters } from "@ryvra/domain-payments";
+import { canAccessWorkspaceCapability, describeWorkspaceCapabilityRequirement } from "@ryvra/auth";
+import { evaluateRoutePermission, resolveRoutePermissionMeta } from "@ryvra/config";
 import {
   Card,
   ComplianceEvidencePanel,
+  DelegationProvenanceChips,
   OperationTimelineCard,
   PolicyLinksCard,
   Section,
@@ -10,18 +13,21 @@ import {
 } from "@ryvra/ui";
 import nextDynamic from "next/dynamic";
 import { ModeBadge } from "../components/mode-badge";
-import { EmptyState, ErrorState, UnauthorizedState } from "../components/page-states";
+import { EmptyState, ErrorState, PermissionDeniedState, UnauthorizedState } from "../components/page-states";
 import { PayoutsTableClient } from "../components/payouts-table-client";
+import { buildPayoutDelegationContext } from "../lib/delegation-context";
 import { formatCurrencyMinor } from "../lib/format";
 import { resolveClaimAvailability, type ClaimPayoutCandidate } from "../lib/claim-ux";
 import { buildPayoutEvidenceReferences, buildPayoutTimelineStages, resolvePayoutRetryable } from "../lib/trust-compliance";
 import {
+  parseAccountId,
   parseDateRange,
   parsePage,
   parsePageSize,
   parsePayoutDestinationType,
   parsePayoutStatus,
   parseSortDirection,
+  parseWorkspaceId,
   type RouteSearchParams,
 } from "../lib/search-params";
 import { capturePayPageError, createPayRuntimeContext } from "../lib/runtime";
@@ -111,7 +117,23 @@ export default async function PayPayoutsPage({ searchParams }: PayPayoutsPagePro
     );
   }
 
+  const routePermission = evaluateRoutePermission(resolveRoutePermissionMeta("pay", "/payouts"), runtime.sessionRoleClaims);
+  if (!routePermission.allowed) {
+    return (
+      <section style={{ display: "grid", gap: themeTokens.spacing.lg }}>
+        <Section title="Payouts" description="Payout tracking with typed list and summary boundaries.">
+          <PermissionDeniedState message={routePermission.reason ?? "You do not have permission to view payouts."} />
+        </Section>
+      </section>
+    );
+  }
+
   try {
+    const accountId = parseAccountId(searchParams) ?? runtime.marketsAccountId ?? "acct-core-1";
+    const workspaceId = parseWorkspaceId(searchParams) ?? "workspace-core-1";
+    const canOperate = canAccessWorkspaceCapability(runtime.workspaceRole, "operate");
+    const operateDeniedReason = describeWorkspaceCapabilityRequirement("operate", runtime.workspaceRole, "Claim submission");
+    const panelDeniedReason = describeWorkspaceCapabilityRequirement("operate", runtime.workspaceRole, "Operational evidence panels");
     const request = buildPayoutRequest(searchParams);
     const [payoutList, summary] = await Promise.all([runtime.payClient.listPayouts(request), runtime.payClient.getPayoutSummary()]);
 
@@ -127,6 +149,9 @@ export default async function PayPayoutsPage({ searchParams }: PayPayoutsPagePro
 
     runtime.logger.info("Loaded payouts data", {
       mode: runtime.config.mode,
+      accountId,
+      workspaceId,
+      role: runtime.workspaceRole.role,
       payoutCount: payoutList.items.length,
       totalPayouts: summary.scheduledCount + summary.processingCount + summary.completedCount + summary.failedCount,
       claimEnabled: claimAvailability.enabled,
@@ -139,6 +164,18 @@ export default async function PayPayoutsPage({ searchParams }: PayPayoutsPagePro
           <div style={{ display: "flex", justifyContent: "flex-end" }}>
             <ModeBadge mode={runtime.config.mode} />
           </div>
+
+          <Card title="Runtime context">
+            <p style={{ marginTop: 0, marginBottom: themeTokens.spacing.xs }}>
+              Account: <strong>{accountId}</strong>
+            </p>
+            <p style={{ margin: 0 }}>
+              Workspace: <strong>{workspaceId}</strong>
+            </p>
+            <p style={{ marginTop: themeTokens.spacing.xs, marginBottom: 0 }}>
+              Role: <strong>{runtime.workspaceRole.label}</strong>
+            </p>
+          </Card>
 
           <div style={{ display: "grid", gap: themeTokens.spacing.md, gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))" }}>
             <Card title="Scheduled">
@@ -165,23 +202,41 @@ export default async function PayPayoutsPage({ searchParams }: PayPayoutsPagePro
             processingText="Payout and claim processing may continue after this page refreshes; check timeline and status routes for updates."
           />
 
-          <ClaimFingerprintCardClient mode={runtime.config.mode} payout={claimCandidate} availability={claimAvailability} />
-
-          <OperationTimelineCard
-            title="Latest payout operation timeline"
-            state={payoutTimelineStages.length > 0 ? "success" : "empty"}
-            emptyMessage="No payout timeline is available for the current filters."
-            stages={payoutTimelineStages}
+          <ClaimFingerprintCardClient
+            mode={runtime.config.mode}
+            payout={claimCandidate}
+            availability={claimAvailability}
+            canOperate={canOperate}
+            operateDeniedReason={operateDeniedReason}
           />
 
-          <ComplianceEvidencePanel
-            title="Latest payout compliance evidence"
-            summaryLabel="Details"
-            sourceSystem="pay"
-            retryable={resolvePayoutRetryable(trustPayout)}
-            references={buildPayoutEvidenceReferences(trustPayout)}
-            lastUpdated={trustPayout?.completedAt ?? trustPayout?.scheduledFor ?? trustPayout?.createdAt}
-          />
+          <Card title="Delegated operation provenance">
+            <DelegationProvenanceChips context={trustPayout ? buildPayoutDelegationContext(trustPayout) : { available: false }} />
+          </Card>
+
+          {canOperate ? (
+            <>
+              <OperationTimelineCard
+                title="Latest payout operation timeline"
+                state={payoutTimelineStages.length > 0 ? "success" : "empty"}
+                emptyMessage="No payout timeline is available for the current filters."
+                stages={payoutTimelineStages}
+              />
+
+              <ComplianceEvidencePanel
+                title="Latest payout compliance evidence"
+                summaryLabel="Details"
+                sourceSystem="pay"
+                retryable={resolvePayoutRetryable(trustPayout)}
+                references={buildPayoutEvidenceReferences(trustPayout)}
+                lastUpdated={trustPayout?.completedAt ?? trustPayout?.scheduledFor ?? trustPayout?.createdAt}
+              />
+            </>
+          ) : (
+            <Card title="Operational evidence">
+              <p style={{ margin: 0 }}>{panelDeniedReason}</p>
+            </Card>
+          )}
 
           <PolicyLinksCard
             title="Payout policy and help"
@@ -193,7 +248,7 @@ export default async function PayPayoutsPage({ searchParams }: PayPayoutsPagePro
             ]}
           />
 
-          <PayoutsTableClient items={payoutList.items} pagination={payoutList.pagination} />
+          <PayoutsTableClient items={payoutList.items} pagination={payoutList.pagination} currentUserId={runtime.sessionUserId} />
 
           {payoutList.items.length === 0 ? (
             <EmptyState title="No payouts" description="No payouts matched the current filters." actionLink={{ href: "/payouts", label: "Reset filters" }} />

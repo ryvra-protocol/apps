@@ -1,8 +1,17 @@
 "use client";
 
 import { reconciliationStatuses, type PayPaginationMeta, type ReconciliationItemDto } from "@ryvra/domain-payments";
-import { Button, Card, DataTable, themeTokens } from "@ryvra/ui";
+import {
+  Button,
+  Card,
+  DataTable,
+  DelegationProvenanceChips,
+  delegationViewFilters,
+  matchesDelegationView,
+  themeTokens,
+} from "@ryvra/ui";
 import { useDeferredValue, useState } from "react";
+import { buildReconciliationDelegationContext, supportsReconciliationDelegationVisibility } from "../lib/delegation-context";
 import { formatCurrencyMinor, formatDateTime } from "../lib/format";
 import { StatusBadge } from "./status-badge";
 import { useQueryFilters } from "./use-query-filters";
@@ -10,11 +19,12 @@ import { useQueryFilters } from "./use-query-filters";
 interface ReconciliationTableClientProps {
   items: ReconciliationItemDto[];
   pagination: PayPaginationMeta;
+  currentUserId?: string;
 }
 
 const reconciliationStatusOptions = ["ALL", ...reconciliationStatuses] as const;
 
-export function ReconciliationTableClient({ items, pagination }: ReconciliationTableClientProps) {
+export function ReconciliationTableClient({ items, pagination, currentUserId }: ReconciliationTableClientProps) {
   const { searchParams, updateQuery, clearQuery } = useQueryFilters();
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
 
@@ -25,11 +35,19 @@ export function ReconciliationTableClient({ items, pagination }: ReconciliationT
   const exceptionOnly = searchParams.get("exceptionOnly") === "true";
   const from = searchParams.get("from") ?? "";
   const to = searchParams.get("to") ?? "";
+  const delegationParam = (searchParams.get("delegation") ?? "all").toLowerCase();
+  const delegationFilter = delegationViewFilters.includes(delegationParam as (typeof delegationViewFilters)[number])
+    ? (delegationParam as (typeof delegationViewFilters)[number])
+    : "all";
+  const delegationAvailable = supportsReconciliationDelegationVisibility();
+  const appliedDelegationFilter = delegationAvailable ? delegationFilter : "all";
 
-  const hasFilters = status !== "ALL" || exceptionOnly || from.length > 0 || to.length > 0;
+  const hasFilters = status !== "ALL" || exceptionOnly || from.length > 0 || to.length > 0 || delegationFilter !== "all";
 
   const deferredItems = useDeferredValue(items);
-  const visibleRows = deferredItems;
+  const visibleRows = deferredItems.filter((item) =>
+    matchesDelegationView(buildReconciliationDelegationContext(item), appliedDelegationFilter, currentUserId),
+  );
   const rowsPending = deferredItems !== items;
 
   const canGoPrev = pagination.page > 1;
@@ -107,11 +125,27 @@ export function ReconciliationTableClient({ items, pagination }: ReconciliationT
             <span>Exceptions only</span>
           </label>
 
+          <label style={{ display: "grid", gap: themeTokens.spacing.xs }}>
+            <span>Delegation view</span>
+            <select
+              className="pay-filter-control"
+              value={delegationFilter}
+              aria-label="Delegation filter"
+              disabled={!delegationAvailable}
+              onChange={(event) => updateQuery({ delegation: event.currentTarget.value === "all" ? undefined : event.currentTarget.value })}
+            >
+              <option value="all">All operations</option>
+              <option value="mine">Mine</option>
+              <option value="delegated_to_me">Delegated to me</option>
+              <option value="delegated_by_me">Delegated by me</option>
+            </select>
+          </label>
+
           <div style={{ display: "flex", alignItems: "flex-end" }}>
             <Button
               type="button"
               variant="secondary"
-              onClick={() => clearQuery(["status", "from", "to", "exceptionOnly", "page"])}
+              onClick={() => clearQuery(["status", "from", "to", "exceptionOnly", "delegation", "page"])}
               disabled={!hasFilters}
               aria-describedby={!hasFilters ? "recon-reset-hint" : undefined}
             >
@@ -122,6 +156,11 @@ export function ReconciliationTableClient({ items, pagination }: ReconciliationT
         {!hasFilters ? (
           <p id="recon-reset-hint" style={{ marginBottom: 0, color: themeTokens.color.textMuted }}>
             Reset is disabled because no filters are currently applied.
+          </p>
+        ) : null}
+        {!delegationAvailable ? (
+          <p style={{ marginBottom: 0, color: themeTokens.color.textMuted }}>
+            Delegated actor metadata: Not available in current environment.
           </p>
         ) : null}
       </Card>
@@ -146,6 +185,11 @@ export function ReconciliationTableClient({ items, pagination }: ReconciliationT
             key: "updatedAt",
             header: "Updated",
             render: (value) => formatDateTime(String(value)),
+          },
+          {
+            key: "id",
+            header: "Provenance",
+            render: (_value, row) => <DelegationProvenanceChips context={buildReconciliationDelegationContext(row)} />,
           },
         ]}
         rows={visibleRows}
@@ -176,7 +220,7 @@ export function ReconciliationTableClient({ items, pagination }: ReconciliationT
       {visibleRows.length === 0 ? (
         <Card title="No reconciliation items found">
           <p style={{ marginTop: 0 }}>Try broadening filters or disable exceptions-only mode.</p>
-          <Button type="button" variant="secondary" onClick={() => clearQuery(["status", "from", "to", "exceptionOnly", "page"])}>
+          <Button type="button" variant="secondary" onClick={() => clearQuery(["status", "from", "to", "exceptionOnly", "delegation", "page"])}>
             Clear filters
           </Button>
         </Card>

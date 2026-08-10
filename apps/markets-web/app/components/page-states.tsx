@@ -47,6 +47,14 @@ export function UnauthorizedState() {
   );
 }
 
+export function PermissionDeniedState({ title = "Permission required", message }: { title?: string; message: string }) {
+  return (
+    <Card title={title}>
+      <p style={{ margin: 0 }}>{message}</p>
+    </Card>
+  );
+}
+
 export function ErrorState({ title, message, retryLink, source, retryable }: ErrorStateProps) {
   return (
     <Card title={title}>

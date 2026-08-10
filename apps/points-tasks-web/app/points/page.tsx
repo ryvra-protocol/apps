@@ -2,6 +2,7 @@ import type {
   PointEntryFilters,
   PointsAccountScopedListRequest,
 } from "@ryvra/domain-points";
+import { canAccessWorkspaceCapability, describeWorkspaceCapabilityRequirement } from "@ryvra/auth";
 import {
   Card,
   ComplianceEvidencePanel,
@@ -137,6 +138,9 @@ export default async function PointsPage({ searchParams }: PointsPageProps) {
     }
 
     const window = parsePointsWindow(searchParams);
+    const canOperate = canAccessWorkspaceCapability(runtime.workspaceRole, "operate");
+    const operateDeniedReason = describeWorkspaceCapabilityRequirement("operate", runtime.workspaceRole, "Claim submission");
+    const panelDeniedReason = describeWorkspaceCapabilityRequirement("operate", runtime.workspaceRole, "Operational evidence panels");
     const selectedInsightWindow = resolvePointsTasksInsightWindow(searchParams);
     const summaryRequest = buildPointsSummaryRequest({
       accountId: request.accountId,
@@ -244,6 +248,8 @@ export default async function PointsPage({ searchParams }: PointsPageProps) {
     runtime.logger.info("Loaded points ledger data", {
       mode: runtime.config.mode,
       accountId: request.accountId,
+      workspaceId: request.workspaceId ?? "workspace-core-1",
+      role: runtime.workspaceRole.role,
       pointEntryCount: pointsList.items.length,
       totalPoints: summary.totalPoints,
       availablePoints: summary.availablePoints,
@@ -255,7 +261,8 @@ export default async function PointsPage({ searchParams }: PointsPageProps) {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: themeTokens.spacing.sm }}>
             <ModeBadge mode={runtime.config.mode} />
             <span style={{ color: themeTokens.color.textMuted, fontSize: themeTokens.typography.size.sm }}>
-              Base URL: {runtime.config.apiBaseUrl} • Account: {request.accountId}
+              Base URL: {runtime.config.apiBaseUrl} • Account: {request.accountId} • Workspace:{" "}
+              {request.workspaceId ?? "workspace-core-1"} • Role: {runtime.workspaceRole.label}
             </span>
           </div>
 
@@ -270,6 +277,8 @@ export default async function PointsPage({ searchParams }: PointsPageProps) {
                   ...(request.userId ? { userId: request.userId } : {}),
                   ...(request.workspaceId ? { workspaceId: request.workspaceId } : {}),
                 }}
+                canOperate={canOperate}
+                operateDeniedReason={operateDeniedReason}
               />
             }
           />
@@ -302,21 +311,29 @@ export default async function PointsPage({ searchParams }: PointsPageProps) {
             processingText="If references are unavailable, they are explicitly marked as unavailable in this environment."
           />
 
-          <OperationTimelineCard
-            title="Daily claim operation timeline"
-            state={dailyClaimTimeline.length > 0 ? "success" : "empty"}
-            stages={dailyClaimTimeline}
-            emptyMessage="Daily claim timeline data is unavailable."
-          />
+          {canOperate ? (
+            <>
+              <OperationTimelineCard
+                title="Daily claim operation timeline"
+                state={dailyClaimTimeline.length > 0 ? "success" : "empty"}
+                stages={dailyClaimTimeline}
+                emptyMessage="Daily claim timeline data is unavailable."
+              />
 
-          <ComplianceEvidencePanel
-            title="Daily claim compliance evidence"
-            summaryLabel="Details"
-            sourceSystem="points_tasks_api"
-            retryable={dailyClaim.retryable}
-            references={buildDailyClaimEvidenceReferences(request.accountId)}
-            lastUpdated={dailyClaim.nextEligibleAt ?? dailyClaimObservedAt}
-          />
+              <ComplianceEvidencePanel
+                title="Daily claim compliance evidence"
+                summaryLabel="Details"
+                sourceSystem="points_tasks_api"
+                retryable={dailyClaim.retryable}
+                references={buildDailyClaimEvidenceReferences(request.accountId)}
+                lastUpdated={dailyClaim.nextEligibleAt ?? dailyClaimObservedAt}
+              />
+            </>
+          ) : (
+            <Card title="Operational evidence">
+              <p style={{ margin: 0 }}>{panelDeniedReason}</p>
+            </Card>
+          )}
 
           <PolicyLinksCard
             title="Points policy and help"
@@ -328,7 +345,7 @@ export default async function PointsPage({ searchParams }: PointsPageProps) {
             ]}
           />
 
-          <PointsTableClient items={pointsList.items} pagination={pointsList.pagination} />
+          <PointsTableClient items={pointsList.items} pagination={pointsList.pagination} currentUserId={runtime.sessionUserId} />
 
           {pointsList.items.length === 0 ? (
             <EmptyState

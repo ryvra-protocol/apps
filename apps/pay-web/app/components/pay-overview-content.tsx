@@ -36,9 +36,21 @@ interface PayOverviewContentProps {
   mode: RuntimeMode;
   overview: PayOverviewDto;
   unifiedBalanceCard: PayUnifiedBalanceCardModel;
+  accountId: string;
+  workspaceId?: string;
+  roleLabel: string;
 }
 
-export function PayOverviewContent({ title, description, mode, overview, unifiedBalanceCard }: PayOverviewContentProps) {
+export function PayOverviewContent({
+  title,
+  description,
+  mode,
+  overview,
+  unifiedBalanceCard,
+  accountId,
+  workspaceId,
+  roleLabel,
+}: PayOverviewContentProps) {
   const portfolioInsights = buildPayPortfolioInsights({
     overview,
     unifiedBalanceCard,
@@ -82,6 +94,18 @@ export function PayOverviewContent({ title, description, mode, overview, unified
             <p style={{ margin: 0 }}>{overview.metrics.reconciliationMismatchCount}</p>
           </Card>
         </div>
+
+        <Card title="Runtime context">
+          <p style={{ marginTop: 0, marginBottom: themeTokens.spacing.xs }}>
+            Account: <strong>{accountId}</strong>
+          </p>
+          <p style={{ margin: 0 }}>
+            Workspace: <strong>{workspaceId ?? "workspace-core-1"}</strong>
+          </p>
+          <p style={{ marginTop: themeTokens.spacing.xs, marginBottom: 0 }}>
+            Role: <strong>{roleLabel}</strong>
+          </p>
+        </Card>
 
         <Card title="Recent activity">
           <DataTable
