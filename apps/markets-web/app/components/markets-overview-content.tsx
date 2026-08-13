@@ -1,6 +1,6 @@
 import type { MarketsOverviewDto } from "@ryvra/domain-markets";
 import type { RuntimeMode } from "@ryvra/config";
-import { Card, Section, UnifiedBalanceCard, themeTokens, type InsightWindowOption } from "@ryvra/ui";
+import { Card, GettingStartedChecklist, Section, UnifiedBalanceCard, themeTokens, type InsightWindowOption } from "@ryvra/ui";
 import { MarketsPortfolioInsightsCard } from "./markets-portfolio-insights-card";
 import { ModeBadge } from "./mode-badge";
 import { StatusBadge } from "./status-badge";
@@ -33,6 +33,7 @@ const windowOptions: InsightWindowOption[] = [
 interface MarketsOverviewContentProps {
   title: string;
   description: string;
+  route: string;
   mode: RuntimeMode;
   overview: MarketsOverviewDto;
   unifiedBalanceCard: MarketsUnifiedBalanceCardModel;
@@ -43,6 +44,7 @@ interface MarketsOverviewContentProps {
 export function MarketsOverviewContent({
   title,
   description,
+  route,
   mode,
   overview,
   unifiedBalanceCard,
@@ -53,6 +55,12 @@ export function MarketsOverviewContent({
     overview,
     unifiedBalanceCard,
   });
+  const scopeSearchParams = new URLSearchParams({
+    account_id: overview.accountId,
+    ...(workspaceId ? { workspace_id: workspaceId } : {}),
+  });
+  const scopeQuery = scopeSearchParams.toString();
+  const withScope = (href: string): string => (scopeQuery.length > 0 ? `${href}?${scopeQuery}` : href);
 
   return (
     <section style={{ display: "grid", gap: themeTokens.spacing.lg }}>
@@ -69,6 +77,19 @@ export function MarketsOverviewContent({
             <UnifiedBalanceCard {...unifiedBalanceCard} />
           </div>
           <MarketsPortfolioInsightsCard model={portfolioInsights} windowOptions={windowOptions} />
+          <GettingStartedChecklist
+            appId="markets-web"
+            route={route}
+            scope={{
+              accountId: overview.accountId,
+              ...(workspaceId ? { workspaceId } : {}),
+            }}
+            scopeHref={withScope(route)}
+            unifiedBalanceHref={withScope("/overview")}
+            firstActionHref={withScope("/orders")}
+            firstActionLabel="Complete first task action"
+            notificationsHref={withScope("/status")}
+          />
         </div>
 
         <div style={{ display: "grid", gap: themeTokens.spacing.md, gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))" }}>

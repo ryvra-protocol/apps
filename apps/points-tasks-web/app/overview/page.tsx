@@ -85,6 +85,7 @@ export default async function PointsOverviewPage({ searchParams }: PointsTasksOv
       <PointsTasksOverviewContent
         title="Points & Tasks Overview"
         description="Summary-focused parity view with points/task aggregates and recent activity."
+        route="/overview"
         mode={runtime.config.mode}
         baseUrl={runtime.config.apiBaseUrl}
         accountId={accountId}

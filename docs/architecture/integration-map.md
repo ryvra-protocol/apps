@@ -275,3 +275,20 @@
 - Domain-specific orchestration belongs in app-level features unless shared by multiple apps.
 - Stable shared domain rules should move into domain packages.
 - Infrastructure bindings (HTTP SDKs, auth adapters) should remain behind `@ryvra/api-client` and `@ryvra/auth` interfaces.
+
+## Phase 19 additions: growth + conversion UX integration
+
+- Shared growth instrumentation now lives in `@ryvra/ui`:
+  - `growth-instrumentation.ts` defines funnel events (`stage_entered`, `stage_completed`, `stage_abandoned`) and local-preview sink persistence (`ryvra.growth.events.v1`).
+  - `ActivationFunnelTracker` is mounted in shell frames to emit landing/session and scope-selection funnel events with privacy-safe scope hashing.
+- Shared onboarding checklist pattern now lives in `@ryvra/ui`:
+  - `GettingStartedChecklist.tsx` + `getting-started-checklist.ts` provide deterministic checklist progression, minimize/dismiss/resume behavior, and scope-aware persistence (`ryvra.onboarding.<app>.<scopeHash>`).
+  - Markets, Pay, and Points/Tasks dashboard/overview top-priority zones now surface onboarding entry points.
+- Shared claim experiment framework now lives in `@ryvra/ui`:
+  - deterministic A/B assignment per scope (`claim_conversion_phase19_v1`)
+  - QA override via `claim_variant` query param (scoped persistence)
+  - event tracker for `variant_exposed`, `cta_clicked`, `claim_success`, `claim_failure`
+- Claim conversion integrations:
+  - `apps/pay-web/app/components/claim-fingerprint-card-client.tsx` now consumes shared assignment + tracking + variant presentation while preserving existing claim guardrails.
+  - `apps/points-tasks-web/app/components/daily-claim-card.tsx` now consumes shared assignment + tracking + variant presentation while preserving existing claim guardrails.
+- Analytics backend sink remains deferred; current implementation is explicitly labeled local preview and intentionally does not imply remote delivery.

@@ -1,8 +1,21 @@
 "use client";
 
-import { Button, Card, useNotificationCenter, themeTokens, translateRuntime } from "@ryvra/ui";
-import { useRouter } from "next/navigation";
-import { useRef, useState, useTransition } from "react";
+import {
+  Button,
+  Card,
+  ClaimExperimentStatus,
+  buildClaimVariantPresentation,
+  createClaimConversionEventTracker,
+  createClaimExperimentInstrumentation,
+  resolveClaimActionEnabled,
+  resolveClaimExperimentAssignment,
+  resolveClaimExperimentOverride,
+  useNotificationCenter,
+  themeTokens,
+  translateRuntime,
+} from "@ryvra/ui";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
   createClaimExecutionAttempt,
   createClaimSubmissionLock,
@@ -19,14 +32,16 @@ import {
 import { StatusBadge } from "./status-badge";
 
 interface DailyClaimCardProps {
+  surface: "points" | "tasks";
   model: DailyClaimViewModel;
   scope: DailyClaimScope;
   canOperate: boolean;
   operateDeniedReason?: string;
 }
 
-export function DailyClaimCard({ model, scope, canOperate, operateDeniedReason }: DailyClaimCardProps) {
+export function DailyClaimCard({ surface, model, scope, canOperate, operateDeniedReason }: DailyClaimCardProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { addNotification } = useNotificationCenter();
   const lockRef = useRef(createClaimSubmissionLock());
   const [attempt, setAttempt] = useState<ClaimExecutionAttempt | null>(null);
@@ -35,9 +50,61 @@ export function DailyClaimCard({ model, scope, canOperate, operateDeniedReason }
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [didSucceed, setDidSucceed] = useState(false);
   const [isRefreshing, startRefresh] = useTransition();
+  const serializedSearchParams = searchParams.toString();
+
+  const instrumentation = useMemo(
+    () =>
+      createClaimExperimentInstrumentation({
+        appId: "points-tasks-web",
+        route: surface === "tasks" ? "/tasks" : "/points",
+        scope,
+      }),
+    [scope.accountId, scope.userId, scope.workspaceId, surface],
+  );
+
+  const assignment = useMemo(
+    () => {
+      const overrideVariant = resolveClaimExperimentOverride(serializedSearchParams);
+      return resolveClaimExperimentAssignment({
+        scopeHash: instrumentation.scopeHash,
+        ...(overrideVariant ? { overrideVariant } : {}),
+      });
+    },
+    [instrumentation.scopeHash, serializedSearchParams],
+  );
+
+  const experimentPresentation = useMemo(
+    () =>
+      buildClaimVariantPresentation(assignment.variant, {
+        defaultCtaLabel: model.cta.label,
+        trustBoostCtaLabel: "Claim now with guided checks",
+      }),
+    [assignment.variant, model.cta.label],
+  );
+
+  const conversionTracker = useMemo(
+    () =>
+      createClaimConversionEventTracker({
+        instrumentation,
+        assignment,
+        actionType: "claim",
+      }),
+    [assignment, instrumentation],
+  );
+
+  useEffect(() => {
+    conversionTracker.trackExposure();
+  }, [conversionTracker]);
+
+  useEffect(() => {
+    return () => {
+      conversionTracker.trackAbandoned();
+    };
+  }, [conversionTracker]);
 
   const submitClaim = async (mode: "new" | "retry") => {
-    if (!canOperate || !model.cta.enabled || isSubmitting || isRefreshing) {
+    const claimActionEnabled = resolveClaimActionEnabled(canOperate, model.cta.enabled);
+    if (!claimActionEnabled || isSubmitting || isRefreshing) {
       return;
     }
 
@@ -46,6 +113,7 @@ export function DailyClaimCard({ model, scope, canOperate, operateDeniedReason }
     }
 
     const nextAttempt = mode === "retry" && attempt ? attempt : createClaimExecutionAttempt(scope);
+    conversionTracker.trackCtaClick();
 
     setIsSubmitting(true);
     setWriteError(null);
@@ -79,6 +147,7 @@ export function DailyClaimCard({ model, scope, canOperate, operateDeniedReason }
         setDidSucceed(false);
         setWriteError(result.error);
         setWriteGuidance(result.retry.guidance);
+        conversionTracker.trackFailure();
         addNotification(
           buildDailyClaimLifecycleNotification({
             stage: "failed",
@@ -94,6 +163,7 @@ export function DailyClaimCard({ model, scope, canOperate, operateDeniedReason }
       setDidSucceed(true);
       setWriteError(null);
       setWriteGuidance("Claim submitted. Refreshing claim status and points balances.");
+      conversionTracker.trackSuccess();
       addNotification(
         buildDailyClaimLifecycleNotification({
           stage: resolveDailyClaimLifecycleStageFromIntentState(result.state),
@@ -124,9 +194,16 @@ export function DailyClaimCard({ model, scope, canOperate, operateDeniedReason }
   const status = didSucceed ? "already_claimed" : model.status;
   const statusLabel = didSucceed ? "Already claimed" : model.statusLabel;
   const localizedStatusLabel = translateRuntime(`status.${status.toLowerCase()}`, statusLabel);
-  const ctaEnabled = canOperate && model.cta.enabled && !didSucceed;
+  const ctaEnabled = resolveClaimActionEnabled(canOperate, model.cta.enabled) && !didSucceed;
   const ctaDisabledReason = !canOperate ? operateDeniedReason ?? "Operator workspace access is required." : model.cta.reason;
-  const ctaLabel = isSubmitting ? "Submitting claim..." : isRefreshing ? "Refreshing claim..." : didSucceed ? "Claim submitted" : model.cta.label;
+  const ctaLabel =
+    isSubmitting
+      ? "Submitting claim..."
+      : isRefreshing
+        ? "Refreshing claim..."
+        : didSucceed
+          ? "Claim submitted"
+          : experimentPresentation.ctaLabel;
 
   return (
     <Card title={translateRuntime("claim.dailyTitle", "Daily claim")}>
@@ -143,6 +220,24 @@ export function DailyClaimCard({ model, scope, canOperate, operateDeniedReason }
           </p>
         ) : null}
 
+        <ClaimExperimentStatus
+          experimentId={assignment.experimentId}
+          variant={assignment.variant}
+          overrideActive={assignment.source === "qa_override"}
+        />
+        <p
+          style={{
+            margin: 0,
+            color: experimentPresentation.emphasizeTrust ? themeTokens.color.text : themeTokens.color.textMuted,
+            fontSize: themeTokens.typography.size.sm,
+          }}
+        >
+          {experimentPresentation.trustHeadline}
+        </p>
+        <p style={{ margin: 0, color: themeTokens.color.textMuted, fontSize: themeTokens.typography.size.sm }}>
+          {experimentPresentation.trustDetail}
+        </p>
+
         <div style={{ display: "grid", gap: themeTokens.spacing.xs }}>
           <Button
             type="button"
@@ -152,7 +247,7 @@ export function DailyClaimCard({ model, scope, canOperate, operateDeniedReason }
             }}
             aria-label={
               ctaEnabled
-                ? model.cta.label
+                ? experimentPresentation.ctaLabel
                 : `Claim disabled: ${ctaDisabledReason ?? translateRuntime("claim.unavailableReason", "Unavailable")}`
             }
           >

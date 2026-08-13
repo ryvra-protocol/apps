@@ -13,6 +13,7 @@ import {
   type ResolvedRouteDefinition,
 } from "@ryvra/config";
 import {
+  ActivationFunnelTracker,
   AppShell,
   WorkspaceScopeSwitcher,
   appendScopeToHref,
@@ -25,6 +26,7 @@ import {
   type ProductSwitcherItem,
   type ShellNavItem,
   type UserMenuItem,
+  type FunnelActionType,
   type WorkspaceScopeSelection,
 } from "@ryvra/ui";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -145,6 +147,14 @@ function buildUserMenuItems(canManageWorkspace: boolean): UserMenuItem[] {
       disabled: !canManageWorkspace,
     },
   ];
+}
+
+function resolveFirstActionType(pathname: string): FunnelActionType | undefined {
+  if (pathname === "/tasks") {
+    return "task";
+  }
+
+  return undefined;
 }
 
 export function ShellFrame({ children, roleClaims, defaultAccountId, defaultWorkspaceId, sessionUserId }: ShellFrameProps) {
@@ -357,6 +367,8 @@ export function ShellFrame({ children, roleClaims, defaultAccountId, defaultWork
     () => [...new Set([...scopeResolution.notices, ...persistenceNotices])],
     [persistenceNotices, scopeResolution.notices],
   );
+  const firstActionType = resolveFirstActionType(normalizedPathname);
+  const markCompletionOnMount = firstActionType === "task";
   const notificationScopeKey = `${productId}:${scopeResolution.scope.accountId}:${scopeResolution.scope.workspaceId ?? "workspace-none"}:${scopeResolution.scope.userId ?? "user-none"}`;
 
   return (
@@ -394,6 +406,13 @@ export function ShellFrame({ children, roleClaims, defaultAccountId, defaultWork
           : describeWorkspaceCapabilityRequirement("admin", roleView, "Workspace settings")
       }
     >
+      <ActivationFunnelTracker
+        appId="points-tasks-web"
+        route={normalizedPathname}
+        scope={scopeResolution.scope}
+        {...(firstActionType ? { firstActionType } : {})}
+        markCompletionOnMount={markCompletionOnMount}
+      />
       {children}
     </AppShell>
   );

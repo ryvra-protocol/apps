@@ -4,14 +4,21 @@ import type { RuntimeMode } from "@ryvra/config";
 import {
   Button,
   Card,
+  ClaimExperimentStatus,
   ComplianceEvidencePanel,
   ConfirmationReceiptCard,
   ErrorTransparencySummary,
   OperationTimelineCard,
+  buildClaimVariantPresentation,
+  createClaimConversionEventTracker,
+  createClaimExperimentInstrumentation,
+  resolveClaimActionEnabled,
+  resolveClaimExperimentAssignment,
+  resolveClaimExperimentOverride,
   useNotificationCenter,
   themeTokens,
 } from "@ryvra/ui";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
   createClaimIdempotencyKey,
@@ -49,6 +56,8 @@ interface ClaimFingerprintCardClientProps {
   mode: RuntimeMode;
   payout: ClaimPayoutCandidate | null;
   availability: ClaimAvailability;
+  accountId: string;
+  workspaceId?: string;
   canOperate: boolean;
   operateDeniedReason?: string;
 }
@@ -61,10 +70,13 @@ export function ClaimFingerprintCardClient({
   mode,
   payout,
   availability,
+  accountId,
+  workspaceId,
   canOperate,
   operateDeniedReason,
 }: ClaimFingerprintCardClientProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { addNotification } = useNotificationCenter();
   const [panelOpen, setPanelOpen] = useState(false);
   const [uiState, setUiState] = useState<ClaimUiState>("idle");
@@ -78,6 +90,50 @@ export function ClaimFingerprintCardClient({
 
   const lockRef = useRef(createClaimSubmissionLock());
   const confirmationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const serializedSearchParams = searchParams.toString();
+
+  const instrumentation = useMemo(
+    () =>
+      createClaimExperimentInstrumentation({
+        appId: "pay-web",
+        route: "/payouts",
+        scope: {
+          accountId,
+          ...(workspaceId ? { workspaceId } : {}),
+        },
+      }),
+    [accountId, workspaceId],
+  );
+
+  const assignment = useMemo(
+    () => {
+      const overrideVariant = resolveClaimExperimentOverride(serializedSearchParams);
+      return resolveClaimExperimentAssignment({
+        scopeHash: instrumentation.scopeHash,
+        ...(overrideVariant ? { overrideVariant } : {}),
+      });
+    },
+    [instrumentation.scopeHash, serializedSearchParams],
+  );
+
+  const experimentPresentation = useMemo(
+    () =>
+      buildClaimVariantPresentation(assignment.variant, {
+        defaultCtaLabel: "Claim",
+        trustBoostCtaLabel: "Start secure claim",
+      }),
+    [assignment.variant],
+  );
+
+  const conversionTracker = useMemo(
+    () =>
+      createClaimConversionEventTracker({
+        instrumentation,
+        assignment,
+        actionType: "payout",
+      }),
+    [assignment, instrumentation],
+  );
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
@@ -99,15 +155,20 @@ export function ClaimFingerprintCardClient({
   }, []);
 
   useEffect(() => {
+    conversionTracker.trackExposure();
+  }, [conversionTracker]);
+
+  useEffect(() => {
     return () => {
+      conversionTracker.trackAbandoned();
       if (confirmationTimerRef.current) {
         clearTimeout(confirmationTimerRef.current);
       }
     };
-  }, []);
+  }, [conversionTracker]);
 
   const disabledReason = !canOperate ? operateDeniedReason ?? "Operator workspace access is required." : availability.reason;
-  const disabled = !canOperate || !availability.enabled || !payout;
+  const disabled = !resolveClaimActionEnabled(canOperate, availability.enabled) || !payout;
 
   const confirmationHint = useMemo(
     () =>
@@ -131,6 +192,7 @@ export function ClaimFingerprintCardClient({
     setTimelineTimestamps({});
 
     if (closePanel) {
+      conversionTracker.trackAbandoned();
       setPanelOpen(false);
     }
   };
@@ -140,6 +202,7 @@ export function ClaimFingerprintCardClient({
       return;
     }
 
+    conversionTracker.trackCtaClick();
     resetFlow(false);
     setPanelOpen(true);
     setIdempotencyKey(createClaimIdempotencyKey(payout.id));
@@ -193,6 +256,7 @@ export function ClaimFingerprintCardClient({
         setSubmissionGuidance(result.retry.guidance);
         setTimelineTimestamps((current) => ({ ...current, resolvedAt: new Date().toISOString() }));
         setUiState((current) => transitionClaimUiState(current, "FAILURE"));
+        conversionTracker.trackFailure();
         addNotification(
           buildClaimLifecycleNotification({
             stage: "failed",
@@ -215,6 +279,7 @@ export function ClaimFingerprintCardClient({
       setUiState((current) => transitionClaimUiState(current, "SUCCESS"));
       setError(null);
       setSubmissionGuidance("Claim submitted. Refreshing payout and status data.");
+      conversionTracker.trackSuccess();
       addNotification(
         buildClaimLifecycleNotification({
           stage: "completed",
@@ -403,6 +468,16 @@ export function ClaimFingerprintCardClient({
           <p style={{ margin: 0 }}>No payout currently qualifies for claim submission.</p>
         )}
 
+        <ClaimExperimentStatus
+          experimentId={assignment.experimentId}
+          variant={assignment.variant}
+          overrideActive={assignment.source === "qa_override"}
+        />
+        <p style={{ margin: 0, color: experimentPresentation.emphasizeTrust ? themeTokens.color.text : themeTokens.color.textMuted }}>
+          {experimentPresentation.trustHeadline}
+        </p>
+        <p className="pay-claim-meta">{experimentPresentation.trustDetail}</p>
+
         <div className="pay-claim-cta">
           <Button
             type="button"
@@ -410,7 +485,7 @@ export function ClaimFingerprintCardClient({
             disabled={disabled || isRefreshing}
             aria-describedby={disabled ? "pay-claim-disabled-reason" : undefined}
           >
-            Claim
+            {experimentPresentation.ctaLabel}
           </Button>
         </div>
 

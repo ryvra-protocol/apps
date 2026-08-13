@@ -13,6 +13,7 @@ import {
   type ResolvedRouteDefinition,
 } from "@ryvra/config";
 import {
+  ActivationFunnelTracker,
   AppShell,
   WorkspaceScopeSwitcher,
   appendScopeToHref,
@@ -25,6 +26,7 @@ import {
   type ProductSwitcherItem,
   type ShellNavItem,
   type UserMenuItem,
+  type FunnelActionType,
   type WorkspaceScopeSelection,
 } from "@ryvra/ui";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -142,6 +144,11 @@ function buildUserMenuItems(canManageWorkspace: boolean): UserMenuItem[] {
       disabled: !canManageWorkspace,
     },
   ];
+}
+
+function resolveFirstActionType(pathname: string): FunnelActionType | undefined {
+  void pathname;
+  return undefined;
 }
 
 export function ShellFrame({ children, roleClaims, defaultAccountId, defaultWorkspaceId, sessionUserId }: ShellFrameProps) {
@@ -325,6 +332,7 @@ export function ShellFrame({ children, roleClaims, defaultAccountId, defaultWork
     () => [...new Set([...scopeResolution.notices, ...persistenceNotices])],
     [persistenceNotices, scopeResolution.notices],
   );
+  const firstActionType = resolveFirstActionType(normalizedPathname);
   const notificationScopeKey = `${productId}:${scopeResolution.scope.accountId}:${scopeResolution.scope.workspaceId ?? "workspace-none"}`;
 
   return (
@@ -360,6 +368,12 @@ export function ShellFrame({ children, roleClaims, defaultAccountId, defaultWork
           : describeWorkspaceCapabilityRequirement("admin", roleView, "Workspace settings")
       }
     >
+      <ActivationFunnelTracker
+        appId="pay-web"
+        route={normalizedPathname}
+        scope={scopeResolution.scope}
+        {...(firstActionType ? { firstActionType } : {})}
+      />
       {children}
     </AppShell>
   );
