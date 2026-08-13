@@ -21,7 +21,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
   const roleClaims = roleClaimsFromSession(session);
 
   return (
-    <html lang="en">
+    <html lang="en" dir="ltr" suppressHydrationWarning>
       <body style={{ margin: 0 }}>
         <Suspense fallback={<div>{children}</div>}>
           <ShellFrame

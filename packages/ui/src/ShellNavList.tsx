@@ -1,6 +1,7 @@
 import { NavItemIcon } from "./NavItemIcon";
 import type { ShellNavItem } from "./navigation";
 import { isCurrentRoute } from "./route-utils";
+import { useI18n } from "./I18nProvider";
 
 export interface ShellNavListProps {
   items: ShellNavItem[];
@@ -23,11 +24,16 @@ export function ShellNavList({
   listClassName,
   tooltipPlacement = "right",
 }: ShellNavListProps) {
+  const { t } = useI18n();
+
   return (
     <ul className={classNameFor(["ryvra-nav-list", listClassName])}>
       {items.map((item) => {
         const current = isCurrentRoute(item, currentPath);
-        const label = item.ariaLabel ?? item.label;
+        const translatedLabel = item.labelKey ? t(item.labelKey, item.label) : item.label;
+        const ariaLabel =
+          item.ariaLabelKey ? t(item.ariaLabelKey, item.ariaLabel ?? translatedLabel) : item.ariaLabel ?? translatedLabel;
+        const translatedBadge = item.badgeKey ? t(item.badgeKey, item.badge ?? item.badgeKey) : item.badge;
         return (
           <li key={item.id}>
             <a
@@ -40,20 +46,20 @@ export function ShellNavList({
               ])}
               href={item.href}
               aria-current={current ? "page" : undefined}
-              aria-label={label}
+              aria-label={ariaLabel}
               aria-disabled={item.disabled ? "true" : undefined}
               target={item.external ? "_blank" : undefined}
               rel={item.external ? "noreferrer" : undefined}
-              title={iconOnly ? label : undefined}
-              data-tooltip={iconOnly ? label : undefined}
+              title={iconOnly ? ariaLabel : undefined}
+              data-tooltip={iconOnly ? ariaLabel : undefined}
             >
               <span className="ryvra-nav-link-content">
                 <NavItemIcon itemId={item.id} />
                 <span className={classNameFor(["ryvra-nav-link-label", iconOnly && "ryvra-visually-hidden"])}>
-                  {item.label}
+                  {translatedLabel}
                 </span>
               </span>
-              {!iconOnly && item.badge ? <span className="ryvra-nav-badge">{item.badge}</span> : null}
+              {!iconOnly && translatedBadge ? <span className="ryvra-nav-badge">{translatedBadge}</span> : null}
             </a>
           </li>
         );

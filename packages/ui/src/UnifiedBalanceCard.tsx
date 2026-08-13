@@ -1,5 +1,6 @@
 import { Card } from "./Card";
 import { themeTokens } from "./theme";
+import { translateRuntime } from "./i18n-runtime";
 
 export type UnifiedBalanceCardState = "loading" | "empty" | "error" | "success";
 
@@ -45,13 +46,13 @@ function RetryLink({ href, label }: { href: string; label: string }) {
 
 export function UnifiedBalanceCard({
   state,
-  title = "Unified balance",
+  title = translateRuntime("unified.title", "Unified balance"),
   totalLabel,
   rows = [],
-  emptyMessage = "No unified assets are available for the active account scope.",
-  errorMessage = "Unable to load unified balances.",
+  emptyMessage = translateRuntime("unified.empty", "No unified assets are available for the active account scope."),
+  errorMessage = translateRuntime("unified.error", "Unable to load unified balances."),
   retryHref,
-  retryLabel = "Retry unified balance",
+  retryLabel = translateRuntime("unified.retry", "Retry unified balance"),
   statusMessage,
 }: UnifiedBalanceCardProps) {
   if (state === "loading") {
@@ -91,7 +92,9 @@ export function UnifiedBalanceCard({
   return (
     <Card title={title}>
       <div style={{ display: "grid", gap: themeTokens.spacing.sm }}>
-        <p style={{ margin: 0, color: themeTokens.color.textMuted, fontSize: themeTokens.typography.size.sm }}>Total aggregated balance</p>
+        <p style={{ margin: 0, color: themeTokens.color.textMuted, fontSize: themeTokens.typography.size.sm }}>
+          {translateRuntime("unified.totalAggregated", "Total aggregated balance")}
+        </p>
         <p style={{ margin: 0, fontSize: themeTokens.typography.size.xl, fontWeight: themeTokens.typography.weight.semibold }}>
           {totalLabel ?? "0 USD"}
         </p>
@@ -102,16 +105,24 @@ export function UnifiedBalanceCard({
 
       <details open={rows.length <= 4}>
         <summary style={{ cursor: "pointer", fontWeight: themeTokens.typography.weight.medium }}>
-          Asset breakdown ({rows.length})
+          {translateRuntime("unified.assetBreakdown", "Asset breakdown ({count})", { count: rows.length })}
         </summary>
         <div style={{ overflowX: "auto", marginTop: themeTokens.spacing.sm }}>
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "18rem" }}>
             <thead>
-              <tr style={{ textAlign: "left", color: themeTokens.color.textMuted, fontSize: themeTokens.typography.size.sm }}>
-                <th style={{ padding: `${themeTokens.spacing.xs} 0` }}>Asset</th>
-                <th style={{ padding: `${themeTokens.spacing.xs} 0` }}>Chain</th>
-                <th style={{ padding: `${themeTokens.spacing.xs} 0` }}>Quantity</th>
-                <th style={{ padding: `${themeTokens.spacing.xs} 0` }}>Value</th>
+              <tr style={{ textAlign: "start", color: themeTokens.color.textMuted, fontSize: themeTokens.typography.size.sm }}>
+                <th style={{ padding: `${themeTokens.spacing.xs} 0` }}>
+                  {translateRuntime("unified.column.asset", "Asset")}
+                </th>
+                <th style={{ padding: `${themeTokens.spacing.xs} 0` }}>
+                  {translateRuntime("unified.column.chain", "Chain")}
+                </th>
+                <th style={{ padding: `${themeTokens.spacing.xs} 0` }}>
+                  {translateRuntime("unified.column.quantity", "Quantity")}
+                </th>
+                <th style={{ padding: `${themeTokens.spacing.xs} 0` }}>
+                  {translateRuntime("unified.column.value", "Value")}
+                </th>
               </tr>
             </thead>
             <tbody>

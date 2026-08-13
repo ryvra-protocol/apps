@@ -1,6 +1,7 @@
 import { Card } from "./Card";
 import { StatusBadge } from "./StatusBadge";
 import { themeTokens } from "./theme";
+import { formatLocalizedDateTime } from "./i18n-runtime";
 
 export const TRUST_UNAVAILABLE_VALUE = "Not available in current environment";
 export const TRUST_REDACTED_VALUE = "Redacted for security";
@@ -113,7 +114,9 @@ export function formatTrustTimestamp(value?: string | null): string {
     return value;
   }
 
-  return new Date(parsed).toISOString();
+  return formatLocalizedDateTime(new Date(parsed), {
+    fallback: TRUST_UNAVAILABLE_VALUE,
+  });
 }
 
 export function buildRetrySafetyMessage(retryable: boolean): string {

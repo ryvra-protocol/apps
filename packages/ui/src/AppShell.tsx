@@ -7,11 +7,13 @@ import { GlobalHeader } from "./GlobalHeader";
 import { GlobalSidebar } from "./GlobalSidebar";
 import { BottomIconDock } from "./BottomIconDock";
 import { NotificationCenterProvider } from "./NotificationCenterProvider";
+import { I18nProvider, useI18n } from "./I18nProvider";
 import {
   readSidebarCollapsedPreference,
   toggleSidebarCollapsed,
   writeSidebarCollapsedPreference,
 } from "./sidebar-preferences";
+import type { LocaleResources, SupportedLocale } from "./i18n-runtime";
 
 export interface AppShellProps {
   appName: string;
@@ -28,9 +30,30 @@ export interface AppShellProps {
   commandTriggerLabel?: string;
   notificationScopeKey?: string;
   scopeSwitcher?: ReactNode;
+  i18nResources?: LocaleResources;
+  initialLocale?: SupportedLocale;
+  initialTimeZonePreference?: string;
+  hydrateI18nFromStorage?: boolean;
 }
 
-export function AppShell({
+interface AppShellLayoutProps {
+  appName: string;
+  globalNavItems: ShellNavItem[];
+  localNavItems?: ShellNavItem[];
+  localNavTitle?: string;
+  localNavAriaLabel?: string;
+  productSwitcherItems: ProductSwitcherItem[];
+  breadcrumbs: BreadcrumbItem[];
+  currentPath?: string;
+  children: ReactNode;
+  footer?: ReactNode;
+  userMenuItems?: UserMenuItem[];
+  commandTriggerLabel?: string;
+  notificationScopeKey?: string;
+  scopeSwitcher?: ReactNode;
+}
+
+function AppShellLayout({
   appName,
   globalNavItems,
   localNavItems = [],
@@ -45,11 +68,25 @@ export function AppShell({
   commandTriggerLabel = "Command Palette",
   notificationScopeKey,
   scopeSwitcher,
-}: AppShellProps) {
+}: AppShellLayoutProps) {
+  const { direction, t } = useI18n();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const resolvedNotificationScopeKey = notificationScopeKey && notificationScopeKey.trim().length > 0
     ? notificationScopeKey
     : appName.toLowerCase().replace(/\s+/g, "-");
+  const resolvedLocalNavTitle = localNavTitle === "Module" ? t("shell.module", localNavTitle) : localNavTitle;
+  const resolvedLocalNavAriaLabel =
+    localNavAriaLabel === "Module navigation"
+      ? t("shell.moduleNavigation", localNavAriaLabel)
+      : localNavAriaLabel;
+  const resolvedCommandTriggerLabel = commandTriggerLabel === "Command Palette"
+    ? t("shell.commandPalette", commandTriggerLabel)
+    : commandTriggerLabel === "Quick Actions"
+      ? t("shell.quickActions", commandTriggerLabel)
+      : commandTriggerLabel;
+  const resolvedFooter = typeof footer === "string" && footer === "Ryvra unified shell foundation"
+    ? t("shell.footerFoundation", footer)
+    : footer;
 
   useEffect(() => {
     const preference = readSidebarCollapsedPreference(typeof window !== "undefined" ? window.localStorage : null);
@@ -67,25 +104,25 @@ export function AppShell({
   }
 
   return (
-    <div className="ryvra-shell-root">
+    <div className="ryvra-shell-root" dir={direction}>
       <style>{shellStyles}</style>
       <a className="ryvra-skip-link" href="#app-main-content">
-        Skip to content
+        {t("shell.skipToContent", "Skip to content")}
       </a>
       <NotificationCenterProvider scopeKey={resolvedNotificationScopeKey}>
         <GlobalHeader
           appName={appName}
           breadcrumbs={breadcrumbs}
           userMenuItems={userMenuItems}
-          commandTriggerLabel={commandTriggerLabel}
+          commandTriggerLabel={resolvedCommandTriggerLabel}
           scopeSwitcher={scopeSwitcher}
         />
         <div className="ryvra-shell-layout">
           <GlobalSidebar
             globalNavItems={globalNavItems}
             localNavItems={localNavItems}
-            localNavTitle={localNavTitle}
-            localNavAriaLabel={localNavAriaLabel}
+            localNavTitle={resolvedLocalNavTitle}
+            localNavAriaLabel={resolvedLocalNavAriaLabel}
             currentPath={currentPath}
             collapsed={sidebarCollapsed}
             onToggleCollapsed={handleSidebarToggle}
@@ -95,8 +132,27 @@ export function AppShell({
           </main>
         </div>
         <BottomIconDock items={productSwitcherItems} />
-        {footer ? <footer className="ryvra-shell-footer">{footer}</footer> : null}
+        {resolvedFooter ? <footer className="ryvra-shell-footer">{resolvedFooter}</footer> : null}
       </NotificationCenterProvider>
     </div>
+  );
+}
+
+export function AppShell({
+  i18nResources,
+  initialLocale,
+  initialTimeZonePreference,
+  hydrateI18nFromStorage = true,
+  ...props
+}: AppShellProps) {
+  return (
+    <I18nProvider
+      hydrateFromStorage={hydrateI18nFromStorage}
+      {...(i18nResources ? { resources: i18nResources } : {})}
+      {...(initialLocale ? { initialLocale } : {})}
+      {...(initialTimeZonePreference ? { initialTimeZonePreference } : {})}
+    >
+      <AppShellLayout {...props} />
+    </I18nProvider>
   );
 }

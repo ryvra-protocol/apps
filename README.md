@@ -33,6 +33,14 @@ This repository hosts the unified-shell baseline with Pay, Markets, and Points/T
 - Non-critical claim modules on `/pay/payouts` and `/points` are lazy-loaded to reduce initial client payload.
 - Added performance guard command: `pnpm perf:guard` (bundle budget + critical route artifact checks after build).
 
+## Phase 18 i18n + localization notes
+
+- Shared shell i18n runtime now supports `en` (default), `fr`, and `ar`.
+- Locale + timezone preferences are user-configurable in shell settings and persisted client-side (`ryvra.locale`, `ryvra.timezone`).
+- Shared shell/notification/navigation surfaces now resolve namespaced translation keys with deterministic fallback to `en`.
+- RTL direction toggles automatically when an RTL locale is selected, with shell-level directional layout adjustments.
+- Number/currency/date/relative-time formatting is centralized in `@ryvra/ui` and applied across Markets, Pay, and Points/Tasks presentation layers.
+
 ## Phase 15 portfolio + placement notes
 
 - Markets and Pay dashboard/overview now place the shared Unified Balance card in the top-priority section.
@@ -302,3 +310,4 @@ See `docs/architecture/` for boundaries, responsibilities, and integration mappi
 - `docs/architecture/reliability-performance-phase-17.md`
 - `docs/architecture/notifications-and-comms-phase-14.md`
 - `docs/architecture/portfolio-and-insights-phase-15.md`
+- `docs/architecture/i18n-localization-phase-18.md`

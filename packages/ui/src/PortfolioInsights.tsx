@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Card } from "./Card";
 import { themeTokens } from "./theme";
+import { formatLocalizedCurrency, formatLocalizedDateTime, formatLocalizedNumber } from "./i18n-runtime";
 
 export type InsightModuleState = "loading" | "empty" | "error" | "success";
 export type InsightWindow = "24h" | "7d" | "30d";
@@ -54,10 +55,10 @@ function toSafeUnitLabel(unit: string | undefined, fallback = "USD"): string {
 }
 
 export function formatInsightNumber(value: number, maximumFractionDigits = 2): string {
-  return new Intl.NumberFormat("en-US", {
+  return formatLocalizedNumber(normalizeNumber(value), {
     minimumFractionDigits: 0,
     maximumFractionDigits,
-  }).format(normalizeNumber(value));
+  });
 }
 
 export function formatInsightPercent(value: number, maximumFractionDigits = 1): string {
@@ -65,7 +66,11 @@ export function formatInsightPercent(value: number, maximumFractionDigits = 1): 
 }
 
 export function formatInsightCurrency(value: number, currency: string, maximumFractionDigits = 2): string {
-  return `${formatInsightNumber(value, maximumFractionDigits)} ${toSafeUnitLabel(currency)}`;
+  return formatLocalizedCurrency(normalizeNumber(value), toSafeUnitLabel(currency), {
+    currencyDisplay: "code",
+    minimumFractionDigits: 0,
+    maximumFractionDigits,
+  });
 }
 
 export function formatInsightTimestamp(isoTimestamp: string): string {
@@ -74,15 +79,9 @@ export function formatInsightTimestamp(isoTimestamp: string): string {
     return "n/a";
   }
 
-  return new Intl.DateTimeFormat("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "UTC",
-    timeZoneName: "short",
-  }).format(new Date(parsed));
+  return formatLocalizedDateTime(new Date(parsed), {
+    fallback: "n/a",
+  });
 }
 
 export function InsightModuleCard({

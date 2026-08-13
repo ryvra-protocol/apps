@@ -37,6 +37,23 @@
   - disabled navigation labels include explicit role requirements when route permissions fail
   - route-level permission-denied rendering is enforced on restricted surfaces (for example Pay reconciliation and Points/Tasks tasks access)
 
+## Phase 18 additions: internationalization and localization
+
+- Shared locale runtime now lives in `@ryvra/ui`:
+  - supported locales: `en` (default), `fr`, `ar`
+  - fallback translation chain: selected locale -> `en` -> key fallback string
+  - non-production missing-key diagnostics with per-key de-duplication
+- Shared shell now mounts a locale/timezone provider (`I18nProvider`) and shared preferences panel (`LocalePreferences`) inside header actions.
+- Shared shell/navigation/notification primitives consume namespaced translation keys instead of hardcoded labels where key metadata is available:
+  - navigation items (`labelKey`, `ariaLabelKey`, `badgeKey`)
+  - user menu items and route breadcrumbs
+  - notification center labels, filters, settings trigger copy
+- Locale-aware formatting utilities are centralized in `@ryvra/ui` and consumed across apps:
+  - numbers/amounts via `Intl.NumberFormat`
+  - currencies with deterministic fraction-digit defaults
+  - datetime and relative-time rendering with explicit timezone preference resolution
+- RTL behavior is enabled at shell/document scope through locale-driven `dir` toggling with targeted shell mirroring for nav/tooltips/panels.
+
 ## Markets integration map (Phase 9.5 v2 strict parity)
 
 - `apps/markets-web` runtime (`app/lib/runtime.ts`) loads mode/API config and constructs `createApiClient(...).markets`.

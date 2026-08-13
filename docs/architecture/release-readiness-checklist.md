@@ -58,6 +58,10 @@
 - `pnpm build`
 - `pnpm test`
 - `pnpm perf:guard` (Phase 17 bundle budget + critical route artifact guard)
+- locale smoke checks:
+  - shared shell render in `en`, `fr`, and `ar`
+  - locale preference persistence restore
+  - RTL direction toggle assertions
 
 ## Phase 16 team/workspace controls go-live gates
 
@@ -88,6 +92,12 @@ pnpm --filter @ryvra/points-tasks-web build
 pnpm --filter @ryvra/api-client test
 pnpm perf:guard
 ```
+
+Internationalization-specific smoke assertions:
+
+- locale preference update/persistence (`ryvra.locale`)
+- timezone preference update/persistence (`ryvra.timezone`)
+- fallback translation diagnostics only in non-production mode
 
 Optional guarded connectivity probes:
 

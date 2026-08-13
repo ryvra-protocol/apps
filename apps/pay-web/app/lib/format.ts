@@ -1,9 +1,15 @@
-import { formatInsightCurrency, formatInsightTimestamp } from "@ryvra/ui";
+import { formatLocalizedCurrency, formatLocalizedDateTime } from "@ryvra/ui";
 
 export function formatCurrencyMinor(amountMinor: number, currency: string): string {
-  return formatInsightCurrency(amountMinor / 100, currency, 2);
+  return formatLocalizedCurrency(amountMinor / 100, currency, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+    currencyDisplay: "symbol",
+  });
 }
 
 export function formatDateTime(isoTimestamp: string): string {
-  return formatInsightTimestamp(isoTimestamp);
+  return formatLocalizedDateTime(isoTimestamp, {
+    fallback: "n/a",
+  });
 }

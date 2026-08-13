@@ -47,7 +47,8 @@ test("operation timeline renders loading, empty, error, and success states", () 
   assert.match(success, /Confirmation/);
   assert.match(success, /Submission/);
   assert.match(success, /aria-current="step"/);
-  assert.match(success, /2026-08-09T15:00:01.000Z/);
+  assert.match(success, /Aug 09, 2026/);
+  assert.match(success, /UTC/);
 });
 
 test("status progression mapping surfaces stage status badges and accessibility labels", () => {

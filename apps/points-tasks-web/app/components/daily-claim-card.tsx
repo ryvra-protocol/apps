@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Card, useNotificationCenter, themeTokens } from "@ryvra/ui";
+import { Button, Card, useNotificationCenter, themeTokens, translateRuntime } from "@ryvra/ui";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import {
@@ -123,22 +123,23 @@ export function DailyClaimCard({ model, scope, canOperate, operateDeniedReason }
 
   const status = didSucceed ? "already_claimed" : model.status;
   const statusLabel = didSucceed ? "Already claimed" : model.statusLabel;
+  const localizedStatusLabel = translateRuntime(`status.${status.toLowerCase()}`, statusLabel);
   const ctaEnabled = canOperate && model.cta.enabled && !didSucceed;
   const ctaDisabledReason = !canOperate ? operateDeniedReason ?? "Operator workspace access is required." : model.cta.reason;
   const ctaLabel = isSubmitting ? "Submitting claim..." : isRefreshing ? "Refreshing claim..." : didSucceed ? "Claim submitted" : model.cta.label;
 
   return (
-    <Card title="Daily claim">
+    <Card title={translateRuntime("claim.dailyTitle", "Daily claim")}>
       <div style={{ display: "grid", gap: themeTokens.spacing.sm }}>
         <div style={{ display: "flex", alignItems: "center", gap: themeTokens.spacing.sm, flexWrap: "wrap" }}>
-          <span style={{ color: themeTokens.color.textMuted }}>Status:</span>
+          <span style={{ color: themeTokens.color.textMuted }}>{translateRuntime("claim.status", "Status:")}</span>
           <StatusBadge status={status} />
-          <span>{statusLabel}</span>
+          <span>{localizedStatusLabel}</span>
         </div>
 
         {model.nextEligibleLabel ? (
           <p style={{ margin: 0, color: themeTokens.color.textMuted }} aria-live="polite">
-            Next eligible: {model.nextEligibleLabel}
+            {translateRuntime("claim.nextEligible", "Next eligible:")} {model.nextEligibleLabel}
           </p>
         ) : null}
 
@@ -149,7 +150,11 @@ export function DailyClaimCard({ model, scope, canOperate, operateDeniedReason }
             onClick={() => {
               void submitClaim("new");
             }}
-            aria-label={ctaEnabled ? "Claim daily points" : `Claim disabled: ${ctaDisabledReason ?? "Unavailable"}`}
+            aria-label={
+              ctaEnabled
+                ? model.cta.label
+                : `Claim disabled: ${ctaDisabledReason ?? translateRuntime("claim.unavailableReason", "Unavailable")}`
+            }
           >
             {ctaLabel}
           </Button>
@@ -182,7 +187,7 @@ export function DailyClaimCard({ model, scope, canOperate, operateDeniedReason }
                   void submitClaim("retry");
                 }}
               >
-                Retry claim
+                {translateRuntime("claim.retryClaim", "Retry claim")}
               </Button>
             ) : (
               <Button
@@ -193,7 +198,7 @@ export function DailyClaimCard({ model, scope, canOperate, operateDeniedReason }
                   void submitClaim("new");
                 }}
               >
-                Start new attempt
+                {translateRuntime("claim.startNewAttempt", "Start new attempt")}
               </Button>
             )}
           </div>
@@ -219,7 +224,7 @@ export function DailyClaimCard({ model, scope, canOperate, operateDeniedReason }
               fontWeight: themeTokens.typography.weight.medium,
             }}
           >
-            Retry claim status
+            {translateRuntime("claim.retryStatus", "Retry claim status")}
           </a>
         ) : null}
       </div>

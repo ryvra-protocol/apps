@@ -1,7 +1,9 @@
-import { formatInsightNumber, formatInsightTimestamp } from "@ryvra/ui";
+import { formatLocalizedDateTime, formatLocalizedNumber } from "@ryvra/ui";
 
 export function formatDateTime(isoTimestamp: string): string {
-  return formatInsightTimestamp(isoTimestamp);
+  return formatLocalizedDateTime(isoTimestamp, {
+    fallback: "n/a",
+  });
 }
 
 export function formatDecimal(value: string | number, maximumFractionDigits = 4): string {
@@ -10,7 +12,10 @@ export function formatDecimal(value: string | number, maximumFractionDigits = 4)
     return String(value);
   }
 
-  return formatInsightNumber(numericValue, maximumFractionDigits);
+  return formatLocalizedNumber(numericValue, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits,
+  });
 }
 
 export function formatSigned(value: string | undefined): string {

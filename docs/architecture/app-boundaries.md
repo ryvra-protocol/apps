@@ -20,6 +20,7 @@ Define clear responsibility boundaries between the three frontend apps and share
 - Uses shared scope switcher primitives to enforce canonical account/workspace query state and persistence.
 - Applies Viewer/Operator/Admin UI gating for operational controls and evidence panels using shared capability helpers (no backend auth invention).
 - Surfaces delegated-operation provenance in orders list/detail surfaces with explicit fallback messaging when backend metadata is unavailable.
+- Must consume shared locale/timezone formatting helpers for user-facing number/date/time/currency presentation and avoid app-local hardcoded locale assumptions.
 
 ### `apps/pay-web`
 
@@ -37,6 +38,7 @@ Define clear responsibility boundaries between the three frontend apps and share
 - Uses shared scope switcher primitives to enforce canonical account/workspace query state and persistence.
 - Applies Viewer/Operator/Admin gating for claim actions, reconciliation access, and sensitive operational evidence panels with explicit denied reasons.
 - Surfaces delegated-operation provenance in payouts/invoices/reconciliation surfaces; when delegation metadata is absent, renders explicit unavailable state (never silent/blank).
+- Must consume shared locale/timezone formatting helpers for user-facing number/date/time/currency presentation and avoid app-local hardcoded locale assumptions.
 
 ### `apps/points-tasks-web`
 
@@ -53,6 +55,7 @@ Define clear responsibility boundaries between the three frontend apps and share
 - Uses shared scope switcher primitives to enforce canonical account/workspace/user query state and persistence.
 - Applies Viewer/Operator/Admin gating for claim actions, task route permissions, and operational evidence visibility.
 - Surfaces delegated-operation provenance in points/task list/detail surfaces, using metadata where present and explicit unavailable state when absent.
+- Must consume shared locale/timezone formatting helpers for user-facing number/date/time/currency presentation and avoid app-local hardcoded locale assumptions.
 
 ## Shared packages
 
@@ -96,6 +99,12 @@ Define clear responsibility boundaries between the three frontend apps and share
   - icon-only controls always retain accessible labels, tooltips, and `aria-current` semantics
   - top product navigation is rendered as a centered bottom icon dock with safe-area-aware spacing
   - notification center trigger and panel controls preserve keyboard/ARIA/focus semantics across shells
+- Owns shared i18n/localization runtime and shell-level preferences:
+  - locale provider + translation resolver with default fallback to `en`
+  - locale/timezone preference persistence keys and hydration-safe restore
+  - locale switcher and timezone switcher header controls
+  - RTL direction toggling and shell-level directional mirroring hooks
+  - locale-aware number/date/time/currency formatting helpers used by app surfaces
 
 ### `@ryvra/auth`
 
