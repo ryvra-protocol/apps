@@ -93,7 +93,11 @@ export function PayOverviewContent({
                 label: "Claim",
                 href: withScope("/payouts"),
                 disabled: !canOperate,
-                disabledReason: !canOperate ? operateDeniedReason ?? "Claim actions require operator access." : undefined,
+                ...(!canOperate
+                  ? {
+                      disabledReason: operateDeniedReason ?? "Claim actions require operator access.",
+                    }
+                  : {}),
               },
               {
                 id: "pay-transfer",

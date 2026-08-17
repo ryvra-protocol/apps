@@ -133,7 +133,11 @@ export default async function PointsTasksDashboardPage({ searchParams }: PointsT
           label: dailyClaim.cta.label,
           href: claimHrefQuery ? `/points?${claimHrefQuery}` : "/points",
           enabled: canOperate && dailyClaim.cta.enabled,
-          reason: canOperate ? dailyClaim.cta.reason : operateDeniedReason,
+          ...(canOperate
+            ? dailyClaim.cta.reason
+              ? { reason: dailyClaim.cta.reason }
+              : {}
+            : { reason: operateDeniedReason }),
         }}
       />
     );

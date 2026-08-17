@@ -99,7 +99,11 @@ export function PointsTasksOverviewContent({
                 href: claimCta.href,
                 variant: "primary",
                 disabled: !claimCta.enabled,
-                disabledReason: !claimCta.enabled ? claimCta.reason ?? "Claim is not currently available." : undefined,
+                ...(!claimCta.enabled
+                  ? {
+                      disabledReason: claimCta.reason ?? "Claim is not currently available.",
+                    }
+                  : {}),
               },
               {
                 id: "hub-transfer",
