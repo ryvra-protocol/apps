@@ -76,6 +76,22 @@
   - operation lists/details render provenance when metadata exists.
   - missing delegation metadata renders explicit `Not available in current environment` state.
 
+## Phase 19 growth/conversion go-live gates
+
+- Funnel instrumentation parity:
+  - `stage_entered`, `stage_completed`, and inferable `stage_abandoned` events emit for landing/session, scope selection, first key action, and completion success.
+  - Event payloads include scope hash only (no raw account/workspace/user identifiers).
+- Onboarding checklist parity:
+  - shared getting-started checklist is visible in dashboard/overview high-priority zones across Markets, Pay, and Points/Tasks.
+  - checklist progression, minimize/dismiss/resume, and reset behavior persist by `app + scopeHash`.
+- Claim experiment parity:
+  - deterministic variant assignment per scope (`claim_conversion_phase19_v1`) with QA override via `claim_variant` query param.
+  - variant rendering must not bypass existing role/scope/availability guards.
+  - claim exposure/click/success/failure outcomes emit through shared growth events.
+- Analytics sink policy:
+  - backend analytics endpoint remains deferred in this phase.
+  - local-preview sink persistence (`ryvra.growth.events.v1`) must stay explicitly labeled non-remote.
+
 ## Smoke validation commands
 
 ```bash

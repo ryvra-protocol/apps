@@ -70,6 +70,7 @@ export default async function MarketsOverviewPage({ searchParams }: MarketsOverv
       <MarketsOverviewContent
         title="Markets Overview"
         description="Shared overview route with dashboard-consistent market metrics and activity."
+        route="/overview"
         mode={runtime.config.mode}
         overview={overview}
         unifiedBalanceCard={unifiedBalanceCard}

@@ -282,6 +282,7 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
             pointsBalanceLabel={formatNumber(pointsBalance)}
             dailyClaimSurface={
               <DailyClaimCard
+                surface="tasks"
                 model={dailyClaim}
                 scope={{
                   accountId: request.accountId,

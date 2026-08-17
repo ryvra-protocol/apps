@@ -144,3 +144,26 @@ Define clear responsibility boundaries between the three frontend apps and share
 - Cross-app integration behavior changes must be implemented in shared packages first (`@ryvra/api-client`, relevant `@ryvra/domain-*`).
 - App-level changes should consume shared updates with minimal glue code.
 - Backward compatibility beyond canonical deprecation windows must be explicit and documented.
+
+## Phase 19 boundaries: growth and conversion UX
+
+- `apps/markets-web`
+  - Consumes shared activation funnel tracking from the shell and shared onboarding checklist entry points in dashboard/overview top-priority zones.
+  - Treats first-action funnel progression as route-level operational workflow entry (`/orders`, `/positions`) without introducing new write behavior.
+- `apps/pay-web`
+  - Owns payout claim conversion surfaces while consuming shared experiment assignment/tracking primitives.
+  - Must preserve existing permission/runtime guards (`canOperate`, claim availability) regardless of experiment variant.
+  - Emits claim conversion outcomes through shared growth instrumentation without exposing request payloads or secrets.
+- `apps/points-tasks-web`
+  - Owns daily-claim conversion surfaces while consuming shared experiment assignment/tracking primitives.
+  - Must preserve existing claim eligibility and operator guardrails regardless of experiment variant.
+  - Emits task-route activation funnel progression from shell and claim outcomes from daily-claim card.
+- `@ryvra/ui`
+  - Owns Phase 19 shared primitives:
+    - growth funnel/event model + local-preview sink
+    - reusable getting-started checklist model/component
+    - claim conversion experiment assignment + event tracker + accessible variant status surface
+  - Must remain privacy-safe by hashing scope context and redacting sensitive metadata keys before persistence.
+- `@ryvra/api-client` / backend services
+  - No new analytics endpoint contract is assumed in this phase.
+  - Remote sink wiring is explicitly deferred; current implementation remains local/dev instrumentation only.

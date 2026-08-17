@@ -3,6 +3,7 @@ export type { ButtonProps, ButtonVariant } from "./Button";
 
 export { Card } from "./Card";
 export type { CardProps } from "./Card";
+export { ClaimExperimentStatus } from "./ClaimExperimentStatus";
 
 export { Section } from "./Section";
 export type { SectionProps } from "./Section";
@@ -18,6 +19,7 @@ export type { UnifiedBalanceCardProps, UnifiedBalanceCardRow, UnifiedBalanceCard
 
 export { AppShell } from "./AppShell";
 export type { AppShellProps } from "./AppShell";
+export { ActivationFunnelTracker } from "./ActivationFunnelTracker";
 
 export { GlobalHeader } from "./GlobalHeader";
 export type { GlobalHeaderProps } from "./GlobalHeader";
@@ -95,6 +97,49 @@ export {
   parseStoredScope,
   isValidScopeValue,
 } from "./workspace-scope";
+
+export { GettingStartedChecklist } from "./GettingStartedChecklist";
+export {
+  buildDefaultChecklistSteps,
+  buildGettingStartedChecklistStorageKey,
+  completeChecklistStep,
+  createGettingStartedChecklistState,
+  gettingStartedChecklistStoragePrefix,
+  gettingStartedStepIds,
+  parseChecklistState,
+  readChecklistState,
+  resetChecklistState,
+  resolveChecklistProgress,
+  setChecklistDismissed,
+  toggleChecklistMinimized,
+  writeChecklistState,
+} from "./getting-started-checklist";
+export type { GettingStartedChecklistState, GettingStartedChecklistStep, GettingStartedStepId } from "./getting-started-checklist";
+
+export {
+  buildClaimExperimentOverrideStorageKey,
+  buildClaimExperimentStorageKey,
+  buildClaimVariantPresentation,
+  claimConversionExperimentId,
+  claimConversionVariants,
+  claimExperimentOverrideQueryParam,
+  createClaimConversionEventTracker,
+  createClaimExperimentInstrumentation,
+  resolveClaimActionEnabled,
+  resolveClaimExperimentAssignment,
+  resolveClaimExperimentOverride,
+} from "./claim-conversion-experiment";
+export type { ClaimConversionVariant, ClaimExperimentAssignment, ClaimVariantPresentation } from "./claim-conversion-experiment";
+
+export {
+  buildGrowthScopeHash,
+  createGrowthInstrumentation,
+  growthEventNamespace,
+  growthEventStorageKey,
+  hashIdentifier,
+  readStoredGrowthEvents,
+} from "./growth-instrumentation";
+export type { FunnelActionType, FunnelStage, GrowthEvent, GrowthEventName, GrowthInstrumentation, GrowthMetadata, GrowthScope, GrowthSinkMode } from "./growth-instrumentation";
 export type {
   WorkspaceScopeOption,
   WorkspaceScopeSelection,

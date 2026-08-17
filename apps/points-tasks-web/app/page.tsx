@@ -85,6 +85,7 @@ export default async function PointsTasksDashboardPage({ searchParams }: PointsT
       <PointsTasksOverviewContent
         title="Points & Tasks Dashboard"
         description="Aggregate points/task KPIs with recent activity and parity-aligned typed data wiring."
+        route="/"
         mode={runtime.config.mode}
         baseUrl={runtime.config.apiBaseUrl}
         accountId={accountId}

@@ -271,6 +271,7 @@ export default async function PointsPage({ searchParams }: PointsPageProps) {
             pointsBalanceLabel={formatNumber(pointsBalance)}
             dailyClaimSurface={
               <DailyClaimCard
+                surface="points"
                 model={dailyClaim}
                 scope={{
                   accountId: request.accountId,

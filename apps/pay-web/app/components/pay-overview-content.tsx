@@ -1,6 +1,6 @@
 import type { PayOverviewDto } from "@ryvra/domain-payments";
 import type { RuntimeMode } from "@ryvra/config";
-import { Card, DataTable, Section, UnifiedBalanceCard, themeTokens, type InsightWindowOption } from "@ryvra/ui";
+import { Card, DataTable, GettingStartedChecklist, Section, UnifiedBalanceCard, themeTokens, type InsightWindowOption } from "@ryvra/ui";
 import { formatCurrencyMinor, formatDateTime } from "../lib/format";
 import { buildPayPortfolioInsights } from "../lib/portfolio-insights";
 import type { PayUnifiedBalanceCardModel } from "../lib/unified-balance";
@@ -33,6 +33,7 @@ const windowOptions: InsightWindowOption[] = [
 interface PayOverviewContentProps {
   title: string;
   description: string;
+  route: string;
   mode: RuntimeMode;
   overview: PayOverviewDto;
   unifiedBalanceCard: PayUnifiedBalanceCardModel;
@@ -44,6 +45,7 @@ interface PayOverviewContentProps {
 export function PayOverviewContent({
   title,
   description,
+  route,
   mode,
   overview,
   unifiedBalanceCard,
@@ -55,6 +57,12 @@ export function PayOverviewContent({
     overview,
     unifiedBalanceCard,
   });
+  const scopeSearchParams = new URLSearchParams({
+    account_id: accountId,
+    ...(workspaceId ? { workspace_id: workspaceId } : {}),
+  });
+  const scopeQuery = scopeSearchParams.toString();
+  const withScope = (href: string): string => (scopeQuery.length > 0 ? `${href}?${scopeQuery}` : href);
 
   return (
     <section style={{ display: "grid", gap: themeTokens.spacing.lg }}>
@@ -71,6 +79,19 @@ export function PayOverviewContent({
             <UnifiedBalanceCard {...unifiedBalanceCard} />
           </div>
           <PayPortfolioInsightsCard model={portfolioInsights} windowOptions={windowOptions} />
+          <GettingStartedChecklist
+            appId="pay-web"
+            route={route}
+            scope={{
+              accountId,
+              ...(workspaceId ? { workspaceId } : {}),
+            }}
+            scopeHref={withScope(route)}
+            unifiedBalanceHref={withScope("/overview")}
+            firstActionHref={withScope("/payouts")}
+            firstActionLabel="Complete first payout action"
+            notificationsHref={withScope("/status")}
+          />
         </div>
 
         <div style={{ display: "grid", gap: themeTokens.spacing.md, gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))" }}>

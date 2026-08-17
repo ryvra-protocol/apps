@@ -41,6 +41,15 @@ This repository hosts the unified-shell baseline with Pay, Markets, and Points/T
 - RTL direction toggles automatically when an RTL locale is selected, with shell-level directional layout adjustments.
 - Number/currency/date/relative-time formatting is centralized in `@ryvra/ui` and applied across Markets, Pay, and Points/Tasks presentation layers.
 
+## Phase 19 growth + conversion UX notes
+
+- Shared activation funnel instrumentation now emits privacy-safe local-preview events (`ryvra.growth.events.v1`) for landing/session, scope selection, key-action initiation, and completion.
+- Markets, Pay, and Points/Tasks dashboard/overview surfaces now include a shared **Getting started** checklist with scoped persistence/resume behavior.
+- Claim conversion A/B experiment framework is now shared in `@ryvra/ui` with deterministic per-scope assignment and QA override via query param:
+  - `claim_variant=control`
+  - `claim_variant=trust_boost`
+- Current analytics sink remains local-preview only in this phase; remote backend wiring is deferred.
+
 ## Phase 15 portfolio + placement notes
 
 - Markets and Pay dashboard/overview now place the shared Unified Balance card in the top-priority section.
@@ -311,3 +320,4 @@ See `docs/architecture/` for boundaries, responsibilities, and integration mappi
 - `docs/architecture/notifications-and-comms-phase-14.md`
 - `docs/architecture/portfolio-and-insights-phase-15.md`
 - `docs/architecture/i18n-localization-phase-18.md`
+- `docs/architecture/growth-conversion-phase-19.md`

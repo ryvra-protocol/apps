@@ -51,6 +51,7 @@ export default async function PayOverviewPage({ searchParams }: PayOverviewPageP
       <PayOverviewContent
         title="Pay Overview"
         description="Same aggregate model as dashboard, kept as a stable global overview route."
+        route="/overview"
         mode={runtime.config.mode}
         overview={overview}
         unifiedBalanceCard={unifiedBalanceCard}

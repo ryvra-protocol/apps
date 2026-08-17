@@ -1,7 +1,7 @@
 import type { PointsOverviewDto } from "@ryvra/domain-points";
 import type { TasksOverviewDto } from "@ryvra/domain-tasks";
 import type { RuntimeMode } from "@ryvra/config";
-import { Card, Section, themeTokens } from "@ryvra/ui";
+import { Card, GettingStartedChecklist, Section, themeTokens } from "@ryvra/ui";
 import { formatDateTime, formatNumber, formatSignedPoints } from "../lib/format";
 import { ModeBadge } from "./mode-badge";
 import { StatusBadge } from "./status-badge";
@@ -9,6 +9,7 @@ import { StatusBadge } from "./status-badge";
 interface PointsTasksOverviewContentProps {
   title: string;
   description: string;
+  route: string;
   mode: RuntimeMode;
   baseUrl: string;
   accountId: string;
@@ -55,6 +56,7 @@ function buildRecentActivity(pointsOverview: PointsOverviewDto, tasksOverview: T
 export function PointsTasksOverviewContent({
   title,
   description,
+  route,
   mode,
   baseUrl,
   accountId,
@@ -64,6 +66,12 @@ export function PointsTasksOverviewContent({
   tasksOverview,
 }: PointsTasksOverviewContentProps) {
   const recentActivity = buildRecentActivity(pointsOverview, tasksOverview);
+  const scopeSearchParams = new URLSearchParams({
+    account_id: accountId,
+    ...(workspaceId ? { workspace_id: workspaceId } : {}),
+  });
+  const scopeQuery = scopeSearchParams.toString();
+  const withScope = (href: string): string => (scopeQuery.length > 0 ? `${href}?${scopeQuery}` : href);
 
   return (
     <section style={{ display: "grid", gap: themeTokens.spacing.lg }}>
@@ -71,6 +79,25 @@ export function PointsTasksOverviewContent({
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: themeTokens.spacing.sm }}>
           <ModeBadge mode={mode} />
           <span style={{ color: themeTokens.color.textMuted, fontSize: themeTokens.typography.size.sm }}>Base URL: {baseUrl}</span>
+        </div>
+
+        <div
+          data-testid="points-tasks-top-priority-zone"
+          style={{ display: "grid", gap: themeTokens.spacing.md, gridTemplateColumns: "repeat(auto-fit, minmax(270px, 1fr))" }}
+        >
+          <GettingStartedChecklist
+            appId="points-tasks-web"
+            route={route}
+            scope={{
+              accountId,
+              ...(workspaceId ? { workspaceId } : {}),
+            }}
+            scopeHref={withScope(route)}
+            unifiedBalanceHref={withScope(route)}
+            firstActionHref={withScope("/points")}
+            firstActionLabel="Complete first claim or task action"
+            notificationsHref={withScope("/status")}
+          />
         </div>
 
         <div style={{ display: "grid", gap: themeTokens.spacing.md, gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))" }}>

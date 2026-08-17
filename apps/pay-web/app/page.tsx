@@ -51,6 +51,7 @@ export default async function PayHomePage({ searchParams }: PayHomePageProps) {
       <PayOverviewContent
         title="Pay Dashboard"
         description="MVP finance metrics and recent invoice/payout/reconciliation activity."
+        route="/"
         mode={runtime.config.mode}
         overview={overview}
         unifiedBalanceCard={unifiedBalanceCard}

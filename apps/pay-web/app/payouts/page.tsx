@@ -206,6 +206,8 @@ export default async function PayPayoutsPage({ searchParams }: PayPayoutsPagePro
             mode={runtime.config.mode}
             payout={claimCandidate}
             availability={claimAvailability}
+            accountId={accountId}
+            workspaceId={workspaceId}
             canOperate={canOperate}
             operateDeniedReason={operateDeniedReason}
           />

@@ -70,6 +70,7 @@ export default async function MarketsHomePage({ searchParams }: MarketsHomePageP
       <MarketsOverviewContent
         title="Markets Dashboard"
         description="MVP market metrics and recent execution/risk activity."
+        route="/"
         mode={runtime.config.mode}
         overview={overview}
         unifiedBalanceCard={unifiedBalanceCard}
