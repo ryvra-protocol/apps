@@ -1,19 +1,45 @@
 import type { ReactNode } from "react";
 import { themeTokens } from "./theme";
 
+export type CardTone = "default" | "highlight" | "muted";
+
 export interface CardProps {
   title?: string;
   children: ReactNode;
+  tone?: CardTone;
 }
 
-export function Card({ title, children }: CardProps) {
+function resolveCardPalette(tone: CardTone): { background: string; border: string } {
+  if (tone === "highlight") {
+    return {
+      background: themeTokens.color.primarySurface,
+      border: themeTokens.color.primaryBorder,
+    };
+  }
+
+  if (tone === "muted") {
+    return {
+      background: themeTokens.color.surfaceMuted,
+      border: themeTokens.color.borderStrong,
+    };
+  }
+
+  return {
+    background: themeTokens.color.surface,
+    border: themeTokens.color.border,
+  };
+}
+
+export function Card({ title, children, tone = "default" }: CardProps) {
+  const palette = resolveCardPalette(tone);
+
   return (
     <article
       style={{
-        border: `1px solid ${themeTokens.color.border}`,
+        border: `1px solid ${palette.border}`,
         borderRadius: themeTokens.radius.lg,
         padding: themeTokens.spacing.lg,
-        background: themeTokens.color.surface,
+        background: palette.background,
         boxShadow: themeTokens.shadow.sm,
         display: "grid",
         gap: themeTokens.spacing.sm,

@@ -5,6 +5,7 @@ import {
   Card,
   ComplianceEvidencePanel,
   DelegationProvenanceChips,
+  InlineStatusIndicators,
   OperationTimelineCard,
   PolicyLinksCard,
   Section,
@@ -165,17 +166,13 @@ export default async function PayPayoutsPage({ searchParams }: PayPayoutsPagePro
             <ModeBadge mode={runtime.config.mode} />
           </div>
 
-          <Card title="Runtime context">
-            <p style={{ marginTop: 0, marginBottom: themeTokens.spacing.xs }}>
-              Account: <strong>{accountId}</strong>
-            </p>
-            <p style={{ margin: 0 }}>
-              Workspace: <strong>{workspaceId}</strong>
-            </p>
-            <p style={{ marginTop: themeTokens.spacing.xs, marginBottom: 0 }}>
-              Role: <strong>{runtime.workspaceRole.label}</strong>
-            </p>
-          </Card>
+          <InlineStatusIndicators
+            ariaLabel="Payouts route indicators"
+            items={[
+              { id: "payouts-account-indicator", label: "Account", value: accountId, tone: "brand" },
+              { id: "payouts-access-indicator", label: "Access", value: runtime.workspaceRole.label, tone: "neutral" },
+            ]}
+          />
 
           <div style={{ display: "grid", gap: themeTokens.spacing.md, gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))" }}>
             <Card title="Scheduled">
@@ -255,6 +252,15 @@ export default async function PayPayoutsPage({ searchParams }: PayPayoutsPagePro
           {payoutList.items.length === 0 ? (
             <EmptyState title="No payouts" description="No payouts matched the current filters." actionLink={{ href: "/payouts", label: "Reset filters" }} />
           ) : null}
+
+          <Card title="Operational snapshot details" tone="muted">
+            <p style={{ marginTop: 0, marginBottom: themeTokens.spacing.xs }}>
+              Account reference: <strong>{accountId}</strong>
+            </p>
+            <p style={{ margin: 0 }}>
+              Access level: <strong>{runtime.workspaceRole.label}</strong>
+            </p>
+          </Card>
         </Section>
       </section>
     );

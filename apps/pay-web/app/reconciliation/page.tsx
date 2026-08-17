@@ -1,6 +1,6 @@
 import type { PayListRequest, ReconciliationFilters } from "@ryvra/domain-payments";
 import { evaluateRoutePermission, resolveRoutePermissionMeta } from "@ryvra/config";
-import { Card, Section, themeTokens } from "@ryvra/ui";
+import { Card, InlineStatusIndicators, Section, themeTokens } from "@ryvra/ui";
 import { ModeBadge } from "../components/mode-badge";
 import { EmptyState, ErrorState, PermissionDeniedState, UnauthorizedState } from "../components/page-states";
 import { ReconciliationTableClient } from "../components/reconciliation-table-client";
@@ -98,17 +98,13 @@ export default async function PayReconciliationPage({ searchParams }: PayReconci
             <ModeBadge mode={runtime.config.mode} />
           </div>
 
-          <Card title="Runtime context">
-            <p style={{ marginTop: 0, marginBottom: themeTokens.spacing.xs }}>
-              Account: <strong>{accountId}</strong>
-            </p>
-            <p style={{ margin: 0 }}>
-              Workspace: <strong>{workspaceId}</strong>
-            </p>
-            <p style={{ marginTop: themeTokens.spacing.xs, marginBottom: 0 }}>
-              Role: <strong>{runtime.workspaceRole.label}</strong>
-            </p>
-          </Card>
+          <InlineStatusIndicators
+            ariaLabel="Reconciliation route indicators"
+            items={[
+              { id: "reconciliation-account-indicator", label: "Account", value: accountId, tone: "brand" },
+              { id: "reconciliation-access-indicator", label: "Access", value: runtime.workspaceRole.label, tone: "neutral" },
+            ]}
+          />
 
           <div style={{ display: "grid", gap: themeTokens.spacing.md, gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))" }}>
             <Card title="Runs">
@@ -145,6 +141,15 @@ export default async function PayReconciliationPage({ searchParams }: PayReconci
               actionLink={{ href: "/reconciliation", label: "Reset filters" }}
             />
           ) : null}
+
+          <Card title="Operational snapshot details" tone="muted">
+            <p style={{ marginTop: 0, marginBottom: themeTokens.spacing.xs }}>
+              Account reference: <strong>{accountId}</strong>
+            </p>
+            <p style={{ margin: 0 }}>
+              Access level: <strong>{runtime.workspaceRole.label}</strong>
+            </p>
+          </Card>
         </Section>
       </section>
     );

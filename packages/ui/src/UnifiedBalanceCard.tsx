@@ -57,7 +57,7 @@ export function UnifiedBalanceCard({
 }: UnifiedBalanceCardProps) {
   if (state === "loading") {
     return (
-      <Card title={title}>
+      <Card title={title} tone="highlight">
         <div aria-live="polite" role="status" style={{ display: "grid", gap: themeTokens.spacing.sm }}>
           <div style={{ height: "1.4rem", width: "55%", background: themeTokens.color.surfaceMuted, borderRadius: themeTokens.radius.sm }} />
           <div style={{ height: "1rem", width: "90%", background: themeTokens.color.surfaceMuted, borderRadius: themeTokens.radius.sm }} />
@@ -69,7 +69,7 @@ export function UnifiedBalanceCard({
 
   if (state === "error") {
     return (
-      <Card title={title}>
+      <Card title={title} tone="highlight">
         <div role="alert" aria-live="assertive" style={{ display: "grid", gap: themeTokens.spacing.sm }}>
           <p style={{ margin: 0 }}>{errorMessage}</p>
           {retryHref ? <RetryLink href={retryHref} label={retryLabel} /> : null}
@@ -80,7 +80,7 @@ export function UnifiedBalanceCard({
 
   if (state === "empty") {
     return (
-      <Card title={title}>
+      <Card title={title} tone="highlight">
         <p style={{ margin: 0 }}>{emptyMessage}</p>
         {statusMessage ? (
           <p style={{ margin: 0, color: themeTokens.color.textMuted, fontSize: themeTokens.typography.size.sm }}>{statusMessage}</p>
@@ -90,7 +90,7 @@ export function UnifiedBalanceCard({
   }
 
   return (
-    <Card title={title}>
+    <Card title={title} tone="highlight">
       <div style={{ display: "grid", gap: themeTokens.spacing.sm }}>
         <p style={{ margin: 0, color: themeTokens.color.textMuted, fontSize: themeTokens.typography.size.sm }}>
           {translateRuntime("unified.totalAggregated", "Total aggregated balance")}

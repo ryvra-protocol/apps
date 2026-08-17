@@ -75,7 +75,6 @@ export default async function MarketsHomePage({ searchParams }: MarketsHomePageP
         overview={overview}
         unifiedBalanceCard={unifiedBalanceCard}
         {...(workspaceId ? { workspaceId } : {})}
-        roleLabel={runtime.workspaceRole.label}
       />
     );
   } catch (error) {

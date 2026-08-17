@@ -1,4 +1,5 @@
 import { Section, themeTokens } from "@ryvra/ui";
+import { canAccessWorkspaceCapability, describeWorkspaceCapabilityRequirement } from "@ryvra/auth";
 import { ErrorState, UnauthorizedState } from "../components/page-states";
 import { PayOverviewContent } from "../components/pay-overview-content";
 import { parseAccountId, parseWorkspaceId, type RouteSearchParams } from "../lib/search-params";
@@ -46,6 +47,8 @@ export default async function PayOverviewPage({ searchParams }: PayOverviewPageP
       role: runtime.workspaceRole.role,
       activityCount: overview.recentActivity.length,
     });
+    const canOperate = canAccessWorkspaceCapability(runtime.workspaceRole, "operate");
+    const operateDeniedReason = describeWorkspaceCapabilityRequirement("operate", runtime.workspaceRole, "Claim actions");
 
     return (
       <PayOverviewContent
@@ -58,6 +61,8 @@ export default async function PayOverviewPage({ searchParams }: PayOverviewPageP
         accountId={accountId}
         {...(workspaceId ? { workspaceId } : {})}
         roleLabel={runtime.workspaceRole.label}
+        canOperate={canOperate}
+        operateDeniedReason={operateDeniedReason}
       />
     );
   } catch (error) {

@@ -292,3 +292,18 @@
   - `apps/pay-web/app/components/claim-fingerprint-card-client.tsx` now consumes shared assignment + tracking + variant presentation while preserving existing claim guardrails.
   - `apps/points-tasks-web/app/components/daily-claim-card.tsx` now consumes shared assignment + tracking + variant presentation while preserving existing claim guardrails.
 - Analytics backend sink remains deferred; current implementation is explicitly labeled local preview and intentionally does not imply remote delivery.
+
+## UX hardening additions: brand, action surfaces, and user-facing simplification
+
+- User-facing shell/header scope controls were removed from Markets, Pay, and Community Hub while preserving internal canonical scope parsing, URL normalization, and persisted scope behavior.
+- Canonical snapshot emphasis moved to compact inline indicators near top-priority zones; detailed snapshot cards now render at end-of-page on applicable operational surfaces.
+- Shared brand token rollout was applied through `@ryvra/ui`:
+  - updated primary/secondary CTA palette
+  - highlight card tones and indicator surfaces
+  - tokenized border and focus treatments (no ad-hoc color literals in app surfaces)
+- Markets now exposes new module routes and side-nav entries:
+  - `/spot` (Classified Spot)
+  - `/perps` (Perps Trading)
+  - `/staking` (Staking)
+- Dashboard/overview action zones now include consistent high-utility actions (`Send`, `Receive`, plus app-specific actions like `Claim`, `View History`, `Transfer`, `Export`) with explicit deferred backend messaging where execution APIs are unavailable.
+- Points/Tasks user-facing branding is updated to **Ryvra Community Hub** on shell and primary page headers.

@@ -167,7 +167,7 @@ export function ClaimFingerprintCardClient({
     };
   }, [conversionTracker]);
 
-  const disabledReason = !canOperate ? operateDeniedReason ?? "Operator workspace access is required." : availability.reason;
+  const disabledReason = !canOperate ? operateDeniedReason ?? "Operator access is required." : availability.reason;
   const disabled = !resolveClaimActionEnabled(canOperate, availability.enabled) || !payout;
 
   const confirmationHint = useMemo(

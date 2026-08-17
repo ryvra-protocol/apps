@@ -1,6 +1,16 @@
 import type { PayOverviewDto } from "@ryvra/domain-payments";
 import type { RuntimeMode } from "@ryvra/config";
-import { Card, DataTable, GettingStartedChecklist, Section, UnifiedBalanceCard, themeTokens, type InsightWindowOption } from "@ryvra/ui";
+import {
+  ActionToolbar,
+  Card,
+  DataTable,
+  GettingStartedChecklist,
+  InlineStatusIndicators,
+  Section,
+  UnifiedBalanceCard,
+  themeTokens,
+  type InsightWindowOption,
+} from "@ryvra/ui";
 import { formatCurrencyMinor, formatDateTime } from "../lib/format";
 import { buildPayPortfolioInsights } from "../lib/portfolio-insights";
 import type { PayUnifiedBalanceCardModel } from "../lib/unified-balance";
@@ -40,6 +50,8 @@ interface PayOverviewContentProps {
   accountId: string;
   workspaceId?: string;
   roleLabel: string;
+  canOperate: boolean;
+  operateDeniedReason?: string;
 }
 
 export function PayOverviewContent({
@@ -52,6 +64,8 @@ export function PayOverviewContent({
   accountId,
   workspaceId,
   roleLabel,
+  canOperate,
+  operateDeniedReason,
 }: PayOverviewContentProps) {
   const portfolioInsights = buildPayPortfolioInsights({
     overview,
@@ -67,9 +81,50 @@ export function PayOverviewContent({
   return (
     <section style={{ display: "grid", gap: themeTokens.spacing.lg }}>
       <Section title={title} description={description}>
-        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: themeTokens.spacing.sm }}>
           <ModeBadge mode={mode} />
+          <ActionToolbar
+            ariaLabel="Pay key actions"
+            items={[
+              { id: "pay-send", label: "Send", href: withScope("/payouts"), variant: "primary" },
+              { id: "pay-receive", label: "Receive", href: withScope("/invoices") },
+              {
+                id: "pay-claim",
+                label: "Claim",
+                href: withScope("/payouts"),
+                disabled: !canOperate,
+                disabledReason: !canOperate ? operateDeniedReason ?? "Claim actions require operator access." : undefined,
+              },
+              {
+                id: "pay-transfer",
+                label: "Transfer",
+                disabled: true,
+                disabledReason: "Treasury transfer execution is deferred in this environment.",
+              },
+              { id: "pay-history", label: "View History", href: withScope("/reconciliation") },
+              {
+                id: "pay-export",
+                label: "Export",
+                disabled: true,
+                disabledReason: "Export reports are deferred until pay reporting APIs are enabled.",
+              },
+            ]}
+          />
         </div>
+
+        <InlineStatusIndicators
+          ariaLabel="Pay overview indicators"
+          items={[
+            { id: "pay-open-invoices", label: "Open invoices", value: String(overview.metrics.openInvoiceCount), tone: "brand" },
+            { id: "pay-payouts-flight", label: "Payouts in flight", value: String(overview.metrics.payoutInFlightCount), tone: "neutral" },
+            {
+              id: "pay-mismatch-count",
+              label: "Mismatches",
+              value: String(overview.metrics.reconciliationMismatchCount),
+              tone: overview.metrics.reconciliationMismatchCount > 0 ? "warning" : "success",
+            },
+          ]}
+        />
 
         <div
           data-testid="pay-top-priority-zone"
@@ -95,38 +150,26 @@ export function PayOverviewContent({
         </div>
 
         <div style={{ display: "grid", gap: themeTokens.spacing.md, gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))" }}>
-          <Card title="Open invoices">
+          <Card title="Open invoices" tone="muted">
             <p style={{ margin: 0 }}>{overview.metrics.openInvoiceCount}</p>
           </Card>
-          <Card title="Pending invoice amount">
+          <Card title="Pending invoice amount" tone="muted">
             <p style={{ margin: 0 }}>
               {formatCurrencyMinor(overview.metrics.pendingInvoiceAmountMinor, overview.metrics.currency)}
             </p>
           </Card>
-          <Card title="Payouts in flight">
+          <Card title="Payouts in flight" tone="muted">
             <p style={{ margin: 0 }}>{overview.metrics.payoutInFlightCount}</p>
           </Card>
-          <Card title="Payout processing amount">
+          <Card title="Payout processing amount" tone="muted">
             <p style={{ margin: 0 }}>
               {formatCurrencyMinor(overview.metrics.payoutProcessingAmountMinor, overview.metrics.currency)}
             </p>
           </Card>
-          <Card title="Reconciliation mismatches">
+          <Card title="Reconciliation mismatches" tone="muted">
             <p style={{ margin: 0 }}>{overview.metrics.reconciliationMismatchCount}</p>
           </Card>
         </div>
-
-        <Card title="Runtime context">
-          <p style={{ marginTop: 0, marginBottom: themeTokens.spacing.xs }}>
-            Account: <strong>{accountId}</strong>
-          </p>
-          <p style={{ margin: 0 }}>
-            Workspace: <strong>{workspaceId ?? "workspace-core-1"}</strong>
-          </p>
-          <p style={{ marginTop: themeTokens.spacing.xs, marginBottom: 0 }}>
-            Role: <strong>{roleLabel}</strong>
-          </p>
-        </Card>
 
         <Card title="Recent activity">
           <DataTable
@@ -156,6 +199,17 @@ export function PayOverviewContent({
             emptyMessage="No recent pay activity available."
           />
         </Card>
+
+        <div data-testid="pay-snapshot-details-card">
+          <Card title="Operational snapshot details" tone="muted">
+            <p style={{ marginTop: 0, marginBottom: themeTokens.spacing.xs }}>
+              Account reference: <strong>{accountId}</strong>
+            </p>
+            <p style={{ margin: 0 }}>
+              Access level: <strong>{roleLabel}</strong>
+            </p>
+          </Card>
+        </div>
       </Section>
     </section>
   );

@@ -70,8 +70,8 @@
   - Role-gated controls render explicit disabled/denied reasons (no silent failure).
 - Scope switcher parity:
   - canonical query keys (`account_id`, `workspace_id`, optional `user_id`) are enforced in all shells.
-  - malformed scope values reset to safe defaults with explicit notice.
-  - scope persistence (`ryvra.scope.<product>`) restores without SSR hydration mismatch.
+  - user-facing workspace switcher surfaces are removed from production shell headers.
+  - malformed scope values still reset to safe defaults with deterministic canonicalization and persisted restore (`ryvra.scope.<product>`).
 - Delegated visibility parity:
   - operation lists/details render provenance when metadata exists.
   - missing delegation metadata renders explicit `Not available in current environment` state.
@@ -91,6 +91,21 @@
 - Analytics sink policy:
   - backend analytics endpoint remains deferred in this phase.
   - local-preview sink persistence (`ryvra.growth.events.v1`) must stay explicitly labeled non-remote.
+
+## UX hardening go-live gates
+
+- Brand token compliance:
+  - primary/secondary CTAs, highlight cards, and indicator accents consume shared `@ryvra/ui` theme tokens.
+  - no ad-hoc color literals are introduced in app-facing UX surfaces.
+- Snapshot hierarchy compliance:
+  - compact indicators appear above fold for canonical context.
+  - detailed snapshot cards/sections render at end-of-page on applicable routes.
+- Action surface compliance:
+  - Markets, Pay, and Community Hub dashboard/overview surfaces expose consistent top action zones.
+  - required high-utility actions include `Send`, `Receive`, and app-specific operations (`Claim`, `Transfer`, `View History`, `Export`).
+  - deferred backend actions show explicit disabled/deferred reasons.
+- Community Hub naming compliance:
+  - user-facing shell and primary page headers use **Ryvra Community Hub** naming.
 
 ## Smoke validation commands
 

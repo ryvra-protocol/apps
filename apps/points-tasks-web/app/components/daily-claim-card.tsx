@@ -195,7 +195,7 @@ export function DailyClaimCard({ surface, model, scope, canOperate, operateDenie
   const statusLabel = didSucceed ? "Already claimed" : model.statusLabel;
   const localizedStatusLabel = translateRuntime(`status.${status.toLowerCase()}`, statusLabel);
   const ctaEnabled = resolveClaimActionEnabled(canOperate, model.cta.enabled) && !didSucceed;
-  const ctaDisabledReason = !canOperate ? operateDeniedReason ?? "Operator workspace access is required." : model.cta.reason;
+  const ctaDisabledReason = !canOperate ? operateDeniedReason ?? "Operator access is required." : model.cta.reason;
   const ctaLabel =
     isSubmitting
       ? "Submitting claim..."

@@ -4,8 +4,8 @@ import { Suspense, type ReactNode } from "react";
 import { ShellFrame } from "./shell-frame";
 
 export const metadata: Metadata = {
-  title: "Ryvra Points/Tasks",
-  description: "Points and Tasks web platform shell",
+  title: "Ryvra Community Hub",
+  description: "Ryvra Community Hub shell",
 };
 
 interface RootLayoutProps {

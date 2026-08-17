@@ -110,6 +110,31 @@ function renderIconGlyph(iconName: NavIconName) {
           <path d="M18 18v-6" />
         </>
       );
+    case "spot":
+      return (
+        <>
+          <circle cx="8" cy="8" r="3" />
+          <circle cx="16" cy="16" r="3" />
+          <path d="M10.5 10.5l3 3" />
+          <path d="M13 6h6v6" />
+        </>
+      );
+    case "perps":
+      return (
+        <>
+          <path d="M4 17l5-7 4 5 7-10" />
+          <path d="M20 9V4h-5" />
+          <path d="M4 20h16" />
+        </>
+      );
+    case "staking":
+      return (
+        <>
+          <path d="M12 3l5 3v6c0 3.5-2.1 6.6-5 8-2.9-1.4-5-4.5-5-8V6z" />
+          <path d="M9.5 11.5h5" />
+          <path d="M12 9v5" />
+        </>
+      );
     case "status":
       return (
         <>

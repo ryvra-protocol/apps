@@ -6,6 +6,7 @@ import { canAccessWorkspaceCapability, describeWorkspaceCapabilityRequirement } 
 import {
   Card,
   ComplianceEvidencePanel,
+  InlineStatusIndicators,
   type InsightWindowOption,
   OperationTimelineCard,
   PolicyLinksCard,
@@ -258,13 +259,17 @@ export default async function PointsPage({ searchParams }: PointsPageProps) {
     return (
       <section style={{ display: "grid", gap: themeTokens.spacing.lg }}>
         <Section title="Points" description="Canonical points entries view with scope and cursor pagination.">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: themeTokens.spacing.sm }}>
+          <div style={{ display: "flex", justifyContent: "flex-end" }}>
             <ModeBadge mode={runtime.config.mode} />
-            <span style={{ color: themeTokens.color.textMuted, fontSize: themeTokens.typography.size.sm }}>
-              Base URL: {runtime.config.apiBaseUrl} • Account: {request.accountId} • Workspace:{" "}
-              {request.workspaceId ?? "workspace-core-1"} • Role: {runtime.workspaceRole.label}
-            </span>
           </div>
+
+          <InlineStatusIndicators
+            ariaLabel="Points route status indicators"
+            items={[
+              { id: "points-account-indicator", label: "Account", value: request.accountId, tone: "brand" },
+              { id: "points-access-indicator", label: "Access", value: runtime.workspaceRole.label, tone: "neutral" },
+            ]}
+          />
 
           <PointsTasksTopPrioritySection
             route="points"
@@ -340,9 +345,9 @@ export default async function PointsPage({ searchParams }: PointsPageProps) {
             title="Points policy and help"
             description="Open diagnostics and scope context before retrying claim status checks."
             links={[
-              { href: "/status", label: "View points/tasks status diagnostics" },
+              { href: "/status", label: "View Community Hub status diagnostics" },
               { href: "/tasks", label: "Review related task progression" },
-              { href: "/overview", label: "Open points/tasks operational overview" },
+              { href: "/overview", label: "Open Community Hub operational overview" },
             ]}
           />
 

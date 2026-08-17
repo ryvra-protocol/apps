@@ -48,7 +48,7 @@ export function Button({ variant = "primary", style, ...props }: ButtonProps) {
 
         .ryvra-ui-button[data-variant='secondary'] {
           background: ${themeTokens.color.surface};
-          color: ${themeTokens.color.text};
+          color: ${themeTokens.color.primaryActive};
           border-color: ${themeTokens.color.borderStrong};
           box-shadow: ${themeTokens.shadow.sm};
         }
@@ -70,10 +70,16 @@ export function Button({ variant = "primary", style, ...props }: ButtonProps) {
         .ryvra-ui-button:disabled {
           background: ${themeTokens.color.disabledBackground};
           color: ${themeTokens.color.disabledText};
-          border-color: transparent;
+          border-color: ${themeTokens.color.border};
           box-shadow: none;
           cursor: not-allowed;
           transform: none;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .ryvra-ui-button {
+            transition: none;
+          }
         }
       `}</style>
       <button
