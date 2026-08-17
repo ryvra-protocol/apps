@@ -24,9 +24,9 @@ export function PointsTasksPortfolioInsightsCard({
     <InsightModuleCard
       title="Portfolio & insights"
       state={model.state}
-      contentAriaLabel="Points and tasks portfolio insights"
-      emptyMessage="No points/tasks insight data is available for this scope."
-      errorMessage={model.errorMessage ?? "Unable to load points/tasks portfolio insights."}
+      contentAriaLabel="Ryvra Community Hub portfolio insights"
+      emptyMessage="No community insight data is available for this selection."
+      errorMessage={model.errorMessage ?? "Unable to load Community Hub portfolio insights."}
       footer={
         <InsightWindowSelector
           label="Insight window"

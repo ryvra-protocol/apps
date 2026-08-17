@@ -5,6 +5,7 @@ import { evaluateRoutePermission, resolveRoutePermissionMeta } from "@ryvra/conf
 import {
   Card,
   ComplianceEvidencePanel,
+  InlineStatusIndicators,
   type InsightWindowOption,
   OperationTimelineCard,
   PolicyLinksCard,
@@ -269,13 +270,17 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
     return (
       <section style={{ display: "grid", gap: themeTokens.spacing.lg }}>
         <Section title="Tasks" description="Canonical tasks view with scope and cursor pagination.">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: themeTokens.spacing.sm }}>
+          <div style={{ display: "flex", justifyContent: "flex-end" }}>
             <ModeBadge mode={runtime.config.mode} />
-            <span style={{ color: themeTokens.color.textMuted, fontSize: themeTokens.typography.size.sm }}>
-              Base URL: {runtime.config.apiBaseUrl} • Account: {request.accountId} • Workspace:{" "}
-              {request.workspaceId ?? "workspace-core-1"} • Role: {runtime.workspaceRole.label}
-            </span>
           </div>
+
+          <InlineStatusIndicators
+            ariaLabel="Tasks route status indicators"
+            items={[
+              { id: "tasks-account-indicator", label: "Account", value: request.accountId, tone: "brand" },
+              { id: "tasks-access-indicator", label: "Access", value: runtime.workspaceRole.label, tone: "neutral" },
+            ]}
+          />
 
           <PointsTasksTopPrioritySection
             route="tasks"
@@ -351,9 +356,9 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
             title="Tasks policy and help"
             description="Use these routes when validating task progression, scope, and diagnostics."
             links={[
-              { href: "/status", label: "View points/tasks status diagnostics" },
+              { href: "/status", label: "View Community Hub status diagnostics" },
               { href: "/points", label: "Open points ledger context" },
-              { href: "/overview", label: "Open points/tasks operational overview" },
+              { href: "/overview", label: "Open Community Hub operational overview" },
             ]}
           />
 

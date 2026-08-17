@@ -15,7 +15,6 @@ import {
 import {
   ActivationFunnelTracker,
   AppShell,
-  WorkspaceScopeSwitcher,
   appendScopeToHref,
   applyScopeToQuery,
   buildScopePersistenceStorageKey,
@@ -30,7 +29,7 @@ import {
   type WorkspaceScopeSelection,
 } from "@ryvra/ui";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, type ReactNode } from "react";
 
 const productId: ProductId = "markets";
 const scopePreserveKeys = ["ref", "entity", "id", "ctx"] as const;
@@ -39,12 +38,14 @@ const routeLabelKeyMap: Record<string, string> = {
   overview: "nav.overview",
   pay: "nav.pay",
   markets: "nav.markets",
-  points: "nav.points",
   tasks: "nav.tasks",
   "markets-dashboard": "nav.dashboard",
   "markets-instruments": "nav.instruments",
   "markets-orders": "nav.orders",
   "markets-positions": "nav.positions",
+  "markets-spot": "nav.classifiedSpot",
+  "markets-perps": "nav.perpsTrading",
+  "markets-staking": "nav.staking",
 };
 
 const breadcrumbLabelMap: Record<string, { key: string; label: string }> = {
@@ -53,6 +54,9 @@ const breadcrumbLabelMap: Record<string, { key: string; label: string }> = {
   "/instruments": { key: "nav.instruments", label: "Instruments" },
   "/orders": { key: "nav.orders", label: "Orders" },
   "/positions": { key: "nav.positions", label: "Positions" },
+  "/spot": { key: "nav.classifiedSpot", label: "Classified Spot" },
+  "/perps": { key: "nav.perpsTrading", label: "Perps Trading" },
+  "/staking": { key: "nav.staking", label: "Staking" },
   "/status": { key: "nav.status", label: "Status" },
 };
 
@@ -138,7 +142,7 @@ function buildUserMenuItems(canManageWorkspace: boolean): UserMenuItem[] {
     { id: "profile", label: "Profile", labelKey: "shell.userMenu.profile", href: "/overview" },
     {
       id: "settings",
-      label: canManageWorkspace ? "Workspace Settings" : `Workspace Settings (${settingsDisabledReason})`,
+      label: canManageWorkspace ? "Settings" : `Settings (${settingsDisabledReason})`,
       ...(canManageWorkspace ? { labelKey: "shell.userMenu.workspaceSettings" } : {}),
       href: "/status",
       disabled: !canManageWorkspace,
@@ -162,7 +166,6 @@ export function ShellFrame({ children, roleClaims, defaultAccountId, defaultWork
   const serializedSearchParams = searchParams.toString();
   const storageKey = buildScopePersistenceStorageKey(productId);
   const roleView = useMemo(() => resolveWorkspaceRoleView(roleClaims), [roleClaims]);
-  const [persistenceNotices, setPersistenceNotices] = useState<string[]>([]);
   const restoredScopeRef = useRef(false);
 
   const accountOptions = useMemo(
@@ -214,7 +217,6 @@ export function ShellFrame({ children, roleClaims, defaultAccountId, defaultWork
 
     const storedScope = parseStoredScope(storedRawScope);
     if (!storedScope) {
-      setPersistenceNotices(["Saved scope preference was invalid and has been ignored."]);
       return;
     }
 
@@ -249,9 +251,6 @@ export function ShellFrame({ children, roleClaims, defaultAccountId, defaultWork
       });
     }
 
-    if (resolvedStoredScope.notices.length > 0) {
-      setPersistenceNotices(resolvedStoredScope.notices);
-    }
   }, [
     accountOptions,
     defaultAccountId,
@@ -272,48 +271,6 @@ export function ShellFrame({ children, roleClaims, defaultAccountId, defaultWork
     window.localStorage.setItem(storageKey, JSON.stringify(scopeResolution.scope));
   }, [scopeResolution.scope, storageKey]);
 
-  const handleScopeChange = useCallback(
-    (nextScope: WorkspaceScopeSelection) => {
-      const candidateParams = applyScopeToQuery({
-        searchParams: new URLSearchParams(),
-        scope: nextScope,
-        preserveKeys: [],
-      });
-
-      const validatedScope = resolveWorkspaceScope({
-        searchParams: candidateParams,
-        defaults: {
-          accountId: defaultAccountId,
-          workspaceId: defaultWorkspaceId,
-        },
-        accountOptions,
-        workspaceOptions,
-      });
-
-      setPersistenceNotices(validatedScope.notices);
-
-      const nextParams = applyScopeToQuery({
-        searchParams: new URLSearchParams(serializedSearchParams),
-        scope: validatedScope.scope,
-        preserveKeys: scopePreserveKeys,
-      });
-      const serialized = nextParams.toString();
-
-      router.replace(serialized ? `${normalizedPathname}?${serialized}` : normalizedPathname, {
-        scroll: false,
-      });
-    },
-    [
-      accountOptions,
-      defaultAccountId,
-      defaultWorkspaceId,
-      normalizedPathname,
-      router,
-      serializedSearchParams,
-      workspaceOptions,
-    ],
-  );
-
   const globalNav = useMemo(() => getGlobalNavItems({ currentProduct: productId }), []);
   const localNav = useMemo(() => getProductNav(productId), []);
 
@@ -331,10 +288,6 @@ export function ShellFrame({ children, roleClaims, defaultAccountId, defaultWork
   );
 
   const canManageWorkspace = canAccessWorkspaceCapability(roleView, "admin");
-  const scopeNotices = useMemo(
-    () => [...new Set([...scopeResolution.notices, ...persistenceNotices])],
-    [persistenceNotices, scopeResolution.notices],
-  );
   const firstActionType = resolveFirstActionType(normalizedPathname);
   const markCompletionOnMount = firstActionType === "task";
   const notificationScopeKey = `${productId}:${scopeResolution.scope.accountId}:${scopeResolution.scope.workspaceId ?? "workspace-none"}`;
@@ -355,21 +308,10 @@ export function ShellFrame({ children, roleClaims, defaultAccountId, defaultWork
       }))}
       commandTriggerLabel="Quick Actions"
       notificationScopeKey={notificationScopeKey}
-      scopeSwitcher={
-        <WorkspaceScopeSwitcher
-          scope={scopeResolution.scope}
-          accountOptions={accountOptions}
-          workspaceOptions={workspaceOptions}
-          roleLabel={roleView.label}
-          roleAriaLabel={`Current workspace role ${roleView.label}`}
-          notices={scopeNotices}
-          onScopeChange={handleScopeChange}
-        />
-      }
       footer={
         canManageWorkspace
           ? "Ryvra unified shell foundation"
-          : describeWorkspaceCapabilityRequirement("admin", roleView, "Workspace settings")
+          : describeWorkspaceCapabilityRequirement("admin", roleView, "Settings")
       }
     >
       <ActivationFunnelTracker

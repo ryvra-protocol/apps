@@ -30,7 +30,7 @@ export default async function PointsTasksStatusPage() {
   if (!runtime.authDecision.allowed) {
     return (
       <section style={{ display: "grid", gap: themeTokens.spacing.lg }}>
-        <Section title="Points & Tasks Status" description="Operational snapshot for Points/Tasks parity wiring.">
+        <Section title="Ryvra Community Hub Status" description="Operational snapshot for Community Hub parity wiring.">
           <UnauthorizedState />
         </Section>
       </section>
@@ -89,7 +89,7 @@ export default async function PointsTasksStatusPage() {
 
   return (
     <section style={{ display: "grid", gap: themeTokens.spacing.lg }}>
-      <Section title="Points & Tasks Status" description="Operational snapshot for Points/Tasks parity wiring.">
+      <Section title="Ryvra Community Hub Status" description="Operational snapshot for Community Hub parity wiring.">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: themeTokens.spacing.sm }}>
           <ModeBadge mode={runtime.config.mode} />
           <span style={{ color: themeTokens.color.textMuted, fontSize: themeTokens.typography.size.sm }}>

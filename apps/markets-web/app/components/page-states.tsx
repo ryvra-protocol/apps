@@ -45,7 +45,7 @@ export function UnauthorizedState() {
       <p style={{ margin: 0 }}>
         {translateRuntime(
           "state.noPermissionMessage",
-          "You do not have permission to view this page. Confirm your workspace role and try again.",
+          "You do not have permission to view this page. Confirm your access level and try again.",
         )}
       </p>
     </Card>

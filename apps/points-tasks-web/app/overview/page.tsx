@@ -1,4 +1,5 @@
 import { Section, themeTokens } from "@ryvra/ui";
+import { canAccessWorkspaceCapability, describeWorkspaceCapabilityRequirement } from "@ryvra/auth";
 import { ErrorState, UnauthorizedState } from "../components/page-states";
 import { PointsTasksOverviewContent } from "../components/points-tasks-overview-content";
 import {
@@ -10,6 +11,7 @@ import {
   type RouteSearchParams,
 } from "../lib/search-params";
 import { capturePointsTasksPageError, createPointsTasksRuntimeContext } from "../lib/runtime";
+import { buildDailyClaimViewModel } from "../lib/daily-claim";
 
 interface PointsTasksOverviewPageProps {
   searchParams?: Record<string, string | string[] | undefined>;
@@ -27,7 +29,7 @@ export default async function PointsOverviewPage({ searchParams }: PointsTasksOv
   if (!runtime.authDecision.allowed) {
     return (
       <section style={{ display: "grid", gap: themeTokens.spacing.lg }}>
-        <Section title="Points & Tasks Overview" description="Access-controlled points and tasks summary route.">
+        <Section title="Ryvra Community Hub Overview" description="Access-controlled community summary route.">
           <UnauthorizedState />
         </Section>
       </section>
@@ -38,7 +40,7 @@ export default async function PointsOverviewPage({ searchParams }: PointsTasksOv
   if (!accountId) {
     return (
       <section style={{ display: "grid", gap: themeTokens.spacing.lg }}>
-        <Section title="Points & Tasks Overview" description="Typed overview metrics and recent activity feed.">
+        <Section title="Ryvra Community Hub Overview" description="Typed community metrics and recent activity feed.">
           <ErrorState
             title="Account scope is required"
             message="Set account_id in the URL or configure RYVRA_POINTS_TASKS_ACCOUNT_ID before requesting overview data."
@@ -56,8 +58,10 @@ export default async function PointsOverviewPage({ searchParams }: PointsTasksOv
     const workspaceId = parseWorkspaceId(searchParams);
     const pointsWindow = parsePointsWindow(searchParams);
     const tasksWindow = parseTasksWindow(searchParams);
+    const canOperate = canAccessWorkspaceCapability(runtime.workspaceRole, "operate");
+    const operateDeniedReason = describeWorkspaceCapabilityRequirement("operate", runtime.workspaceRole, "Claim actions");
 
-    const [pointsOverview, tasksOverview] = await Promise.all([
+    const [pointsOverview, tasksOverview, dailyClaim] = await Promise.all([
       runtime.pointsTasksClient.getPointsOverview({
         accountId,
         ...(userId ? { userId } : {}),
@@ -70,7 +74,38 @@ export default async function PointsOverviewPage({ searchParams }: PointsTasksOv
         ...(workspaceId ? { workspaceId } : {}),
         ...(tasksWindow ? { window: tasksWindow } : {}),
       }),
+      runtime.pointsTasksClient
+        .getDailyClaimStatus({
+          accountId,
+          ...(userId ? { userId } : {}),
+          ...(workspaceId ? { workspaceId } : {}),
+        })
+        .then((claimState) =>
+          buildDailyClaimViewModel({
+            claimState,
+            nowIso: new Date().toISOString(),
+            claimStatusEndpointAvailable: true,
+            expectedAccountId: accountId,
+          }),
+        )
+        .catch((error) => {
+          const uiError = capturePointsTasksPageError(runtime.logger, "/overview/daily-claim", error);
+          return buildDailyClaimViewModel({
+            nowIso: new Date().toISOString(),
+            claimStatusEndpointAvailable: false,
+            expectedAccountId: accountId,
+            endpointErrorMessage: uiError.message,
+            endpointRetryable: uiError.retryable,
+            retryHref: "/overview",
+          });
+        }),
     ]);
+    const claimHrefParams = new URLSearchParams({
+      account_id: accountId,
+      ...(userId ? { user_id: userId } : {}),
+      ...(workspaceId ? { workspace_id: workspaceId } : {}),
+    });
+    const claimHrefQuery = claimHrefParams.toString();
 
     runtime.logger.info("Loaded points/tasks overview route", {
       mode: runtime.config.mode,
@@ -83,16 +118,27 @@ export default async function PointsOverviewPage({ searchParams }: PointsTasksOv
 
     return (
       <PointsTasksOverviewContent
-        title="Points & Tasks Overview"
-        description="Summary-focused parity view with points/task aggregates and recent activity."
+        title="Ryvra Community Hub Overview"
+        description="Summary-focused community view with points/task aggregates and high-utility actions."
         route="/overview"
         mode={runtime.config.mode}
         baseUrl={runtime.config.apiBaseUrl}
         accountId={accountId}
         {...(workspaceId ? { workspaceId } : {})}
+        {...(userId ? { userId } : {})}
         roleLabel={runtime.workspaceRole.label}
         pointsOverview={pointsOverview}
         tasksOverview={tasksOverview}
+        claimCta={{
+          label: dailyClaim.cta.label,
+          href: claimHrefQuery ? `/points?${claimHrefQuery}` : "/points",
+          enabled: canOperate && dailyClaim.cta.enabled,
+          ...(canOperate
+            ? dailyClaim.cta.reason
+              ? { reason: dailyClaim.cta.reason }
+              : {}
+            : { reason: operateDeniedReason }),
+        }}
       />
     );
   } catch (error) {
@@ -100,7 +146,7 @@ export default async function PointsOverviewPage({ searchParams }: PointsTasksOv
 
     return (
       <section style={{ display: "grid", gap: themeTokens.spacing.lg }}>
-        <Section title="Points & Tasks Overview" description="Summary-focused parity view.">
+        <Section title="Ryvra Community Hub Overview" description="Summary-focused community view.">
           <ErrorState
             title="Unable to load overview"
             message={uiError.message}

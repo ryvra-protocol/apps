@@ -1,8 +1,18 @@
 export { Button } from "./Button";
 export type { ButtonProps, ButtonVariant } from "./Button";
 
+export { ActionToolbar, InlineStatusIndicators } from "./ActionSurface";
+export type {
+  ActionToolbarItem,
+  ActionToolbarProps,
+  ActionToolbarVariant,
+  InlineIndicatorTone,
+  InlineStatusIndicatorItem,
+  InlineStatusIndicatorsProps,
+} from "./ActionSurface";
+
 export { Card } from "./Card";
-export type { CardProps } from "./Card";
+export type { CardProps, CardTone } from "./Card";
 export { ClaimExperimentStatus } from "./ClaimExperimentStatus";
 
 export { Section } from "./Section";

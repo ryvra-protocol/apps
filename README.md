@@ -1,11 +1,22 @@
 # Ryvra Apps Platform Monorepo
 
-This repository hosts the unified-shell baseline with Pay, Markets, and Points/Tasks MVP data wiring for the Ryvra web app platform:
+This repository hosts the unified-shell baseline with Pay, Markets, and Ryvra Community Hub (points/tasks) MVP data wiring for the Ryvra web app platform:
 
 - `apps/markets-web`
 - `apps/pay-web`
 - `apps/points-tasks-web`
 - shared platform packages in `packages/*`
+
+## UX hardening notes (post-Phase 19)
+
+- User-facing workspace selector UI was removed from shell headers; canonical scope handling remains internal and preserved.
+- Dashboard/overview action zones now expose consistent high-utility controls across Markets, Pay, and Ryvra Community Hub (`Send`, `Receive`, plus app-specific actions such as `Claim`, `Transfer`, `View History`, `Export`).
+- Canonical snapshot hierarchy now uses compact inline indicators near top-priority zones, with detailed snapshot cards moved to end-of-page on applicable routes.
+- Markets now includes dedicated module routes and side-nav entries for:
+  - Classified Spot (`/spot`)
+  - Perps Trading (`/perps`)
+  - Staking (`/staking`)
+- Points/Tasks user-facing shell and primary headers are renamed to **Ryvra Community Hub**.
 
 ## Monorepo stack
 
@@ -321,3 +332,4 @@ See `docs/architecture/` for boundaries, responsibilities, and integration mappi
 - `docs/architecture/portfolio-and-insights-phase-15.md`
 - `docs/architecture/i18n-localization-phase-18.md`
 - `docs/architecture/growth-conversion-phase-19.md`
+- `docs/architecture/ux-hardening-brand-and-actions.md`

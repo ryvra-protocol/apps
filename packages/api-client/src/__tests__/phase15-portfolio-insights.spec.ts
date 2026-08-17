@@ -27,14 +27,14 @@ test("placement: markets/pay unified balance appears in top-priority section bef
   assert.match(marketsSource, /data-testid="markets-unified-balance-top-card"/);
   assert.equal(
     marketsSource.indexOf('data-testid="markets-unified-balance-top-card"') <
-      marketsSource.indexOf('<Card title="Total instruments">'),
+      marketsSource.indexOf('title="Total instruments"'),
     true,
   );
 
   assert.match(paySource, /data-testid="pay-top-priority-zone"/);
   assert.match(paySource, /data-testid="pay-unified-balance-top-card"/);
   assert.equal(
-    paySource.indexOf('data-testid="pay-unified-balance-top-card"') < paySource.indexOf('<Card title="Open invoices">'),
+    paySource.indexOf('data-testid="pay-unified-balance-top-card"') < paySource.indexOf('title="Open invoices"'),
     true,
   );
 

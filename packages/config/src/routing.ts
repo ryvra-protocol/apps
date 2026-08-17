@@ -68,7 +68,7 @@ const globalRouteTemplates = [
   },
   {
     id: "points",
-    label: "Points",
+    label: "Ryvra Community Hub",
     product: "points",
     path: "/",
     href: "/",
@@ -168,6 +168,39 @@ const productRoutes = {
       href: "/positions",
       visible: true,
     },
+    {
+      id: "markets-spot",
+      label: "Classified Spot",
+      product: "markets",
+      path: "/spot",
+      href: "/spot",
+      visible: true,
+      permission: {
+        roles: ["member", "admin"],
+      },
+    },
+    {
+      id: "markets-perps",
+      label: "Perps Trading",
+      product: "markets",
+      path: "/perps",
+      href: "/perps",
+      visible: true,
+      permission: {
+        roles: ["member", "admin"],
+      },
+    },
+    {
+      id: "markets-staking",
+      label: "Staking",
+      product: "markets",
+      path: "/staking",
+      href: "/staking",
+      visible: true,
+      permission: {
+        roles: ["member", "admin"],
+      },
+    },
   ],
   points: [
     {
@@ -223,7 +256,7 @@ export const routeRegistry = {
     },
     points: {
       id: "points",
-      label: "Points",
+      label: "Ryvra Community Hub",
       defaultPath: "/",
     },
   },

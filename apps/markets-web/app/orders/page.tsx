@@ -3,6 +3,7 @@ import { canAccessWorkspaceCapability, describeWorkspaceCapabilityRequirement } 
 import {
   Card,
   ComplianceEvidencePanel,
+  InlineStatusIndicators,
   OperationTimelineCard,
   PolicyLinksCard,
   Section,
@@ -127,17 +128,13 @@ export default async function MarketsOrdersPage({ searchParams }: MarketsOrdersP
             <ModeBadge mode={runtime.config.mode} />
           </div>
 
-          <Card title="Runtime context">
-            <p style={{ marginTop: 0, marginBottom: themeTokens.spacing.xs }}>
-              Account: <strong>{request.accountId}</strong>
-            </p>
-            <p style={{ margin: 0 }}>
-              Workspace: <strong>{workspaceId}</strong>
-            </p>
-            <p style={{ marginTop: themeTokens.spacing.xs, marginBottom: 0 }}>
-              Role: <strong>{runtime.workspaceRole.label}</strong>
-            </p>
-          </Card>
+          <InlineStatusIndicators
+            ariaLabel="Orders route indicators"
+            items={[
+              { id: "orders-account-indicator", label: "Account", value: request.accountId, tone: "brand" },
+              { id: "orders-access-indicator", label: "Access", value: runtime.workspaceRole.label, tone: "neutral" },
+            ]}
+          />
 
           <div style={{ display: "grid", gap: themeTokens.spacing.md, gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))" }}>
             <Card title="Open">
@@ -204,6 +201,15 @@ export default async function MarketsOrdersPage({ searchParams }: MarketsOrdersP
               actionLink={{ href: "/orders", label: "Reset filters" }}
             />
           ) : null}
+
+          <Card title="Operational snapshot details" tone="muted">
+            <p style={{ marginTop: 0, marginBottom: themeTokens.spacing.xs }}>
+              Account reference: <strong>{request.accountId}</strong>
+            </p>
+            <p style={{ margin: 0 }}>
+              Access level: <strong>{runtime.workspaceRole.label}</strong>
+            </p>
+          </Card>
         </Section>
       </section>
     );

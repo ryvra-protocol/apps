@@ -15,6 +15,9 @@ export const navIconNames = [
   "instruments",
   "orders",
   "positions",
+  "spot",
+  "perps",
+  "staking",
   "status",
   "default",
 ] as const;
@@ -74,6 +77,15 @@ export function resolveNavIconName(itemId: string): NavIconName {
     }
     if (suffix === "positions") {
       return "positions";
+    }
+    if (suffix === "spot") {
+      return "spot";
+    }
+    if (suffix === "perps") {
+      return "perps";
+    }
+    if (suffix === "staking") {
+      return "staking";
     }
     return "markets";
   }
