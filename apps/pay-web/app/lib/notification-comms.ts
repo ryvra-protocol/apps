@@ -1,11 +1,22 @@
 import type { PayoutDto } from "@ryvra/domain-payments";
 import { formatNotificationReferenceSnippet, type NotificationDraft } from "@ryvra/ui";
+import { redactIdentifier } from "./privacy";
 
 export type ClaimLifecycleNotificationStage = "submitted" | "processing" | "completed" | "failed";
+export type P2pLifecycleNotificationStage = "initiated" | "processing" | "completed" | "failed";
 
 export interface ClaimLifecycleNotificationInput {
   stage: ClaimLifecycleNotificationStage;
   payoutId?: string;
+  intentId?: string;
+  requestId?: string;
+  correlationId?: string;
+  retryable?: boolean;
+}
+
+export interface P2pLifecycleNotificationInput {
+  stage: P2pLifecycleNotificationStage;
+  recipientHandle?: string;
   intentId?: string;
   requestId?: string;
   correlationId?: string;
@@ -183,5 +194,66 @@ export function buildPayoutStatusNotification(payout: Pick<PayoutDto, "id" | "st
     message: retryable
       ? `Payout ${payoutReference} failed and appears retryable.`
       : `Payout ${payoutReference} failed. Review diagnostics before retrying.`,
+  };
+}
+
+export function buildP2pLifecycleNotification(input: P2pLifecycleNotificationInput): NotificationDraft {
+  const recipient =
+    input.recipientHandle && input.recipientHandle.trim().length > 0
+      ? redactIdentifier(input.recipientHandle.trim().toLowerCase(), 2, 2)
+      : "recipient";
+  const preferredReference =
+    formatNotificationReferenceSnippet(input.intentId) ??
+    formatNotificationReferenceSnippet(input.requestId) ??
+    formatNotificationReferenceSnippet(input.correlationId) ??
+    "p2p";
+  const href = "/p2p/history";
+
+  if (input.stage === "initiated") {
+    return {
+      category: "payouts",
+      severity: "info",
+      message: `P2P send initiated for ${recipient}.`,
+      href,
+      referenceLabel: "Reference",
+      referenceValue: preferredReference,
+      dedupeKey: `p2p:initiated:${preferredReference}`,
+    };
+  }
+
+  if (input.stage === "processing") {
+    return {
+      category: "payouts",
+      severity: "info",
+      message: `P2P send to ${recipient} is processing.`,
+      href,
+      referenceLabel: "Reference",
+      referenceValue: preferredReference,
+      dedupeKey: `p2p:processing:${preferredReference}`,
+    };
+  }
+
+  if (input.stage === "completed") {
+    return {
+      category: "payouts",
+      severity: "success",
+      message: `P2P send to ${recipient} completed.`,
+      href,
+      referenceLabel: "Reference",
+      referenceValue: preferredReference,
+      dedupeKey: `p2p:completed:${preferredReference}`,
+    };
+  }
+
+  return {
+    category: "payouts",
+    severity: input.retryable ? "warn" : "error",
+    message: input.retryable
+      ? `P2P send to ${recipient} failed. Retry is available.`
+      : `P2P send to ${recipient} failed. Review details before retrying.`,
+    href,
+    referenceLabel: "Reference",
+    referenceValue: preferredReference,
+    dedupeKey: `p2p:failed:${preferredReference}`,
   };
 }

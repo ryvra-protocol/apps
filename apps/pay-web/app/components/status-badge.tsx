@@ -1,9 +1,5 @@
-import { StatusBadge as SharedStatusBadge } from "@ryvra/ui";
+import { StatusBadge as SharedStatusBadge, type StatusBadgeProps as SharedStatusBadgeProps } from "@ryvra/ui";
 
-interface StatusBadgeProps {
-  status: string;
-}
-
-export function StatusBadge({ status }: StatusBadgeProps) {
-  return <SharedStatusBadge status={status} />;
+export function StatusBadge(props: SharedStatusBadgeProps) {
+  return <SharedStatusBadge {...props} />;
 }

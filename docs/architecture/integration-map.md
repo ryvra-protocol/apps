@@ -307,3 +307,29 @@
   - `/staking` (Staking)
 - Dashboard/overview action zones now include consistent high-utility actions (`Send`, `Receive`, plus app-specific actions like `Claim`, `View History`, `Transfer`, `Export`) with explicit deferred backend messaging where execution APIs are unavailable.
 - Points/Tasks user-facing branding is updated to **Ryvra Community Hub** on shell and primary page headers.
+
+## Phase 21 additions: brand direction rollout + P2P + merchant dashboard
+
+- Shared brand direction token refresh is implemented in `@ryvra/ui` (`packages/ui/src/theme.ts`) and consumed by shared button/card/status/shell surfaces.
+  - primary CTA token: `#3B5BFF`
+  - supportive highlight tokens: secondary `#14B8A6`, accent `#7C3AED`
+  - status and border palette aligned to shared success/warning/danger + light/dark border tokens
+  - focus/border styling remains tokenized (no feature-level ad-hoc hex usage)
+- Explicit exclusion: logo assets are unchanged in Phase 21.
+- Pay route additions:
+  - `/p2p/send` (sender flow with review/confirm + idempotent submit)
+  - `/p2p/receive` (receive instructions + request-payment preview surface)
+  - `/p2p/history` (status-aware history with preview fallback messaging)
+  - `/merchant` (admin-gated merchant dashboard)
+- P2P write flow uses existing Pay contracts only:
+  - `payClient.createPaymentIntent`
+  - `payClient.transitionPaymentIntent` (mode-aware progression)
+  - no new backend contract assumptions
+- P2P notification mapping integrates into existing shell notification center:
+  - `initiated` / `processing` / `completed` / `failed`
+  - privacy-safe reference redaction
+- Merchant dashboard modules:
+  - KPI cards (volume, success rate/count, pending, failed)
+  - transactions table with status/date/search filters and safe payer/payee rendering
+  - payout/settlement summary from existing summary contracts
+  - explicit deferred state for refunds/disputes and unavailable mutation actions (payment-link creation, retry-failed endpoint)

@@ -47,15 +47,15 @@ export function Button({ variant = "primary", style, ...props }: ButtonProps) {
         }
 
         .ryvra-ui-button[data-variant='secondary'] {
-          background: ${themeTokens.color.surface};
-          color: ${themeTokens.color.primaryActive};
-          border-color: ${themeTokens.color.borderStrong};
+          background: ${themeTokens.color.secondarySurface};
+          color: ${themeTokens.color.text};
+          border-color: ${themeTokens.color.secondaryBorder};
           box-shadow: ${themeTokens.shadow.sm};
         }
 
         .ryvra-ui-button[data-variant='secondary']:hover {
-          background: ${themeTokens.color.surfaceStrong};
-          border-color: ${themeTokens.color.primary};
+          background: ${themeTokens.color.surface};
+          border-color: ${themeTokens.color.secondary};
         }
 
         .ryvra-ui-button:active {

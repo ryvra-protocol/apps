@@ -17,6 +17,8 @@ test("route permission evaluation returns explicit denied reason", () => {
 test("route permission metadata resolves for restricted pay and tasks routes", () => {
   assert.deepEqual(resolveRoutePermissionMeta("pay", "/reconciliation"), { roles: ["admin"] });
   assert.deepEqual(resolveRoutePermissionMeta("pay", "/payouts"), { roles: ["member", "admin"] });
+  assert.deepEqual(resolveRoutePermissionMeta("pay", "/p2p/send"), { roles: ["member", "admin"] });
+  assert.deepEqual(resolveRoutePermissionMeta("pay", "/merchant"), { roles: ["admin"] });
   assert.deepEqual(resolveRoutePermissionMeta("points", "/tasks"), { roles: ["member", "admin"], permission: "tasks:read" });
 });
 

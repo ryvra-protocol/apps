@@ -21,6 +21,10 @@ Define clear responsibility boundaries between the three frontend apps and share
 - Applies Viewer/Operator/Admin UI gating for operational controls and evidence panels using shared capability helpers (no backend auth invention).
 - Surfaces delegated-operation provenance in orders list/detail surfaces with explicit fallback messaging when backend metadata is unavailable.
 - Must consume shared locale/timezone formatting helpers for user-facing number/date/time/currency presentation and avoid app-local hardcoded locale assumptions.
+- Owns Phase 21 P2P and merchant UX surfaces while preserving existing guardrails:
+  - P2P routes (`/p2p/send`, `/p2p/receive`, `/p2p/history`) use existing Pay write/read contracts with explicit preview fallback where backend capability is deferred.
+  - Merchant dashboard (`/merchant`) is admin-gated and must render explicit permission-denied state for non-admin users.
+  - Merchant refunds/disputes and retry/payment-link mutations remain explicitly deferred when backend contracts are unavailable.
 
 ### `apps/pay-web`
 
@@ -105,6 +109,10 @@ Define clear responsibility boundaries between the three frontend apps and share
   - locale switcher and timezone switcher header controls
   - RTL direction toggling and shell-level directional mirroring hooks
   - locale-aware number/date/time/currency formatting helpers used by app surfaces
+- Owns Phase 21 brand-direction token layer for cross-app consistency:
+  - primary/secondary/accent/status/light-dark palette tokens
+  - tokenized focus/border/state treatments
+  - no logo asset ownership change in this phase
 
 ### `@ryvra/auth`
 

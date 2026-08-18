@@ -18,6 +18,17 @@ This repository hosts the unified-shell baseline with Pay, Markets, and Ryvra Co
   - Staking (`/staking`)
 - Points/Tasks user-facing shell and primary headers are renamed to **Ryvra Community Hub**.
 
+## Phase 21 notes (brand direction + P2P + merchant)
+
+- Shared brand palette rollout is now applied through `@ryvra/ui` design tokens and component styles (no logo asset changes).
+- Pay now includes P2P routes:
+  - `/p2p/send`
+  - `/p2p/receive`
+  - `/p2p/history`
+- Pay now includes merchant route:
+  - `/merchant` (admin-gated with explicit permission-denied fallback)
+- P2P request-payment, merchant payment-link mutation, merchant retry-failed mutation, and refund/dispute action APIs remain explicitly deferred when unavailable.
+
 ## Monorepo stack
 
 - **Package manager:** pnpm workspaces
@@ -333,3 +344,4 @@ See `docs/architecture/` for boundaries, responsibilities, and integration mappi
 - `docs/architecture/i18n-localization-phase-18.md`
 - `docs/architecture/growth-conversion-phase-19.md`
 - `docs/architecture/ux-hardening-brand-and-actions.md`
+- `docs/architecture/brand-direction-and-p2p-merchant-phase-21.md`
