@@ -107,6 +107,22 @@
 - Community Hub naming compliance:
   - user-facing shell and primary page headers use **Ryvra Community Hub** naming.
 
+## Phase 21 go-live gates (brand direction + P2P + merchant)
+
+- Brand token compliance:
+  - shared palette includes Primary/Secondary/Accent/Success/Warning/Danger plus required light/dark/text/border tokens.
+  - CTA/buttons/cards/borders/status chips consume shared tokens only.
+  - no logo asset changes are included in this phase.
+- P2P surface compliance:
+  - `/p2p/send` includes recipient + amount + memo + review/confirm + success/failure states.
+  - `/p2p/receive` includes receive handle instructions and request-payment preview/deferred messaging.
+  - `/p2p/history` includes status/date/search filtering and explicit preview fallback messaging where canonical P2P history APIs are unavailable.
+  - lifecycle notifications map initiated/processing/completed/failed without exposing secrets.
+- Merchant dashboard compliance:
+  - `/merchant` is explicitly role-gated and renders permission-denied state for unauthorized users.
+  - KPI cards, transactions table, settlement summary, and deferred refunds/disputes panel are present.
+  - unavailable backend operations render explicit deferred reasons (no fake persistence).
+
 ## Smoke validation commands
 
 ```bash

@@ -86,8 +86,9 @@ export function PayOverviewContent({
           <ActionToolbar
             ariaLabel="Pay key actions"
             items={[
-              { id: "pay-send", label: "Send", href: withScope("/payouts"), variant: "primary" },
-              { id: "pay-receive", label: "Receive", href: withScope("/invoices") },
+              { id: "pay-send", label: "Send", href: withScope("/p2p/send"), variant: "primary" },
+              { id: "pay-receive", label: "Receive", href: withScope("/p2p/receive") },
+              { id: "pay-request", label: "Request", href: withScope("/p2p/receive?action=request") },
               {
                 id: "pay-claim",
                 label: "Claim",
@@ -100,12 +101,11 @@ export function PayOverviewContent({
                   : {}),
               },
               {
-                id: "pay-transfer",
-                label: "Transfer",
-                disabled: true,
-                disabledReason: "Treasury transfer execution is deferred in this environment.",
+                id: "pay-merchant",
+                label: "Merchant Dashboard",
+                href: withScope("/merchant"),
               },
-              { id: "pay-history", label: "View History", href: withScope("/reconciliation") },
+              { id: "pay-history", label: "View History", href: withScope("/p2p/history") },
               {
                 id: "pay-export",
                 label: "Export",

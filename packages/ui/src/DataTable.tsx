@@ -116,7 +116,7 @@ export function DataTable<Row extends object>({
         .ryvra-data-table-row-interactive:focus-visible {
           outline: ${themeTokens.focusRing.width} solid ${themeTokens.color.focusRing};
           outline-offset: -2px;
-          box-shadow: inset 0 0 0 2px rgba(37, 99, 235, 0.15);
+          box-shadow: inset ${themeTokens.color.focusRingShadow};
         }
 
         .ryvra-data-table-row-expanded td {

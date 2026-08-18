@@ -260,19 +260,19 @@ export const shellStyles = `
 .ryvra-notification-severity--success {
   border-color: ${themeTokens.color.success};
   background: ${themeTokens.color.successSurface};
-  color: ${themeTokens.color.success};
+  color: ${themeTokens.color.textPrimary};
 }
 
 .ryvra-notification-severity--warn {
   border-color: ${themeTokens.color.warning};
   background: ${themeTokens.color.warningSurface};
-  color: ${themeTokens.color.warning};
+  color: ${themeTokens.color.textPrimary};
 }
 
 .ryvra-notification-severity--error {
   border-color: ${themeTokens.color.danger};
   background: ${themeTokens.color.dangerSurface};
-  color: ${themeTokens.color.danger};
+  color: ${themeTokens.color.textPrimary};
 }
 
 .ryvra-notification-message {
@@ -441,7 +441,7 @@ export const shellStyles = `
 .ryvra-sidebar-toggle:focus-visible {
   outline: ${themeTokens.focusRing.width} solid ${themeTokens.color.focusRing};
   outline-offset: ${themeTokens.focusRing.offset};
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+  box-shadow: ${themeTokens.color.focusRingShadow};
 }
 
 .ryvra-sidebar-toggle-glyph {
@@ -562,8 +562,8 @@ export const shellStyles = `
   pointer-events: none;
   z-index: 55;
   border-radius: ${themeTokens.radius.sm};
-  background: ${themeTokens.color.text};
-  color: ${themeTokens.color.textInverse};
+  background: ${themeTokens.color.tooltipBackground};
+  color: ${themeTokens.color.tooltipText};
   font-size: ${themeTokens.typography.size.xs};
   font-weight: ${themeTokens.typography.weight.medium};
   line-height: 1.25;
@@ -609,7 +609,7 @@ export const shellStyles = `
 .ryvra-summary-trigger:focus-visible {
   outline: ${themeTokens.focusRing.width} solid ${themeTokens.color.focusRing};
   outline-offset: ${themeTokens.focusRing.offset};
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+  box-shadow: ${themeTokens.color.focusRingShadow};
 }
 
 .ryvra-nav-link[aria-current="page"],

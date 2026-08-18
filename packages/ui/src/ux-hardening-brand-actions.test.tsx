@@ -4,8 +4,9 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { renderToStaticMarkup } from "react-dom/server";
-import { ActionToolbar } from "./ActionSurface";
+import { ActionToolbar, InlineStatusIndicators } from "./ActionSurface";
 import { Card } from "./Card";
+import { StatusBadge } from "./StatusBadge";
 import { themeTokens } from "./theme";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
@@ -93,9 +94,15 @@ test("send receive and utility actions are present across app overview action zo
   }
 });
 
-test("brand tokens and card tones use brand palette values", () => {
-  assert.equal(themeTokens.color.primary, "#4f46e5");
-  assert.equal(themeTokens.color.primarySurface, "#eef0ff");
+test("phase 21 brand tokens apply to buttons, cards, borders, and status chips", () => {
+  assert.equal(themeTokens.color.primary, "#3B5BFF");
+  assert.equal(themeTokens.color.secondary, "#14B8A6");
+  assert.equal(themeTokens.color.accent, "#7C3AED");
+  assert.equal(themeTokens.color.success, "#16A34A");
+  assert.equal(themeTokens.color.warning, "#F59E0B");
+  assert.equal(themeTokens.color.danger, "#DC2626");
+  assert.equal(themeTokens.color.backgroundLight, "#F8FAFC");
+  assert.equal(themeTokens.color.borderLight, "#CBD5E1");
 
   const markup = renderToStaticMarkup(
     <Card title="Brand card" tone="highlight">
@@ -103,7 +110,21 @@ test("brand tokens and card tones use brand palette values", () => {
     </Card>,
   );
 
-  assert.match(markup, /background:#eef0ff/);
+  assert.match(markup, /background:#EDE9FE/i);
+
+  const statusMarkup = renderToStaticMarkup(<StatusBadge status="completed" />);
+  assert.match(statusMarkup, new RegExp(`border:1px solid ${themeTokens.color.success}`, "i"));
+
+  const indicatorsMarkup = renderToStaticMarkup(
+    <InlineStatusIndicators
+      items={[
+        { id: "brand", label: "Brand", value: "Active", tone: "brand" },
+        { id: "warning", label: "Risk", value: "Watch", tone: "warning" },
+      ]}
+    />,
+  );
+  assert.match(indicatorsMarkup, new RegExp(themeTokens.color.primarySurface, "i"));
+  assert.match(indicatorsMarkup, new RegExp(themeTokens.color.warningSurface, "i"));
 });
 
 test("action toolbar preserves accessibility and deferred-action messaging", () => {

@@ -12,8 +12,8 @@ export interface CardProps {
 function resolveCardPalette(tone: CardTone): { background: string; border: string } {
   if (tone === "highlight") {
     return {
-      background: themeTokens.color.primarySurface,
-      border: themeTokens.color.primaryBorder,
+      background: themeTokens.color.accentSurface,
+      border: themeTokens.color.accentBorder,
     };
   }
 

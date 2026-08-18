@@ -46,7 +46,7 @@ function resolvePalette(tone: StatusTone): { background: string; border: string;
     return {
       background: themeTokens.color.successSurface,
       border: themeTokens.color.success,
-      color: themeTokens.color.success,
+      color: themeTokens.color.textPrimary,
     };
   }
 
@@ -54,7 +54,7 @@ function resolvePalette(tone: StatusTone): { background: string; border: string;
     return {
       background: themeTokens.color.warningSurface,
       border: themeTokens.color.warning,
-      color: themeTokens.color.warning,
+      color: themeTokens.color.textPrimary,
     };
   }
 
@@ -62,7 +62,7 @@ function resolvePalette(tone: StatusTone): { background: string; border: string;
     return {
       background: themeTokens.color.dangerSurface,
       border: themeTokens.color.danger,
-      color: themeTokens.color.danger,
+      color: themeTokens.color.textPrimary,
     };
   }
 

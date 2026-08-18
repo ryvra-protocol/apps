@@ -124,6 +124,50 @@ const productRoutes = {
       },
     },
     {
+      id: "pay-p2p-send",
+      label: "Send",
+      product: "pay",
+      path: "/p2p/send",
+      href: "/p2p/send",
+      visible: true,
+      permission: {
+        roles: ["member", "admin"],
+      },
+    },
+    {
+      id: "pay-p2p-receive",
+      label: "Receive",
+      product: "pay",
+      path: "/p2p/receive",
+      href: "/p2p/receive",
+      visible: true,
+      permission: {
+        roles: ["member", "admin"],
+      },
+    },
+    {
+      id: "pay-p2p-history",
+      label: "P2P History",
+      product: "pay",
+      path: "/p2p/history",
+      href: "/p2p/history",
+      visible: true,
+      permission: {
+        roles: ["member", "admin"],
+      },
+    },
+    {
+      id: "pay-merchant-dashboard",
+      label: "Merchant Dashboard",
+      product: "pay",
+      path: "/merchant",
+      href: "/merchant",
+      visible: true,
+      permission: {
+        roles: ["admin"],
+      },
+    },
+    {
       id: "pay-reconciliation",
       label: "Reconciliation",
       product: "pay",

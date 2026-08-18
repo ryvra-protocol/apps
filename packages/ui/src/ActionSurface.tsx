@@ -28,8 +28,8 @@ function resolveActionColors(variant: ActionToolbarVariant, disabled: boolean): 
 
   if (variant === "secondary") {
     return {
-      background: themeTokens.color.surface,
-      border: themeTokens.color.borderStrong,
+      background: themeTokens.color.secondarySurface,
+      border: themeTokens.color.secondaryBorder,
       color: themeTokens.color.text,
     };
   }
@@ -190,7 +190,7 @@ function resolveIndicatorPalette(tone: InlineIndicatorTone): { background: strin
     return {
       background: themeTokens.color.successSurface,
       border: themeTokens.color.success,
-      color: themeTokens.color.success,
+      color: themeTokens.color.textPrimary,
     };
   }
 
@@ -198,7 +198,7 @@ function resolveIndicatorPalette(tone: InlineIndicatorTone): { background: strin
     return {
       background: themeTokens.color.warningSurface,
       border: themeTokens.color.warning,
-      color: themeTokens.color.warning,
+      color: themeTokens.color.textPrimary,
     };
   }
 
@@ -206,7 +206,7 @@ function resolveIndicatorPalette(tone: InlineIndicatorTone): { background: strin
     return {
       background: themeTokens.color.dangerSurface,
       border: themeTokens.color.danger,
-      color: themeTokens.color.danger,
+      color: themeTokens.color.textPrimary,
     };
   }
 

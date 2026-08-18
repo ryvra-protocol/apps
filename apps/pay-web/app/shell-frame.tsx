@@ -42,6 +42,10 @@ const routeLabelKeyMap: Record<string, string> = {
   "pay-dashboard": "nav.dashboard",
   "pay-invoices": "nav.invoices",
   "pay-payouts": "nav.payouts",
+  "pay-p2p-send": "nav.send",
+  "pay-p2p-receive": "nav.receive",
+  "pay-p2p-history": "nav.history",
+  "pay-merchant-dashboard": "nav.merchantDashboard",
   "pay-reconciliation": "nav.reconciliation",
 };
 
@@ -50,6 +54,10 @@ const breadcrumbLabelMap: Record<string, { key: string; label: string }> = {
   "/overview": { key: "nav.overview", label: "Overview" },
   "/invoices": { key: "nav.invoices", label: "Invoices" },
   "/payouts": { key: "nav.payouts", label: "Payouts" },
+  "/p2p/send": { key: "nav.send", label: "Send" },
+  "/p2p/receive": { key: "nav.receive", label: "Receive" },
+  "/p2p/history": { key: "nav.history", label: "P2P History" },
+  "/merchant": { key: "nav.merchantDashboard", label: "Merchant Dashboard" },
   "/reconciliation": { key: "nav.reconciliation", label: "Reconciliation" },
   "/status": { key: "nav.status", label: "Status" },
 };
