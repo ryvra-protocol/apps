@@ -15,9 +15,9 @@
 
 ### Endpoint assumptions vs `ryvra-protocol/pay` exposure
 
-- **Assumed in apps:** HTTP routes under `/pay/*` read models.
-- **Actual in pay repo:** no HTTP router/controller/OpenAPI exposure at this stage.
-- Canonical pay repo is a domain/service module (types + state machine + service orchestration), not an API server.
+- **Assumed in apps:** HTTP routes under `/pay/*` read/write models.
+- **Actual in pay repo:** canonical HTTP OpenAPI is published at `openapi/pay.openapi.yaml` with changelog `docs/api-contract-changelog.md`.
+- **Current Apps pin:** OpenAPI SHA `27bae071d8779801eb9c35e9b8e3db6af0d06d26`, commit `4b61bf09bc16a3676ea8241675ba2d76cd22d74c`.
 
 ### DTO/enums mismatch risk
 
@@ -34,8 +34,8 @@
 
 ### Stage classification for this objective
 
-- **scaffold**
-- Reason: pay repo has canonical domain contracts but no exposed HTTP API contract yet.
+- **aligned**
+- Reason: canonical pay OpenAPI is published and pinned in Apps; remaining caveats are feature-level semantics, not source-of-truth publication.
 
 ### Concrete parity gaps
 
@@ -49,37 +49,27 @@
 
 ### Canonical references used
 
-- `README.md` (status + canonical baseline)
-- `src/types/payment-intent.ts`
-- `src/types/payment-events.ts`
-- `src/service/pay-service.ts`
-- `src/service/state-machine.ts`
-- `src/service/reconciliation.ts`
-- `src/service/idempotency-store.ts`
-- `src/adapters/policy-client.ts`
-- `src/adapters/unified-asset-boundary.ts`
-- `src/adapters/accounts-execution-boundary.ts`
+- `openapi/pay.openapi.yaml`
+- `docs/api-contract-changelog.md`
 - `docs/rfc-0006-pay-rails-and-payment-intents.md`
 
 ### Verification summary
 
 - **Endpoint paths / methods:**
-  - No OpenAPI/spec/router/controller files found in `ryvra-protocol/pay`.
-  - No canonical HTTP endpoint list exists yet.
-- **Request payload schemas (canonical domain):**
-  - `PaymentIntent`, `PaymentExecution`, `UnifiedAssetReference`, boundary inputs in `src/types/payment-intent.ts`.
-- **Response payload schemas (canonical domain):**
-  - `PaymentIntent`, `PolicyDecision`, event envelopes, reconciliation result model in `src/types/payment-events.ts` and `src/service/reconciliation.ts`.
+  - Canonical `/pay/*` read and write routes are published in `openapi/pay.openapi.yaml`.
+- **Request/response payload schemas (canonical HTTP + domain):**
+  - OpenAPI defines endpoint-level request/response schema shapes.
+  - Domain/service references (`PaymentIntent`, `PaymentExecution`, reconciliation primitives) remain the implementation baseline.
 - **Enum/status sets:**
   - lifecycle: `created | authorized | executing | settled | failed | reversed`.
   - policy decision: `ALLOW | DENY`.
   - reconciliation result: `matched | mismatch | pending`.
 - **Pagination/filter conventions:**
-  - Not defined by pay repo HTTP contract (no API exposure yet).
+  - Canonical query conventions are defined in the published Pay OpenAPI contract.
 - **Auth requirements:**
   - idempotency tuple and retry semantics documented in `docs/rfc-0006-pay-rails-and-payment-intents.md` and enforced in `src/service/pay-service.ts`.
 - **Versioning strategy:**
-  - RFC baseline is `v1` draft (`docs/rfc-0006-pay-rails-and-payment-intents.md`), package currently `0.1.0`.
+  - Published contract version is `1.0.0` (`info.version`) with semantic-versioned contract changes tracked in `docs/api-contract-changelog.md`.
 
 ## Phase 8.5 parity alignment implemented in apps
 
@@ -102,17 +92,17 @@
 
 | Client method | HTTP method | Endpoint path | Contract source | Status |
 | --- | --- | --- | --- | --- |
-| `listInvoices` | GET | `/pay/invoices` | apps read model compatibility | adjusted |
-| `getInvoiceSummary` | GET | `/pay/invoices/summary` | apps read model compatibility | adjusted |
-| `listPayouts` | GET | `/pay/payouts` | apps read model compatibility | adjusted |
-| `getPayoutSummary` | GET | `/pay/payouts/summary` | apps read model compatibility | adjusted |
-| `listReconciliationItems` | GET | `/pay/reconciliation/items` | apps read model compatibility | adjusted |
-| `getReconciliationSummary` | GET | `/pay/reconciliation/summary` | apps read model compatibility | adjusted |
-| `getPayOverview` | GET | `/pay/overview` | apps read model compatibility | adjusted |
-| `listSubscriptions` | GET | `/pay/subscriptions` | apps read model compatibility | adjusted |
-| `createPaymentIntent` | POST | `/pay/intents` | derived from `src/service/pay-service.ts` + RFC baseline | adjusted |
-| `transitionPaymentIntent` | POST | `/pay/intents/{intentId}/transitions` | derived from `transitionIntent(...)` in `src/service/pay-service.ts` | adjusted |
-| `reconcileSettlement` | POST | `/pay/reconciliation/intents/{intentId}` | derived from `reconcileIntentSettlement(...)` in `src/service/reconciliation.ts` | adjusted |
+| `listInvoices` | GET | `/pay/invoices` | `openapi/pay.openapi.yaml` | adjusted |
+| `getInvoiceSummary` | GET | `/pay/invoices/summary` | `openapi/pay.openapi.yaml` | adjusted |
+| `listPayouts` | GET | `/pay/payouts` | `openapi/pay.openapi.yaml` | adjusted |
+| `getPayoutSummary` | GET | `/pay/payouts/summary` | `openapi/pay.openapi.yaml` | adjusted |
+| `listReconciliationItems` | GET | `/pay/reconciliation/items` | `openapi/pay.openapi.yaml` | adjusted |
+| `getReconciliationSummary` | GET | `/pay/reconciliation/summary` | `openapi/pay.openapi.yaml` | adjusted |
+| `getPayOverview` | GET | `/pay/overview` | `openapi/pay.openapi.yaml` | adjusted |
+| `listSubscriptions` | GET | `/pay/subscriptions` | `openapi/pay.openapi.yaml` (deprecated) | adjusted |
+| `createPaymentIntent` | POST | `/pay/intents` | `openapi/pay.openapi.yaml` | adjusted |
+| `transitionPaymentIntent` | POST | `/pay/intents/{intentId}/transitions` | `openapi/pay.openapi.yaml` | adjusted |
+| `reconcileSettlement` | POST | `/pay/reconciliation/intents/{intentId}` | `openapi/pay.openapi.yaml` | adjusted |
 
 ## Version compatibility policy
 
@@ -139,6 +129,6 @@
 
 ## Known limitations and next steps
 
-1. `ryvra-protocol/pay` still lacks an officially published HTTP API contract/spec.
-2. Existing dashboard read-model endpoints remain compatibility paths until pay publishes canonical API endpoints.
-3. Future parity pass should replace derived write route assumptions with published pay OpenAPI/router definitions once available.
+1. `ryvra-protocol/pay` has a published canonical HTTP API contract pinned in Apps (`openapi/pay.openapi.yaml`, SHA `27bae071d8779801eb9c35e9b8e3db6af0d06d26`).
+2. Existing dashboard route UX still includes compatibility adapters around canonical payloads.
+3. Claim-specific workflow semantics may remain deferred/provisional even when the canonical base endpoints are published.

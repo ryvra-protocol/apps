@@ -331,6 +331,8 @@ See `docs/architecture/` for boundaries, responsibilities, and integration mappi
 - `docs/architecture/markets-mvp-data-flow.md`
 - `docs/architecture/pay-mvp-data-flow.md`
 - `docs/architecture/pay-integration-parity.md`
+- `docs/architecture/org-contract-sync-policy.md`
+- `docs/architecture/contract-pin-matrix.json`
 - `docs/architecture/claim-ux-fingerprint-phase-12a.md`
 - `docs/architecture/points-tasks-mvp-data-flow.md`
 - `docs/architecture/unified-balance-and-daily-claim-phase-12b.md`

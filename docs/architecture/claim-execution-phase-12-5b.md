@@ -42,7 +42,7 @@ Selected workflow for Phase 12.5B:
 - create intent in `created`
 - transition in sequence: `authorized -> executing -> settled`
 
-This sequence is a guarded provisional assumption until Pay publishes a claim-specific transition contract. If upstream transition semantics differ, the API route returns explicit canonical errors and preserves `intentId` for safe retry/resume instead of re-creating a new intent.
+This sequence is a guarded provisional assumption; the canonical Pay OpenAPI is published, but claim-specific transition semantics are not yet documented as a dedicated workflow contract. If upstream transition semantics differ, the API route returns explicit canonical errors and preserves `intentId` for safe retry/resume instead of re-creating a new intent.
 
 ## Idempotency strategy
 

@@ -1,6 +1,10 @@
 import type { PaymentIntentState } from "@ryvra/domain-payments";
 
 export const PAY_PROTOCOL_SOURCE = "ryvra-protocol/pay" as const;
+export const PAY_PROTOCOL_OPENAPI_PATH = "openapi/pay.openapi.yaml" as const;
+export const PAY_PROTOCOL_CHANGELOG_PATH = "docs/api-contract-changelog.md" as const;
+export const PAY_PROTOCOL_OPENAPI_SHA = "27bae071d8779801eb9c35e9b8e3db6af0d06d26" as const;
+export const PAY_PROTOCOL_OPENAPI_COMMIT = "4b61bf09bc16a3676ea8241675ba2d76cd22d74c" as const;
 export const PAY_PROTOCOL_COMPATIBILITY_VERSION = "rfc-0006-v1-draft+phase8-read-model-adapter" as const;
 export const PAY_PARITY_CHECK_MARKER = "phase-8.5-2026-08-07T01:25:40.481Z" as const;
 

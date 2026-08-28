@@ -50,6 +50,10 @@ export default async function PayStatusPage() {
                     apiBaseUrl: runtime.config.apiBaseUrl,
                     parity: {
                       sourceOfTruth: diagnostics.sourceOfTruth,
+                      sourceOpenApiPath: diagnostics.sourceOpenApiPath,
+                      sourceChangelogPath: diagnostics.sourceChangelogPath,
+                      sourceOpenApiSha: diagnostics.sourceOpenApiSha,
+                      sourceOpenApiCommit: diagnostics.sourceOpenApiCommit,
                       compatibilityVersion: diagnostics.compatibilityVersion,
                       parityCheckMarker: diagnostics.parityCheckMarker,
                     },

@@ -97,7 +97,7 @@
   - runtime payload decoding and parity diagnostics (`getParityDiagnostics`)
   - canonical request/correlation id emission across both data paths and diagnostics probes
 - query/filter parity in HTTP mode uses snake_case compatibility keys.
-- `/pay/status` displays mode, base URL, compatibility version, parity marker, and connectivity probe result.
+- `/pay/status` displays mode, base URL, canonical source refs, compatibility version, parity marker, and connectivity probe result.
 - `/pay/status` now renders explicit retryable error state when diagnostics cannot be loaded.
 - `/pay/payouts` now exposes a user-facing `Claim` CTA via `app/components/claim-fingerprint-card-client.tsx` with a UI-only fingerprint-style confirmation step (no WebAuthn).
 - Claim submissions flow through `app/api/claims/payout/route.ts` and call `payClient.createPaymentIntent(...)` -> `POST /pay/intents` with idempotency key + request/correlation IDs attached on every write request.
@@ -148,13 +148,14 @@
 
 ## Pay source-of-truth linkage (`ryvra-protocol/pay`)
 
-- Canonical source files currently define domain/service contracts (no published HTTP router/spec yet):
-  - `src/types/payment-intent.ts`
-  - `src/types/payment-events.ts`
-  - `src/service/pay-service.ts`
-  - `src/service/reconciliation.ts`
-  - `src/service/state-machine.ts`
-  - `docs/rfc-0006-pay-rails-and-payment-intents.md`
+- Canonical published contract references:
+  - `openapi/pay.openapi.yaml`
+  - `docs/api-contract-changelog.md`
+- Current Apps marker linkage:
+  - OpenAPI SHA `27bae071d8779801eb9c35e9b8e3db6af0d06d26`
+  - OpenAPI commit `4b61bf09bc16a3676ea8241675ba2d76cd22d74c`
+  - Compatibility marker `rfc-0006-v1-draft+phase8-read-model-adapter`
+- Feature-specific workflow semantics may still be documented as provisional where pay-owned contract detail is intentionally deferred.
 
 ## Points/Tasks integration map (Phase 10.5 strict canonical parity)
 
@@ -191,7 +192,7 @@
 
 - **Ryvra Identity/Auth services:** concrete session validation and role claims.
 - **Ryvra Markets services:** canonical `/markets/*` contract now published and enforced in apps parity wiring.
-- **Ryvra Pay services:** canonical HTTP/API publication still pending.
+- **Ryvra Pay services:** canonical `/pay/*` OpenAPI contract is published and pinned in apps parity wiring.
 - **Ryvra Points/Tasks services:** canonical endpoint-level OpenAPI is now published and wired in apps parity contracts.
 - **Ryvra observability stack:** structured logs, tracing, and alerting pipeline.
 
