@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
@@ -89,40 +90,31 @@ async function assertReferenceContainsSha(entry, reference) {
   }
 }
 
+function computeGitBlobSha(fileBuffer) {
+  const headerBuffer = Buffer.from(`blob ${fileBuffer.length}\u0000`, "utf8");
+  return createHash("sha1").update(headerBuffer).update(fileBuffer).digest("hex");
+}
+
 async function fetchCanonicalSha(sourceRepo, sourcePath) {
   const encodedPath = sourcePath
     .split("/")
     .map((segment) => encodeURIComponent(segment))
     .join("/");
-  const url = `https://api.github.com/repos/${sourceRepo}/contents/${encodedPath}`;
-  const headers = {
-    Accept: "application/vnd.github+json",
-    "User-Agent": "ryvra-apps-contract-sync-check",
-  };
-
-  if (isNonEmptyString(process.env.GITHUB_TOKEN)) {
-    headers.Authorization = "Bearer " + process.env.GITHUB_TOKEN;
-  }
-
-  const response = await fetch(url, { headers });
-  const bodyText = await response.text();
-  let payload = null;
-  try {
-    payload = bodyText ? JSON.parse(bodyText) : null;
-  } catch {
-    payload = null;
-  }
+  const url = `https://raw.githubusercontent.com/${sourceRepo}/main/${encodedPath}`;
+  const response = await fetch(url, {
+    headers: {
+      "User-Agent": "ryvra-apps-contract-sync-check",
+    },
+  });
 
   if (!response.ok) {
-    const message = payload && typeof payload.message === "string" ? payload.message : response.statusText;
-    throw new Error(`GitHub API lookup failed for ${sourceRepo}/${sourcePath}: HTTP ${response.status} ${message}`);
+    throw new Error(
+      `Raw source lookup failed for ${sourceRepo}/${sourcePath} at ${url}: HTTP ${response.status} ${response.statusText}`,
+    );
   }
 
-  if (!payload || typeof payload.sha !== "string") {
-    throw new Error(`GitHub API lookup for ${sourceRepo}/${sourcePath} did not return a file SHA.`);
-  }
-
-  return payload.sha;
+  const fileBuffer = Buffer.from(await response.arrayBuffer());
+  return computeGitBlobSha(fileBuffer);
 }
 
 async function run() {
