@@ -73,7 +73,11 @@ import {
 } from "./markets-parity";
 import {
   PAY_PARITY_CHECK_MARKER,
+  PAY_PROTOCOL_CHANGELOG_PATH,
   PAY_PROTOCOL_COMPATIBILITY_VERSION,
+  PAY_PROTOCOL_OPENAPI_COMMIT,
+  PAY_PROTOCOL_OPENAPI_PATH,
+  PAY_PROTOCOL_OPENAPI_SHA,
   PAY_PROTOCOL_SOURCE,
   payRouteMap,
 } from "./pay-parity";
@@ -992,6 +996,10 @@ function buildPayClient(transport: Transport, options: CreateApiClientOptions): 
           baseUrl,
           compatibilityVersion,
           sourceOfTruth: PAY_PROTOCOL_SOURCE,
+          sourceOpenApiPath: PAY_PROTOCOL_OPENAPI_PATH,
+          sourceChangelogPath: PAY_PROTOCOL_CHANGELOG_PATH,
+          sourceOpenApiSha: PAY_PROTOCOL_OPENAPI_SHA,
+          sourceOpenApiCommit: PAY_PROTOCOL_OPENAPI_COMMIT,
           parityCheckMarker,
           connectivity: {
             checkedAt: new Date().toISOString(),
@@ -1011,6 +1019,10 @@ function buildPayClient(transport: Transport, options: CreateApiClientOptions): 
           baseUrl,
           compatibilityVersion,
           sourceOfTruth: PAY_PROTOCOL_SOURCE,
+          sourceOpenApiPath: PAY_PROTOCOL_OPENAPI_PATH,
+          sourceChangelogPath: PAY_PROTOCOL_CHANGELOG_PATH,
+          sourceOpenApiSha: PAY_PROTOCOL_OPENAPI_SHA,
+          sourceOpenApiCommit: PAY_PROTOCOL_OPENAPI_COMMIT,
           parityCheckMarker,
           connectivity: primaryProbe,
         };
@@ -1023,6 +1035,10 @@ function buildPayClient(transport: Transport, options: CreateApiClientOptions): 
         baseUrl,
         compatibilityVersion,
         sourceOfTruth: PAY_PROTOCOL_SOURCE,
+        sourceOpenApiPath: PAY_PROTOCOL_OPENAPI_PATH,
+        sourceChangelogPath: PAY_PROTOCOL_CHANGELOG_PATH,
+        sourceOpenApiSha: PAY_PROTOCOL_OPENAPI_SHA,
+        sourceOpenApiCommit: PAY_PROTOCOL_OPENAPI_COMMIT,
         parityCheckMarker,
         connectivity: fallbackProbe.ok
           ? {

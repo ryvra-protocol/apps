@@ -1,0 +1,38 @@
+[
+  {
+    "domain": "markets",
+    "source_repo": "ryvra-protocol/markets",
+    "source_path": "openapi/markets.openapi.yaml",
+    "pinned_sha": "cc08c626f2f26e192fe86d744d2aa1798c9c690a",
+    "pin_file_references": [
+      "packages/api-client/src/markets-parity.ts",
+      "docs/architecture/markets-integration-parity.md",
+      "docs/architecture/integration-map.md"
+    ],
+    "last_verified_at": "2026-08-28T03:49:21.399Z"
+  },
+  {
+    "domain": "pay",
+    "source_repo": "ryvra-protocol/pay",
+    "source_path": "openapi/pay.openapi.yaml",
+    "pinned_sha": "27bae071d8779801eb9c35e9b8e3db6af0d06d26",
+    "pin_file_references": [
+      "packages/api-client/src/pay-parity.ts",
+      "docs/architecture/pay-integration-parity.md",
+      "docs/architecture/integration-map.md"
+    ],
+    "last_verified_at": "2026-08-28T03:49:21.399Z"
+  },
+  {
+    "domain": "points_tasks",
+    "source_repo": "ryvra-protocol/protocol-core",
+    "source_path": "openapi/points-tasks.openapi.yaml",
+    "pinned_sha": "89e790e859984892fcfbbe7e0b3e7dd2f159b2e7",
+    "pin_file_references": [
+      "packages/api-client/src/points-tasks-parity.ts",
+      "docs/architecture/points-tasks-integration-parity.md",
+      "docs/architecture/integration-map.md"
+    ],
+    "last_verified_at": "2026-08-28T03:49:21.399Z"
+  }
+]

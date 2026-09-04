@@ -131,7 +131,10 @@ Define clear responsibility boundaries between the three frontend apps and share
 
 ### Pay (`ryvra-protocol/pay`)
 
-- Canonical domain/service contracts are integrated; full HTTP OpenAPI publication remains pending.
+- Canonical OpenAPI is published and pinned in Apps:
+  - `openapi/pay.openapi.yaml`
+  - `docs/api-contract-changelog.md`
+  - OpenAPI SHA `27bae071d8779801eb9c35e9b8e3db6af0d06d26`
 
 ### Points/Tasks (`ryvra-protocol/protocol-core`)
 

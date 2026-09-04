@@ -171,6 +171,10 @@ export interface PayParityDiagnostics {
   baseUrl: string;
   compatibilityVersion: string;
   sourceOfTruth: string;
+  sourceOpenApiPath: string;
+  sourceChangelogPath: string;
+  sourceOpenApiSha: string;
+  sourceOpenApiCommit: string;
   parityCheckMarker: string;
   connectivity: PayConnectivityCheckResult;
 }

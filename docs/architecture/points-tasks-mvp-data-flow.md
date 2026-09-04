@@ -99,4 +99,4 @@ Normalized Points/Tasks errors are canonical-only:
 
 ## Remaining limitations
 
-- Pay claim transition sequence is still provisional pending a pay-owned claim-specific HTTP contract publication.
+- Pay canonical HTTP contract is published at `ryvra-protocol/pay/openapi/pay.openapi.yaml`; claim-specific transition semantics remain provisional until pay documents claim-owned workflow semantics explicitly.

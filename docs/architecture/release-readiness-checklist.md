@@ -44,15 +44,26 @@
   - `openapi/markets.openapi.yaml`
   - `docs/api-contract-changelog.md`
 - Pay source of truth: `ryvra-protocol/pay`
-  - canonical domain/service contracts + RFC references documented in `docs/architecture/integration-map.md`
+  - `openapi/pay.openapi.yaml`
+  - `docs/api-contract-changelog.md`
+  - OpenAPI SHA `27bae071d8779801eb9c35e9b8e3db6af0d06d26`
+  - OpenAPI commit `4b61bf09bc16a3676ea8241675ba2d76cd22d74c`
 - Points/Tasks source of truth: `ryvra-protocol/protocol-core`
   - `openapi/points-tasks.openapi.yaml`
   - `docs/api-contract-changelog.md`
+- Contract pin matrix: `docs/architecture/contract-pin-matrix.json`
+- Contract sync policy: `docs/architecture/org-contract-sync-policy.md`
+
+## Contract sync release gates
+
+- Contract pin verification passes (`pnpm contract:check` / CI `contract-sync-check`).
+- Markets, Pay, and Points/Tasks parity status is reviewed against canonical repos before release.
 
 ## CI required checks
 
 - Runtime policy check (Node 24.x + pnpm 10.16.0)
 - `pnpm install --frozen-lockfile`
+- `pnpm contract:check` (contract pin matrix + upstream SHA drift guard)
 - `pnpm lint`
 - `pnpm typecheck`
 - `pnpm build`
@@ -129,6 +140,7 @@
 node -v
 pnpm -v
 pnpm install --frozen-lockfile
+pnpm contract:check
 pnpm lint
 pnpm typecheck
 pnpm build
