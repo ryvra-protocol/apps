@@ -3,13 +3,13 @@
     "domain": "markets",
     "source_repo": "ryvra-protocol/markets",
     "source_path": "openapi/markets.openapi.yaml",
-    "pinned_sha": "cc08c626f2f26e192fe86d744d2aa1798c9c690a",
+    "pinned_sha": "0a04de11317bfcd0813154686aa1505aa53290ec",
     "pin_file_references": [
       "packages/api-client/src/markets-parity.ts",
       "docs/architecture/markets-integration-parity.md",
       "docs/architecture/integration-map.md"
     ],
-    "last_verified_at": "2026-08-28T03:49:21.399Z"
+    "last_verified_at": "2026-09-11T19:39:21.399Z"
   },
   {
     "domain": "pay",
