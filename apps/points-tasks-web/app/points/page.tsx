@@ -22,6 +22,7 @@ import { PointsTasksTopPrioritySection } from "../components/points-tasks-top-pr
 import { ModeBadge } from "../components/mode-badge";
 import { formatNumber } from "../lib/format";
 import { buildDailyClaimViewModel } from "../lib/daily-claim";
+import { getFingerprintClaimStatus } from "../lib/fingerprint-claim";
 import {
   buildPointsTasksPortfolioInsights,
   buildPointsTasksWindowLinks,
@@ -154,27 +155,20 @@ export default async function PointsPage({ searchParams }: PointsPageProps) {
     const [pointsList, summary, dailyClaim, pointsOverviewResult, tasksOverviewResult] = await Promise.all([
       runtime.pointsTasksClient.listPointEntries(request),
       runtime.pointsTasksClient.getPointSummary(summaryRequest),
-      runtime.pointsTasksClient
-        .getDailyClaimStatus(summaryRequest)
-        .then((claimState) =>
-          buildDailyClaimViewModel({
-            claimState,
-            nowIso: new Date().toISOString(),
-            claimStatusEndpointAvailable: true,
-            expectedAccountId: request.accountId,
-          }),
-        )
-        .catch((error) => {
-          const uiError = capturePointsTasksPageError(runtime.logger, "/points/daily-claim", error);
-          return buildDailyClaimViewModel({
-            nowIso: new Date().toISOString(),
-            claimStatusEndpointAvailable: false,
-            expectedAccountId: request.accountId,
-            endpointErrorMessage: uiError.message,
-            endpointRetryable: uiError.retryable,
-            retryHref: `/points?account_id=${encodeURIComponent(request.accountId)}`,
-          });
+      Promise.resolve(
+        getFingerprintClaimStatus({
+          accountId: request.accountId,
+          ...(request.userId ? { userId: request.userId } : {}),
+          ...(request.workspaceId ? { workspaceId: request.workspaceId } : {}),
         }),
+      ).then((claimState) =>
+        buildDailyClaimViewModel({
+          claimState,
+          nowIso: new Date().toISOString(),
+          claimStatusEndpointAvailable: true,
+          expectedAccountId: request.accountId,
+        }),
+      ),
       runtime.pointsTasksClient
         .getPointsOverview({
           accountId: request.accountId,

@@ -3,6 +3,7 @@ import type { TasksOverviewDto } from "@ryvra/domain-tasks";
 import type { RuntimeMode } from "@ryvra/config";
 import { ActionToolbar, Card, GettingStartedChecklist, InlineStatusIndicators, Section, themeTokens } from "@ryvra/ui";
 import { formatDateTime, formatNumber, formatSignedPoints } from "../lib/format";
+import type { CommunityTopMetricsSnapshot } from "../lib/fingerprint-claim";
 import { ModeBadge } from "./mode-badge";
 import { StatusBadge } from "./status-badge";
 
@@ -18,6 +19,7 @@ interface PointsTasksOverviewContentProps {
   roleLabel: string;
   pointsOverview: PointsOverviewDto;
   tasksOverview: TasksOverviewDto;
+  communityMetrics: CommunityTopMetricsSnapshot;
   claimCta: {
     label: string;
     href: string;
@@ -72,6 +74,7 @@ export function PointsTasksOverviewContent({
   roleLabel,
   pointsOverview,
   tasksOverview,
+  communityMetrics,
   claimCta,
 }: PointsTasksOverviewContentProps) {
   const recentActivity = buildRecentActivity(pointsOverview, tasksOverview);
@@ -145,6 +148,24 @@ export function PointsTasksOverviewContent({
             },
           ]}
         />
+
+        <div style={{ display: "grid", gap: themeTokens.spacing.md, gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))" }}>
+          <Card title="Total fingerprints" tone="muted">
+            <p style={{ margin: 0 }}>{formatNumber(communityMetrics.totalFingerprints, 0)}</p>
+          </Card>
+          <Card title="Total prints scanned" tone="muted">
+            <p style={{ margin: 0 }}>{formatNumber(communityMetrics.totalPrintsScanned, 0)}</p>
+          </Card>
+          <Card title="Cumulative points awarded" tone="muted">
+            <p style={{ margin: 0 }}>{formatNumber(communityMetrics.cumulativePointsAwarded, 2)}</p>
+          </Card>
+          <Card title="Average points per scan" tone="muted">
+            <p style={{ margin: 0 }}>{formatNumber(communityMetrics.averagePointsPerScan, 2)}</p>
+          </Card>
+          <Card title="Derived calculations" tone="muted">
+            <p style={{ margin: 0 }}>{formatNumber(communityMetrics.derivedCalculations, 0)}</p>
+          </Card>
+        </div>
 
         <div
           data-testid="points-tasks-top-priority-zone"

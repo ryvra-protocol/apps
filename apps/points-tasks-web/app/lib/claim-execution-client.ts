@@ -17,6 +17,9 @@ interface ClaimExecutionResponsePayload {
     correlationId?: string;
     failedTransition?: string;
     syncTargets?: string[];
+    awardedPoints?: number;
+    scanTimestamp?: string;
+    claimDateKey?: string;
   };
   error?: unknown;
 }
@@ -28,6 +31,9 @@ export type ExecuteDailyClaimAttemptResult =
       state: string;
       shouldRefresh: true;
       syncTargets: readonly string[];
+      awardedPoints?: number;
+      scanTimestamp?: string;
+      claimDateKey?: string;
     }
   | {
       ok: false;
@@ -152,6 +158,9 @@ export async function executeDailyClaimAttempt(input: ExecuteDailyClaimAttemptIn
         state: payload.data?.state ?? "settled",
         shouldRefresh: true,
         syncTargets: payload.data?.syncTargets && payload.data.syncTargets.length > 0 ? payload.data.syncTargets : claimExecutionSyncTargets,
+        ...(typeof payload.data?.awardedPoints === "number" ? { awardedPoints: payload.data.awardedPoints } : {}),
+        ...(typeof payload.data?.scanTimestamp === "string" ? { scanTimestamp: payload.data.scanTimestamp } : {}),
+        ...(typeof payload.data?.claimDateKey === "string" ? { claimDateKey: payload.data.claimDateKey } : {}),
       };
     } catch (error) {
       const isAbort = error instanceof Error && error.name === "AbortError";
