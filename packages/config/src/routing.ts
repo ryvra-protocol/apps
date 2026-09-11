@@ -235,6 +235,28 @@ const productRoutes = {
       },
     },
     {
+      id: "markets-perps-private",
+      label: "Perps Private",
+      product: "markets",
+      path: "/perps/private",
+      href: "/perps/private",
+      visible: true,
+      permission: {
+        roles: ["member", "admin"],
+      },
+    },
+    {
+      id: "markets-agents",
+      label: "Agent Console",
+      product: "markets",
+      path: "/agents",
+      href: "/agents",
+      visible: true,
+      permission: {
+        roles: ["member", "admin"],
+      },
+    },
+    {
       id: "markets-staking",
       label: "Staking",
       product: "markets",

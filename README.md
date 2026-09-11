@@ -29,6 +29,36 @@ This repository hosts the unified-shell baseline with Pay, Markets, and Ryvra Co
   - `/merchant` (admin-gated with explicit permission-denied fallback)
 - P2P request-payment, merchant payment-link mutation, merchant retry-failed mutation, and refund/dispute action APIs remain explicitly deferred when unavailable.
 
+## Phase 10.3 notes (RFC-0016/0017 autonomous finance control center)
+
+- Markets now includes operator control routes:
+  - `/agents`
+  - `/agents/[id]`
+  - `/agents/[id]/activity`
+  - `/agents/[id]/mandate`
+  - `/agents/[id]/permissions`
+  - `/agents/[id]/risk`
+  - `/agents/[id]/audit`
+  - `/agents/approvals/[intentId]`
+- Markets perps module now includes private operational views:
+  - `/perps/private`
+  - `/perps/positions`
+  - `/perps/history`
+- Approval and escalation actions are backend-authoritative via server API routes:
+  - `POST /api/approvals/[intentId]/decision`
+  - `POST /api/agents/[id]/controls`
+- Feature ownership:
+  - Frontend route/UI: `apps/markets-web`
+  - Backend dependencies: `agent-gateway`, policy-risk service, authorization service, ledger/settlement provenance streams
+- Security boundary note: **frontend is not authority**; all privileged decisions and emergency controls require backend validation.
+- Operator workflows summary:
+  - review approvals queue, inspect intent provenance/risk references, submit approve/deny/challenge/delay/quarantine/cancel decisions
+  - execute emergency controls (suspend/revoke/revoke capability/kill switch activate/deactivate) with explicit confirmation and audit references
+  - inspect end-to-end audit trace chain (actor → mandate → policy → risk → intent → authorization → execution → ledger → settlement)
+- RFC mapping:
+  - RFC-0016/0017 Phase 10 app-layer control surfaces
+  - dependencies: Markets parity wiring (phase 9.5), trust/security/compliance surfaces (phase 13), reliability/observability baselines (phase 17+)
+
 ## Monorepo stack
 
 - **Package manager:** pnpm workspaces
