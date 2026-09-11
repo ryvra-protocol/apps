@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import type { BreadcrumbItem, ProductSwitcherItem, UserMenuItem } from "./navigation";
+import type { BreadcrumbItem, ProductSwitcherItem, ShellNavItem, UserMenuItem } from "./navigation";
 import { shellStyles } from "./shell-styles";
 import { GlobalHeader } from "./GlobalHeader";
 import { GlobalSidebar } from "./GlobalSidebar";
@@ -133,7 +133,10 @@ function AppShellLayout({
         </div>
         <BottomIconDock items={productSwitcherItems} />
         {resolvedFooter ? <footer className="ryvra-shell-footer">{resolvedFooter}</footer> : null}
-        <OnboardingWalkthrough scopeKey={resolvedNotificationScopeKey} content={onboardingWalkthrough} />
+        <OnboardingWalkthrough
+          scopeKey={resolvedNotificationScopeKey}
+          {...(onboardingWalkthrough ? { content: onboardingWalkthrough } : {})}
+        />
       </NotificationCenterProvider>
     </div>
   );
