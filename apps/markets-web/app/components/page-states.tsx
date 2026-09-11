@@ -41,11 +41,11 @@ function ActionLink({ href, label, primary }: RetryLinkProps & { primary?: boole
 
 export function UnauthorizedState() {
   return (
-    <Card title={translateRuntime("state.accessRequired", "Access required")}>
+    <Card title={translateRuntime("state.accessRequired", "Access needed")}>
       <p style={{ margin: 0 }}>
         {translateRuntime(
           "state.noPermissionMessage",
-          "You do not have permission to view this page. Confirm your access level and try again.",
+          "You can't open this page yet. Check your access level and try again.",
         )}
       </p>
     </Card>
@@ -53,7 +53,7 @@ export function UnauthorizedState() {
 }
 
 export function PermissionDeniedState({
-  title = translateRuntime("state.permissionRequired", "Permission required"),
+  title = translateRuntime("state.permissionRequired", "Permission needed"),
   message,
 }: {
   title?: string;

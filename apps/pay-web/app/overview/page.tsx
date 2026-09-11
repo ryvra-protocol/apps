@@ -16,7 +16,7 @@ export default async function PayOverviewPage({ searchParams }: PayOverviewPageP
   if (!runtime.authDecision.allowed) {
     return (
       <section style={{ display: "grid", gap: themeTokens.spacing.lg }}>
-        <Section title="Pay Overview" description="Access-controlled overview view.">
+        <Section title="Pay overview" description="Access-aware snapshot of payment activity.">
           <UnauthorizedState />
         </Section>
       </section>
@@ -52,8 +52,8 @@ export default async function PayOverviewPage({ searchParams }: PayOverviewPageP
 
     return (
       <PayOverviewContent
-        title="Pay Overview"
-        description="Same aggregate model as dashboard, kept as a stable global overview route."
+        title="Pay overview"
+        description="A steady summary of invoices, payouts, and reconciliation progress."
         route="/overview"
         mode={runtime.config.mode}
         overview={overview}
@@ -70,13 +70,13 @@ export default async function PayOverviewPage({ searchParams }: PayOverviewPageP
 
     return (
       <section style={{ display: "grid", gap: themeTokens.spacing.lg }}>
-        <Section title="Pay Overview" description="Shared overview model for pay MVP routes.">
+        <Section title="Pay overview" description="A steady summary of invoices, payouts, and reconciliation progress.">
           <ErrorState
-            title="Unable to load overview data"
+            title="We couldn't load your pay overview"
             message={uiError.message}
             source={uiError.source}
             retryable={uiError.retryable}
-            retryLink={{ href: "/overview", label: "Retry overview" }}
+            retryLink={{ href: "/overview", label: "Try again" }}
           />
         </Section>
       </section>

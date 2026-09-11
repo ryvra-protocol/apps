@@ -16,7 +16,7 @@ export default async function PayHomePage({ searchParams }: PayHomePageProps) {
   if (!runtime.authDecision.allowed) {
     return (
       <section style={{ display: "grid", gap: themeTokens.spacing.lg }}>
-        <Section title="Pay Dashboard" description="Access-controlled pay data surface.">
+        <Section title="Pay dashboard" description="Your payment operations summary with access-aware data.">
           <UnauthorizedState />
         </Section>
       </section>
@@ -52,8 +52,8 @@ export default async function PayHomePage({ searchParams }: PayHomePageProps) {
 
     return (
       <PayOverviewContent
-        title="Pay Dashboard"
-        description="MVP finance metrics and recent invoice/payout/reconciliation activity."
+        title="Pay dashboard"
+        description="Track invoices, payouts, and reconciliation from one clear view."
         route="/"
         mode={runtime.config.mode}
         overview={overview}
@@ -70,13 +70,13 @@ export default async function PayHomePage({ searchParams }: PayHomePageProps) {
 
     return (
       <section style={{ display: "grid", gap: themeTokens.spacing.lg }}>
-        <Section title="Pay Dashboard" description="MVP finance metrics and recent activity.">
+        <Section title="Pay dashboard" description="Track invoices, payouts, and reconciliation from one clear view.">
           <ErrorState
-            title="Unable to load dashboard data"
+            title="We couldn't load your pay dashboard"
             message={uiError.message}
             source={uiError.source}
             retryable={uiError.retryable}
-            retryLink={{ href: "/", label: "Retry dashboard" }}
+            retryLink={{ href: "/", label: "Try again" }}
           />
         </Section>
       </section>

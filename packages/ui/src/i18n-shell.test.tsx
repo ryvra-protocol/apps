@@ -5,11 +5,6 @@ import { AppShell } from "./AppShell";
 import { shellStyles } from "./shell-styles";
 import type { BreadcrumbItem, ProductSwitcherItem, ShellNavItem, UserMenuItem } from "./navigation";
 
-const globalNavItems: ShellNavItem[] = [
-  { id: "overview", label: "Overview", labelKey: "nav.overview", href: "/overview" },
-  { id: "markets", label: "Markets", labelKey: "nav.markets", href: "/markets" },
-];
-
 const localNavItems: ShellNavItem[] = [
   { id: "markets-dashboard", label: "Dashboard", labelKey: "nav.dashboard", href: "/" },
   { id: "markets-orders", label: "Orders", labelKey: "nav.orders", href: "/orders" },
@@ -34,7 +29,6 @@ function renderShell(locale: "en" | "fr" | "ar") {
   return renderToStaticMarkup(
     <AppShell
       appName="Ryvra Markets"
-      globalNavItems={globalNavItems}
       localNavItems={localNavItems}
       localNavTitle="Markets"
       localNavAriaLabel="Markets navigation"

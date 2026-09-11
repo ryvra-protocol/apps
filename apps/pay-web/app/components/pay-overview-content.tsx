@@ -18,7 +18,7 @@ import { ModeBadge } from "./mode-badge";
 import { PayPortfolioInsightsCard } from "./pay-portfolio-insights-card";
 import { StatusBadge } from "./status-badge";
 
-const historyUnavailableReason = "Historical windows are unavailable for pay overview snapshots.";
+const historyUnavailableReason = "Historical trend windows are not available in this environment yet.";
 const windowOptions: InsightWindowOption[] = [
   {
     window: "24h",
@@ -86,31 +86,31 @@ export function PayOverviewContent({
           <ActionToolbar
             ariaLabel="Pay key actions"
             items={[
-              { id: "pay-send", label: "Send", href: withScope("/p2p/send"), variant: "primary" },
-              { id: "pay-receive", label: "Receive", href: withScope("/p2p/receive") },
-              { id: "pay-request", label: "Request", href: withScope("/p2p/receive?action=request") },
+              { id: "pay-send", label: "Send payment", href: withScope("/p2p/send"), variant: "primary" },
+              { id: "pay-receive", label: "Receive payment", href: withScope("/p2p/receive") },
+              { id: "pay-request", label: "Request payment", href: withScope("/p2p/receive?action=request") },
               {
                 id: "pay-claim",
-                label: "Claim",
+                label: "Start payout claim",
                 href: withScope("/payouts"),
                 disabled: !canOperate,
                 ...(!canOperate
                   ? {
-                      disabledReason: operateDeniedReason ?? "Claim actions require operator access.",
+                      disabledReason: operateDeniedReason ?? "Payout claims need operator access.",
                     }
                   : {}),
               },
               {
                 id: "pay-merchant",
-                label: "Merchant Dashboard",
+                label: "Open merchant dashboard",
                 href: withScope("/merchant"),
               },
-              { id: "pay-history", label: "View History", href: withScope("/p2p/history") },
+              { id: "pay-history", label: "View payment history", href: withScope("/p2p/history") },
               {
                 id: "pay-export",
                 label: "Export",
                 disabled: true,
-                disabledReason: "Export reports are deferred until pay reporting APIs are enabled.",
+                disabledReason: "Exports will unlock after reporting APIs are available.",
               },
             ]}
           />
@@ -148,7 +148,7 @@ export function PayOverviewContent({
             scopeHref={withScope(route)}
             unifiedBalanceHref={withScope("/overview")}
             firstActionHref={withScope("/payouts")}
-            firstActionLabel="Complete first payout action"
+            firstActionLabel="Run your first payout step safely"
             notificationsHref={withScope("/status")}
           />
         </div>
@@ -200,12 +200,12 @@ export function PayOverviewContent({
             ]}
             rows={overview.recentActivity}
             getRowKey={(row) => row.id}
-            emptyMessage="No recent pay activity available."
+            emptyMessage="No recent payment activity yet."
           />
         </Card>
 
         <div data-testid="pay-snapshot-details-card">
-          <Card title="Operational snapshot details" tone="muted">
+          <Card title="Operational details" tone="muted">
             <p style={{ marginTop: 0, marginBottom: themeTokens.spacing.xs }}>
               Account reference: <strong>{accountId}</strong>
             </p>

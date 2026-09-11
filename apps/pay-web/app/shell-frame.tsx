@@ -273,10 +273,6 @@ export function ShellFrame({ children, roleClaims, defaultAccountId, defaultWork
   const globalNav = useMemo(() => getGlobalNavItems({ currentProduct: productId }), []);
   const localNav = useMemo(() => getProductNav(productId), []);
 
-  const globalNavItems = useMemo(
-    () => globalNav.map((route) => toShellNavItem(route, scopeResolution.scope, roleClaims)),
-    [globalNav, roleClaims, scopeResolution.scope],
-  );
   const localNavItems = useMemo(
     () => localNav.map((route) => toShellNavItem(route, scopeResolution.scope, roleClaims)),
     [localNav, roleClaims, scopeResolution.scope],
@@ -293,7 +289,6 @@ export function ShellFrame({ children, roleClaims, defaultAccountId, defaultWork
   return (
     <AppShell
       appName="Ryvra Pay"
-      globalNavItems={globalNavItems}
       localNavItems={localNavItems}
       localNavTitle="Pay"
       localNavAriaLabel="Pay module navigation"
@@ -311,6 +306,12 @@ export function ShellFrame({ children, roleClaims, defaultAccountId, defaultWork
           ? "Ryvra unified shell foundation"
           : describeWorkspaceCapabilityRequirement("admin", roleView, "Settings")
       }
+      onboardingWalkthrough={{
+        heading: "Welcome to Ryvra Pay!",
+        appSummary: "Move money faster, track payouts, and keep merchant operations in one place.",
+        keyActionsSummary: "Use Send, Receive, and Merchant Dashboard from the top action bar to get work done quickly.",
+        safeStartSummary: "Start with a small transfer or payout in your current workspace, then confirm status updates on the Status page.",
+      }}
     >
       <ActivationFunnelTracker
         appId="pay-web"

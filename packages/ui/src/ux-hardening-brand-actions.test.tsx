@@ -50,10 +50,10 @@ test("markets modules and module CTAs are present with deferred backend messagin
   assert.match(markets, /Classified Spot/);
   assert.match(markets, /Perps Trading/);
   assert.match(markets, /Staking/);
-  assert.match(markets, /Open Spot/);
-  assert.match(markets, /Open Perps/);
-  assert.match(markets, /Stake Now/);
-  assert.match(markets, /Deferred backend/);
+  assert.match(markets, /Open spot module/);
+  assert.match(markets, /Open perps module/);
+  assert.match(markets, /Open staking module/);
+  assert.match(markets, /Backend pending/);
 });
 
 test("community hub naming replaces legacy points tasks branding in primary headers", () => {
@@ -81,17 +81,25 @@ test("claim CTA is wired into dashboard and overview community hub surfaces", ()
   assert.match(overviewContent, /disabled: !claimCta.enabled/);
 });
 
-test("send receive and utility actions are present across app overview action zones", () => {
+test("natural-language key actions are present across app overview action zones", () => {
   const markets = readSource("apps/markets-web/app/components/markets-overview-content.tsx");
   const pay = readSource("apps/pay-web/app/components/pay-overview-content.tsx");
   const hub = readSource("apps/points-tasks-web/app/components/points-tasks-overview-content.tsx");
 
-  for (const content of [markets, pay, hub]) {
-    assert.match(content, /Send/);
-    assert.match(content, /Receive/);
-    assert.match(content, /View History/);
-    assert.match(content, /Export/);
-  }
+  assert.match(markets, /Place an order/);
+  assert.match(markets, /Review positions/);
+  assert.match(markets, /View order history/);
+  assert.match(markets, /Export/);
+
+  assert.match(pay, /Send payment/);
+  assert.match(pay, /Receive payment/);
+  assert.match(pay, /View payment history/);
+  assert.match(pay, /Export/);
+
+  assert.match(hub, /Open tasks/);
+  assert.match(hub, /View points/);
+  assert.match(hub, /View activity history/);
+  assert.match(hub, /Export/);
 });
 
 test("phase 21 brand tokens apply to buttons, cards, borders, and status chips", () => {

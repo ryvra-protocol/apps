@@ -283,10 +283,6 @@ export function ShellFrame({ children, roleClaims, defaultAccountId, defaultWork
   const globalNav = useMemo(() => getGlobalNavItems({ currentProduct: productId }), []);
   const localNav = useMemo(() => getProductNav(productId), []);
 
-  const globalNavItems = useMemo(
-    () => globalNav.map((route) => toShellNavItem(route, scopeResolution.scope, roleClaims)),
-    [globalNav, roleClaims, scopeResolution.scope],
-  );
   const localNavItems = useMemo(
     () => localNav.map((route) => toShellNavItem(route, scopeResolution.scope, roleClaims)),
     [localNav, roleClaims, scopeResolution.scope],
@@ -304,7 +300,6 @@ export function ShellFrame({ children, roleClaims, defaultAccountId, defaultWork
   return (
     <AppShell
       appName="Ryvra Markets"
-      globalNavItems={globalNavItems}
       localNavItems={localNavItems}
       localNavTitle="Markets"
       localNavAriaLabel="Markets module navigation"
@@ -322,6 +317,12 @@ export function ShellFrame({ children, roleClaims, defaultAccountId, defaultWork
           ? "Ryvra unified shell foundation"
           : describeWorkspaceCapabilityRequirement("admin", roleView, "Settings")
       }
+      onboardingWalkthrough={{
+        heading: "Welcome to Ryvra Markets!",
+        appSummary: "Monitor market health, review positions, and route trading actions from one workspace.",
+        keyActionsSummary: "Use Orders, Positions, Spot, Perps, and Staking in the side nav for focused trading workflows.",
+        safeStartSummary: "Begin with an account check on Overview, then place a low-risk action from Orders to confirm your access and scope.",
+      }}
     >
       <ActivationFunnelTracker
         appId="markets-web"

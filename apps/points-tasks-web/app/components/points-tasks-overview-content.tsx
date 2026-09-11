@@ -91,8 +91,8 @@ export function PointsTasksOverviewContent({
           <ActionToolbar
             ariaLabel="Community Hub key actions"
             items={[
-              { id: "hub-send", label: "Send", href: withScope("/tasks") },
-              { id: "hub-receive", label: "Receive", href: withScope("/points") },
+              { id: "hub-send", label: "Open tasks", href: withScope("/tasks") },
+              { id: "hub-receive", label: "View points", href: withScope("/points") },
               {
                 id: "hub-claim",
                 label: claimCta.label,
@@ -101,22 +101,22 @@ export function PointsTasksOverviewContent({
                 disabled: !claimCta.enabled,
                 ...(!claimCta.enabled
                   ? {
-                      disabledReason: claimCta.reason ?? "Claim is not currently available.",
+                      disabledReason: claimCta.reason ?? "Claim is not available yet.",
                     }
                   : {}),
               },
               {
                 id: "hub-transfer",
-                label: "Transfer",
+                label: "Transfer points",
                 disabled: true,
-                disabledReason: "Community transfer execution is deferred in this environment.",
+                disabledReason: "Point transfers are not available in this environment yet.",
               },
-              { id: "hub-history", label: "View History", href: withScope("/activity") },
+              { id: "hub-history", label: "View activity history", href: withScope("/activity") },
               {
                 id: "hub-export",
                 label: "Export",
                 disabled: true,
-                disabledReason: "Export is deferred until community reporting APIs are enabled.",
+                disabledReason: "Exports will unlock after reporting APIs are available.",
               },
             ]}
           />
@@ -161,7 +161,7 @@ export function PointsTasksOverviewContent({
             scopeHref={withScope(route)}
             unifiedBalanceHref={withScope(route)}
             firstActionHref={withScope("/points")}
-            firstActionLabel="Complete first claim or task action"
+            firstActionLabel="Finish your first task or claim safely"
             notificationsHref={withScope("/status")}
           />
         </div>
@@ -195,7 +195,7 @@ export function PointsTasksOverviewContent({
 
         <Card title="Recent activity">
           {recentActivity.length === 0 ? (
-            <p style={{ margin: 0 }}>No recent community activity available.</p>
+            <p style={{ margin: 0 }}>No recent activity yet.</p>
           ) : (
             <ul style={{ margin: 0, paddingLeft: "1.2rem", display: "grid", gap: themeTokens.spacing.sm }}>
               {recentActivity.map((item) => (
@@ -214,7 +214,7 @@ export function PointsTasksOverviewContent({
         </Card>
 
         <div data-testid="community-hub-snapshot-details-card">
-          <Card title="Operational snapshot details" tone="muted">
+          <Card title="Operational details" tone="muted">
             <p style={{ marginTop: 0, marginBottom: themeTokens.spacing.xs }}>
               Base URL: <strong>{baseUrl}</strong>
             </p>

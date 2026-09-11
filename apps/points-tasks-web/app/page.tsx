@@ -29,7 +29,7 @@ export default async function PointsTasksDashboardPage({ searchParams }: PointsT
   if (!runtime.authDecision.allowed) {
     return (
       <section style={{ display: "grid", gap: themeTokens.spacing.lg }}>
-        <Section title="Ryvra Community Hub Dashboard" description="Access-controlled community overview surface.">
+        <Section title="Ryvra Community Hub dashboard" description="Your points and tasks summary with access-aware data.">
           <UnauthorizedState />
         </Section>
       </section>
@@ -40,13 +40,13 @@ export default async function PointsTasksDashboardPage({ searchParams }: PointsT
   if (!accountId) {
     return (
       <section style={{ display: "grid", gap: themeTokens.spacing.lg }}>
-        <Section title="Ryvra Community Hub Dashboard" description="Typed community metrics and recent activity feed.">
+        <Section title="Ryvra Community Hub dashboard" description="Track progress, points, and task momentum in one place.">
           <ErrorState
-            title="Account scope is required"
-            message="Set account_id in the URL or configure RYVRA_POINTS_TASKS_ACCOUNT_ID before requesting dashboard data."
+            title="Choose an account to continue"
+            message="Add account_id to the URL or set RYVRA_POINTS_TASKS_ACCOUNT_ID before loading dashboard data."
             source="runtime"
             retryable={false}
-            retryLink={{ href: "/", label: "Retry dashboard" }}
+            retryLink={{ href: "/", label: "Try again" }}
           />
         </Section>
       </section>
@@ -118,8 +118,8 @@ export default async function PointsTasksDashboardPage({ searchParams }: PointsT
 
     return (
       <PointsTasksOverviewContent
-        title="Ryvra Community Hub Dashboard"
-        description="Community points and task KPIs with high-signal actions and recent activity."
+        title="Ryvra Community Hub dashboard"
+        description="Track points, task completion, and daily momentum with clear next actions."
         route="/"
         mode={runtime.config.mode}
         baseUrl={runtime.config.apiBaseUrl}
@@ -146,13 +146,13 @@ export default async function PointsTasksDashboardPage({ searchParams }: PointsT
 
     return (
       <section style={{ display: "grid", gap: themeTokens.spacing.lg }}>
-        <Section title="Ryvra Community Hub Dashboard" description="Community points/task KPIs with recent activity.">
+        <Section title="Ryvra Community Hub dashboard" description="Track progress, points, and task momentum in one place.">
           <ErrorState
-            title="Unable to load dashboard"
+            title="We couldn't load your Community Hub dashboard"
             message={uiError.message}
             source={uiError.source}
             retryable={uiError.retryable}
-            retryLink={{ href: "/", label: "Retry dashboard" }}
+            retryLink={{ href: "/", label: "Try again" }}
           />
         </Section>
       </section>
