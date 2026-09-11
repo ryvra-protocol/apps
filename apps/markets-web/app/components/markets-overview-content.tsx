@@ -18,7 +18,7 @@ import { formatDateTime } from "../lib/format";
 import { buildMarketsPortfolioInsights } from "../lib/portfolio-insights";
 import type { MarketsUnifiedBalanceCardModel } from "../lib/unified-balance";
 
-const historyUnavailableReason = "Historical windows are unavailable for markets overview snapshots.";
+const historyUnavailableReason = "Historical trend windows are not available in this environment yet.";
 const windowOptions: InsightWindowOption[] = [
   {
     window: "24h",
@@ -92,26 +92,26 @@ export function MarketsOverviewContent({
     {
       id: "spot",
       title: "Classified Spot",
-      description: "High-liquidity spot routing for classified pairs and curated books.",
-      ctaLabel: "Open Spot",
+      description: "Check classified spot pairs and monitor curated order books.",
+      ctaLabel: "Open spot module",
       href: withScope("/spot"),
-      deferredReason: "Live spot execution is deferred until the classified matching backend is enabled.",
+      deferredReason: "Live spot execution will unlock after the classified matching backend is available.",
     },
     {
       id: "perps",
       title: "Perps Trading",
-      description: "Perpetual strategy routing with margin health and liquidation awareness.",
-      ctaLabel: "Open Perps",
+      description: "Review perpetual positions with margin health and liquidation signals.",
+      ctaLabel: "Open perps module",
       href: withScope("/perps"),
-      deferredReason: "Perps order execution is deferred until derivatives routing is enabled.",
+      deferredReason: "Perps order execution will unlock after derivatives routing is available.",
     },
     {
       id: "staking",
       title: "Staking",
-      description: "Yield and lockup management with governance-aware staking plans.",
-      ctaLabel: "Stake Now",
+      description: "Manage yield plans and lockups with governance context.",
+      ctaLabel: "Open staking module",
       href: withScope("/staking"),
-      deferredReason: "Staking transactions are deferred until staking custody endpoints are available.",
+      deferredReason: "Staking transactions will unlock after custody endpoints are available.",
     },
   ] as const;
 
@@ -123,15 +123,15 @@ export function MarketsOverviewContent({
           <ActionToolbar
             ariaLabel="Markets key actions"
             items={[
-              { id: "send", label: "Send", href: withScope("/orders"), variant: "primary" },
-              { id: "receive", label: "Receive", href: withScope("/positions") },
-              { id: "transfer", label: "Transfer", disabled: true, disabledReason: "Transfer execution is deferred in Markets." },
-              { id: "view-history", label: "View History", href: withScope("/orders") },
+              { id: "send", label: "Place an order", href: withScope("/orders"), variant: "primary" },
+              { id: "receive", label: "Review positions", href: withScope("/positions") },
+              { id: "transfer", label: "Move funds", disabled: true, disabledReason: "Fund transfers are not available in Markets yet." },
+              { id: "view-history", label: "View order history", href: withScope("/orders") },
               {
                 id: "export",
                 label: "Export",
                 disabled: true,
-                disabledReason: "Export reports are deferred until markets reporting APIs are enabled.",
+                disabledReason: "Exports will unlock after reporting APIs are available.",
               },
             ]}
           />
@@ -181,7 +181,7 @@ export function MarketsOverviewContent({
             scopeHref={withScope(route)}
             unifiedBalanceHref={withScope("/overview")}
             firstActionHref={withScope("/orders")}
-            firstActionLabel="Complete first task action"
+            firstActionLabel="Place your first order safely"
             notificationsHref={withScope("/status")}
           />
         </div>
@@ -207,7 +207,7 @@ export function MarketsOverviewContent({
                     {
                       id: `${module.id}-deferred`,
                       label: "Execution",
-                      value: "Deferred backend",
+                      value: "Backend pending",
                       tone: "warning",
                     },
                   ]}
@@ -242,7 +242,7 @@ export function MarketsOverviewContent({
         </div>
 
         <div data-testid="markets-snapshot-details-card">
-          <Card title="Canonical snapshot details" tone="muted">
+          <Card title="Snapshot details" tone="muted">
             <div style={{ display: "grid", gap: themeTokens.spacing.sm }}>
               <p style={{ margin: 0 }}>
                 Account reference: <strong>{overview.accountId}</strong>

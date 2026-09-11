@@ -1,10 +1,9 @@
 import type { ShellNavItem } from "./navigation";
 import { ContextualNav } from "./ContextualNav";
-import { ShellNavList } from "./ShellNavList";
 import { useI18n } from "./I18nProvider";
 
 export interface GlobalSidebarProps {
-  globalNavItems: ShellNavItem[];
+  globalNavItems?: ShellNavItem[];
   localNavItems?: ShellNavItem[];
   localNavTitle?: string;
   localNavAriaLabel?: string;
@@ -14,7 +13,6 @@ export interface GlobalSidebarProps {
 }
 
 export function GlobalSidebar({
-  globalNavItems,
   localNavItems = [],
   localNavTitle = "Module",
   localNavAriaLabel = "Module navigation",
@@ -65,12 +63,6 @@ export function GlobalSidebar({
         </span>
       </button>
       <div id="ryvra-sidebar-sections" className="ryvra-sidebar-sections">
-        <nav className="ryvra-nav-group" aria-label={t("shell.globalNavigation", "Global navigation")}>
-          <p className={collapsed ? "ryvra-nav-title ryvra-visually-hidden" : "ryvra-nav-title"}>
-            {t("shell.globalSection", "Global")}
-          </p>
-          <ShellNavList items={globalNavItems} currentPath={currentPath} iconOnly={collapsed} />
-        </nav>
         <ContextualNav
           title={resolvedLocalNavTitle}
           ariaLabel={resolvedLocalNavAriaLabel}

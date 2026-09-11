@@ -18,6 +18,15 @@ This repository hosts the unified-shell baseline with Pay, Markets, and Ryvra Co
   - Staking (`/staking`)
 - Points/Tasks user-facing shell and primary headers are renamed to **Ryvra Community Hub**.
 
+## UX/content modernization guardrails
+
+- **Side-nav scope rule:** the left sidebar is app-local only (no cross-app global links). Cross-app switching stays in the product dock/switcher.
+- **First-time onboarding popup:** each app shows a one-time walkthrough modal with welcome guidance, key action location hints, and safe-start instructions. Dismissed/completed state persists per app scope in local storage.
+- **Content style guidance:**
+  - Users: short, action-first language.
+  - Merchants: operational clarity (payments, settlements, retries, exports).
+  - Developers: concise technical context without unnecessary jargon.
+
 ## Phase 21 notes (brand direction + P2P + merchant)
 
 - Shared brand palette rollout is now applied through `@ryvra/ui` design tokens and component styles (no logo asset changes).

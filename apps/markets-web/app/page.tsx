@@ -15,7 +15,7 @@ export default async function MarketsHomePage({ searchParams }: MarketsHomePageP
   if (!runtime.authDecision.allowed) {
     return (
       <section style={{ display: "grid", gap: themeTokens.spacing.lg }}>
-        <Section title="Markets Dashboard" description="Access-controlled markets overview surface.">
+        <Section title="Markets dashboard" description="Your trading workspace summary with access-aware data.">
           <UnauthorizedState />
         </Section>
       </section>
@@ -28,13 +28,13 @@ export default async function MarketsHomePage({ searchParams }: MarketsHomePageP
     if (!accountId) {
       return (
         <section style={{ display: "grid", gap: themeTokens.spacing.lg }}>
-          <Section title="Markets Dashboard" description="MVP market metrics and recent execution activity.">
+          <Section title="Markets dashboard" description="Track live-ready market metrics and execution signals.">
             <ErrorState
-              title="Account scope is required"
-              message="Set account_id in the URL or configure RYVRA_MARKETS_ACCOUNT_ID before loading the unified balance and markets overview."
+              title="Choose an account to continue"
+              message="Add account_id to the URL or set RYVRA_MARKETS_ACCOUNT_ID before loading market overview data."
               source="runtime"
               retryable={false}
-              retryLink={{ href: "/", label: "Retry dashboard" }}
+              retryLink={{ href: "/", label: "Try again" }}
             />
           </Section>
         </section>
@@ -68,8 +68,8 @@ export default async function MarketsHomePage({ searchParams }: MarketsHomePageP
 
     return (
       <MarketsOverviewContent
-        title="Markets Dashboard"
-        description="MVP market metrics and recent execution/risk activity."
+        title="Markets dashboard"
+        description="Track execution, exposure, and system health from one place."
         route="/"
         mode={runtime.config.mode}
         overview={overview}
@@ -82,13 +82,13 @@ export default async function MarketsHomePage({ searchParams }: MarketsHomePageP
 
     return (
       <section style={{ display: "grid", gap: themeTokens.spacing.lg }}>
-        <Section title="Markets Dashboard" description="MVP market metrics and recent execution activity.">
+        <Section title="Markets dashboard" description="Track live-ready market metrics and execution signals.">
           <ErrorState
-            title="Unable to load markets dashboard"
+            title="We couldn't load your markets dashboard"
             message={uiError.message}
             source={uiError.source}
             retryable={uiError.retryable}
-            retryLink={{ href: "/", label: "Retry dashboard" }}
+            retryLink={{ href: "/", label: "Try again" }}
           />
         </Section>
       </section>

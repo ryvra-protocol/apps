@@ -109,6 +109,8 @@ export {
 } from "./workspace-scope";
 
 export { GettingStartedChecklist } from "./GettingStartedChecklist";
+export { OnboardingWalkthrough, OnboardingWalkthroughDialog, resolveNextFocusIndex } from "./OnboardingWalkthrough";
+export type { OnboardingWalkthroughContent, OnboardingWalkthroughDialogProps, OnboardingWalkthroughProps } from "./OnboardingWalkthrough";
 export {
   buildDefaultChecklistSteps,
   buildGettingStartedChecklistStorageKey,
@@ -125,6 +127,14 @@ export {
   writeChecklistState,
 } from "./getting-started-checklist";
 export type { GettingStartedChecklistState, GettingStartedChecklistStep, GettingStartedStepId } from "./getting-started-checklist";
+export {
+  ONBOARDING_WALKTHROUGH_STORAGE_PREFIX,
+  buildOnboardingWalkthroughStorageKey,
+  readOnboardingWalkthroughState,
+  shouldShowOnboardingWalkthrough,
+  writeOnboardingWalkthroughState,
+} from "./onboarding-walkthrough";
+export type { OnboardingWalkthroughState } from "./onboarding-walkthrough";
 
 export {
   buildClaimExperimentOverrideStorageKey,

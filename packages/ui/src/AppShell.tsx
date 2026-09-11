@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import type { BreadcrumbItem, ProductSwitcherItem, ShellNavItem, UserMenuItem } from "./navigation";
+import type { BreadcrumbItem, ProductSwitcherItem, UserMenuItem } from "./navigation";
 import { shellStyles } from "./shell-styles";
 import { GlobalHeader } from "./GlobalHeader";
 import { GlobalSidebar } from "./GlobalSidebar";
 import { BottomIconDock } from "./BottomIconDock";
 import { NotificationCenterProvider } from "./NotificationCenterProvider";
 import { I18nProvider, useI18n } from "./I18nProvider";
+import { OnboardingWalkthrough, type OnboardingWalkthroughContent } from "./OnboardingWalkthrough";
 import {
   readSidebarCollapsedPreference,
   toggleSidebarCollapsed,
@@ -17,7 +18,6 @@ import type { LocaleResources, SupportedLocale } from "./i18n-runtime";
 
 export interface AppShellProps {
   appName: string;
-  globalNavItems: ShellNavItem[];
   localNavItems?: ShellNavItem[];
   localNavTitle?: string;
   localNavAriaLabel?: string;
@@ -34,11 +34,11 @@ export interface AppShellProps {
   initialLocale?: SupportedLocale;
   initialTimeZonePreference?: string;
   hydrateI18nFromStorage?: boolean;
+  onboardingWalkthrough?: OnboardingWalkthroughContent;
 }
 
 interface AppShellLayoutProps {
   appName: string;
-  globalNavItems: ShellNavItem[];
   localNavItems?: ShellNavItem[];
   localNavTitle?: string;
   localNavAriaLabel?: string;
@@ -51,11 +51,11 @@ interface AppShellLayoutProps {
   commandTriggerLabel?: string;
   notificationScopeKey?: string;
   scopeSwitcher?: ReactNode;
+  onboardingWalkthrough?: OnboardingWalkthroughContent;
 }
 
 function AppShellLayout({
   appName,
-  globalNavItems,
   localNavItems = [],
   localNavTitle = "Module",
   localNavAriaLabel = "Module navigation",
@@ -68,6 +68,7 @@ function AppShellLayout({
   commandTriggerLabel = "Command Palette",
   notificationScopeKey,
   scopeSwitcher,
+  onboardingWalkthrough,
 }: AppShellLayoutProps) {
   const { direction, t } = useI18n();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
@@ -119,7 +120,6 @@ function AppShellLayout({
         />
         <div className="ryvra-shell-layout">
           <GlobalSidebar
-            globalNavItems={globalNavItems}
             localNavItems={localNavItems}
             localNavTitle={resolvedLocalNavTitle}
             localNavAriaLabel={resolvedLocalNavAriaLabel}
@@ -133,6 +133,7 @@ function AppShellLayout({
         </div>
         <BottomIconDock items={productSwitcherItems} />
         {resolvedFooter ? <footer className="ryvra-shell-footer">{resolvedFooter}</footer> : null}
+        <OnboardingWalkthrough scopeKey={resolvedNotificationScopeKey} content={onboardingWalkthrough} />
       </NotificationCenterProvider>
     </div>
   );

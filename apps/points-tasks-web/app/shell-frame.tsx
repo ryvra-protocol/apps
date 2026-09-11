@@ -293,10 +293,6 @@ export function ShellFrame({ children, roleClaims, defaultAccountId, defaultWork
   const globalNav = useMemo(() => getGlobalNavItems({ currentProduct: productId }), []);
   const localNav = useMemo(() => getProductNav(productId), []);
 
-  const globalNavItems = useMemo(
-    () => globalNav.map((route) => toShellNavItem(route, scopeResolution.scope, roleClaims)),
-    [globalNav, roleClaims, scopeResolution.scope],
-  );
   const localNavItems = useMemo(
     () => localNav.map((route) => toShellNavItem(route, scopeResolution.scope, roleClaims)),
     [localNav, roleClaims, scopeResolution.scope],
@@ -314,7 +310,6 @@ export function ShellFrame({ children, roleClaims, defaultAccountId, defaultWork
   return (
     <AppShell
       appName="Ryvra Community Hub"
-      globalNavItems={globalNavItems}
       localNavItems={localNavItems}
       localNavTitle="Community Hub"
       localNavAriaLabel="Ryvra Community Hub navigation"
@@ -332,6 +327,12 @@ export function ShellFrame({ children, roleClaims, defaultAccountId, defaultWork
           ? "Ryvra unified shell foundation"
           : describeWorkspaceCapabilityRequirement("admin", roleView, "Settings")
       }
+      onboardingWalkthrough={{
+        heading: "Welcome to Ryvra Community Hub!",
+        appSummary: "Track points, finish tasks, and keep progress visible for users and developers.",
+        keyActionsSummary: "Use Points, Tasks, and Activity routes to claim rewards, complete goals, and review progress.",
+        safeStartSummary: "Start with your current task list, complete one low-risk action, then verify updates in Activity.",
+      }}
     >
       <ActivationFunnelTracker
         appId="points-tasks-web"

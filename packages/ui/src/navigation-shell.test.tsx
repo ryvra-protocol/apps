@@ -33,7 +33,6 @@ test("sidebar defaults to collapsed on first render", () => {
   const markup = renderToStaticMarkup(
     <AppShell
       appName="Ryvra Markets"
-      globalNavItems={globalNavItems}
       localNavItems={localNavItems}
       localNavTitle="Markets"
       localNavAriaLabel="Markets navigation"
@@ -64,6 +63,16 @@ test("collapsed sidebar renders icon-only links with hidden labels", () => {
 
   assert.match(markup, /ryvra-nav-link--icon-only/);
   assert.match(markup, /ryvra-visually-hidden/);
+});
+
+test("side navigation excludes global navigation entries", () => {
+  const markup = renderToStaticMarkup(
+    <GlobalSidebar globalNavItems={globalNavItems} localNavItems={localNavItems} currentPath="/orders" collapsed={false} />,
+  );
+
+  assert.doesNotMatch(markup, /Global navigation/);
+  assert.doesNotMatch(markup, /href="\/overview"/);
+  assert.match(markup, /href="\/orders"/);
 });
 
 test("sidebar toggle supports expand/collapse semantics", () => {
@@ -115,7 +124,6 @@ test("bottom dock renders icon-only controls in non-full-width container", () =>
 test("active route highlighting is applied in sidebar and bottom dock", () => {
   const sidebarMarkup = renderToStaticMarkup(
     <GlobalSidebar
-      globalNavItems={globalNavItems}
       localNavItems={localNavItems}
       localNavTitle="Markets"
       localNavAriaLabel="Markets navigation"
@@ -132,7 +140,6 @@ test("active route highlighting is applied in sidebar and bottom dock", () => {
 test("nav controls expose keyboard/focus accessibility hooks", () => {
   const markup = renderToStaticMarkup(
     <GlobalSidebar
-      globalNavItems={globalNavItems}
       localNavItems={localNavItems}
       localNavTitle="Markets"
       localNavAriaLabel="Markets navigation"
@@ -143,8 +150,8 @@ test("nav controls expose keyboard/focus accessibility hooks", () => {
 
   assert.match(markup, /type="button"/);
   assert.match(markup, /aria-controls="ryvra-sidebar-sections"/);
-  assert.match(markup, /aria-label="Overview"/);
-  assert.match(markup, /title="Overview"/);
+  assert.match(markup, /aria-label="Dashboard"/);
+  assert.match(markup, /title="Dashboard"/);
   assert.match(shellStyles, /\.ryvra-nav-link:focus-visible/);
   assert.match(shellStyles, /\.ryvra-sidebar-toggle:focus-visible/);
 });
