@@ -22,12 +22,14 @@ test("route permission metadata resolves for restricted pay and tasks routes", (
   assert.deepEqual(resolveRoutePermissionMeta("points", "/tasks"), { roles: ["member", "admin"], permission: "tasks:read" });
 });
 
-test("markets nav includes classified spot, perps, and staking modules", () => {
+test("markets nav includes classified spot, perps private, agents, and staking modules", () => {
   const marketsRoutes = getProductNav("markets");
   const routeIds = marketsRoutes.map((route) => route.id);
 
   assert.ok(routeIds.includes("markets-spot"));
   assert.ok(routeIds.includes("markets-perps"));
+  assert.ok(routeIds.includes("markets-perps-private"));
+  assert.ok(routeIds.includes("markets-agents"));
   assert.ok(routeIds.includes("markets-staking"));
 });
 

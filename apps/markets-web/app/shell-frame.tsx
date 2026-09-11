@@ -45,6 +45,8 @@ const routeLabelKeyMap: Record<string, string> = {
   "markets-positions": "nav.positions",
   "markets-spot": "nav.classifiedSpot",
   "markets-perps": "nav.perpsTrading",
+  "markets-perps-private": "nav.perpsTrading",
+  "markets-agents": "nav.status",
   "markets-staking": "nav.staking",
 };
 
@@ -56,6 +58,10 @@ const breadcrumbLabelMap: Record<string, { key: string; label: string }> = {
   "/positions": { key: "nav.positions", label: "Positions" },
   "/spot": { key: "nav.classifiedSpot", label: "Classified Spot" },
   "/perps": { key: "nav.perpsTrading", label: "Perps Trading" },
+  "/perps/private": { key: "nav.perpsTrading", label: "Perps Private" },
+  "/perps/positions": { key: "nav.positions", label: "Perps Positions" },
+  "/perps/history": { key: "nav.orders", label: "Perps History" },
+  "/agents": { key: "nav.status", label: "Agent Console" },
   "/staking": { key: "nav.staking", label: "Staking" },
   "/status": { key: "nav.status", label: "Status" },
 };
@@ -122,7 +128,10 @@ function toProductSwitcherItems(
 
 function buildBreadcrumbs(pathname: string, scope: WorkspaceScopeSelection): BreadcrumbItem[] {
   const normalizedPath = normalizePath(pathname);
-  const currentLabel = breadcrumbLabelMap[normalizedPath] ?? { key: "common.page", label: "Page" };
+  const currentLabel =
+    breadcrumbLabelMap[normalizedPath] ??
+    (normalizedPath.startsWith("/agents/") ? { key: "nav.status", label: "Agent Console" } : undefined) ??
+    { key: "common.page", label: "Page" };
   const homeHref = appendScopeToHref("/", scope);
 
   if (normalizedPath === "/") {

@@ -44,12 +44,12 @@ export default async function MarketsPerpsPage({ searchParams }: MarketsPerpsPag
                 { id: "perps-send", label: "Send", href: withScope("/orders"), variant: "primary" },
                 { id: "perps-receive", label: "Receive", href: withScope("/positions") },
                 {
-                  id: "perps-open",
-                  label: "Open Perps",
-                  disabled: true,
-                  disabledReason: "Perps execution backend is not yet enabled in this environment.",
+                  id: "perps-private",
+                  label: "Private View",
+                  href: withScope("/perps/private"),
                 },
-                { id: "perps-history", label: "View History", href: withScope("/orders") },
+                { id: "perps-positions", label: "Perps Positions", href: withScope("/perps/positions") },
+                { id: "perps-history", label: "View History", href: withScope("/perps/history") },
               ]}
             />
           </div>
