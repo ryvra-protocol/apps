@@ -7,8 +7,8 @@ import type {
 export const MARKETS_PROTOCOL_SOURCE = "ryvra-protocol/markets" as const;
 export const MARKETS_PROTOCOL_OPENAPI_PATH = "openapi/markets.openapi.yaml" as const;
 export const MARKETS_PROTOCOL_CHANGELOG_PATH = "docs/api-contract-changelog.md" as const;
-export const MARKETS_PROTOCOL_OPENAPI_SHA = "cc08c626f2f26e192fe86d744d2aa1798c9c690a" as const;
-export const MARKETS_PROTOCOL_OPENAPI_COMMIT = "87b7bf6764be28a6f6b89ff6f6226fe1f40fda46" as const;
+export const MARKETS_PROTOCOL_OPENAPI_SHA = "0a04de11317bfcd0813154686aa1505aa53290ec" as const;
+export const MARKETS_PROTOCOL_OPENAPI_COMMIT = "4700196f4a714c588fffbcb453b5ec371b72c417" as const;
 export const MARKETS_PROTOCOL_COMPATIBILITY_VERSION = "MARKETS_API_VERSION=2026-08-08" as const;
 export const MARKETS_PARITY_CHECK_MARKER = "phase-9-5-v2-2026-08-08T06:30:01.561Z" as const;
 

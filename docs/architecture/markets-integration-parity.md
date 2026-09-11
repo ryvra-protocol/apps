@@ -9,8 +9,8 @@ The Apps Markets integration is now pinned to the merged canonical Markets OpenA
 
 Compatibility markers used by Apps runtime:
 
-- OpenAPI SHA: `cc08c626f2f26e192fe86d744d2aa1798c9c690a`
-- OpenAPI commit: `87b7bf6764be28a6f6b89ff6f6226fe1f40fda46`
+- OpenAPI SHA: `0a04de11317bfcd0813154686aa1505aa53290ec`
+- OpenAPI commit: `4700196f4a714c588fffbcb453b5ec371b72c417`
 - Version marker: `MARKETS_API_VERSION=2026-08-08`
 - Apps parity marker: `phase-9-5-v2-2026-08-08T06:30:01.561Z`
 
