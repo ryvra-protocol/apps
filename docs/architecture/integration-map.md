@@ -82,7 +82,7 @@
   - `docs/api-contract-changelog.md`
 - Current Apps marker linkage:
   - `MARKETS_API_VERSION=2026-08-08`
-  - OpenAPI SHA `cc08c626f2f26e192fe86d744d2aa1798c9c690a`
+  - OpenAPI SHA `0a04de11317bfcd0813154686aa1505aa53290ec`
   - OpenAPI commit `87b7bf6764be28a6f6b89ff6f6226fe1f40fda46`
 
 ## Pay integration map (Phase 8.5 parity hardening)
