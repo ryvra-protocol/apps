@@ -58,25 +58,41 @@ Implemented in `packages/api-client/src/unified-balance.ts`:
 - Shared request builder (`buildPointsSummaryRequest`) keeps scope handling aligned and avoids per-page drift.
 - Phase 15 requires this balance to appear in the page's first summary zone on both `/points` and `/tasks`.
 
-### Daily claim (12B baseline + 12.5B extension)
+### Daily claim (12B baseline + fingerprint scan upgrade)
 
-- `/points` loads daily claim status with `pointsTasksClient.getDailyClaimStatus(...)`.
-- Current status route is provisional and read-only (`GET /points-tasks/eligibility`).
-- Phase 12.5B adds claim execution via pay intents/transitions behind `/api/claims/daily`.
+- Community Hub now uses a fingerprint-style scan interaction for daily claim.
+- Claim state and metrics are persisted server-side per account/user/workspace scope in the points-tasks web runtime.
+- Daily limit is one successful fingerprint scan per account scope per claim day.
+- Claim day policy defaults to UTC when no account timezone policy is configured.
+- Daily award points are generated server-side with a uniform random distribution in `[0.5, 2.0]`.
+- `/api/claims/daily` now supports:
+  - `GET`: today claim status
+  - `POST`: fingerprint scan claim submission with idempotent retry behavior
 - UI supports:
-  - `available`
-  - `already_claimed`
-  - `cooldown`
-  - guarded `unavailable` fallback when endpoint/protocol data is missing
-- CTA is always explicit:
-  - enabled only if backend marks invoke endpoint available
-  - disabled with concrete reason otherwise
-- claim submit path is idempotent + retry-safe and surfaces request/correlation IDs on failures
-- cooldown/already-claimed states render next-eligible timestamp when provided.
-- Phase 15 extends placement to `/tasks` top section (active CTA or explicit disabled state with reason).
+  - ready to scan
+  - scanning/processing
+  - success (points awarded)
+  - already claimed today
+  - error/retry
+- Successful submissions persist:
+  - awarded points
+  - scan timestamp
+  - claim date key
+  - updated aggregate metrics
+- Phase 15 top-zone placement remains in `/points` and `/tasks`.
 
 ## Security/parity posture
 
-- No direct `fetch` bypasses were added; all reads flow through `@ryvra/api-client`.
+- No direct `fetch` bypasses were added for core points/tasks reads.
 - Existing auth/header/scope guardrails remain enforced.
-- Pay write execution path is documented separately in Phase 12.5B and preserves canonical parity/security guards.
+- Fingerprint claim randomness is generated and validated server-side (not client-trusted).
+
+## Community Hub top metrics definitions
+
+Top-section cards include:
+
+- **Total fingerprints**: total successful daily fingerprint claims in scope.
+- **Total prints scanned**: total completed scans counted by the claim service.
+- **Cumulative points awarded**: running sum of server-awarded daily claim points.
+- **Average points per scan**: cumulative points awarded divided by total scans (0 when no scans exist).
+- **Derived calculations**: count of calculation summaries shown in the top metrics section.

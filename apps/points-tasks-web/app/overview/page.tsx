@@ -12,6 +12,7 @@ import {
 } from "../lib/search-params";
 import { capturePointsTasksPageError, createPointsTasksRuntimeContext } from "../lib/runtime";
 import { buildDailyClaimViewModel } from "../lib/daily-claim";
+import { getCommunityTopMetrics, getFingerprintClaimStatus } from "../lib/fingerprint-claim";
 
 interface PointsTasksOverviewPageProps {
   searchParams?: Record<string, string | string[] | undefined>;
@@ -61,7 +62,7 @@ export default async function PointsOverviewPage({ searchParams }: PointsTasksOv
     const canOperate = canAccessWorkspaceCapability(runtime.workspaceRole, "operate");
     const operateDeniedReason = describeWorkspaceCapabilityRequirement("operate", runtime.workspaceRole, "Claim actions");
 
-    const [pointsOverview, tasksOverview, dailyClaim] = await Promise.all([
+    const [pointsOverview, tasksOverview, dailyClaim, communityMetrics] = await Promise.all([
       runtime.pointsTasksClient.getPointsOverview({
         accountId,
         ...(userId ? { userId } : {}),
@@ -74,31 +75,27 @@ export default async function PointsOverviewPage({ searchParams }: PointsTasksOv
         ...(workspaceId ? { workspaceId } : {}),
         ...(tasksWindow ? { window: tasksWindow } : {}),
       }),
-      runtime.pointsTasksClient
-        .getDailyClaimStatus({
+      Promise.resolve(
+        getFingerprintClaimStatus({
           accountId,
           ...(userId ? { userId } : {}),
           ...(workspaceId ? { workspaceId } : {}),
-        })
-        .then((claimState) =>
-          buildDailyClaimViewModel({
-            claimState,
-            nowIso: new Date().toISOString(),
-            claimStatusEndpointAvailable: true,
-            expectedAccountId: accountId,
-          }),
-        )
-        .catch((error) => {
-          const uiError = capturePointsTasksPageError(runtime.logger, "/overview/daily-claim", error);
-          return buildDailyClaimViewModel({
-            nowIso: new Date().toISOString(),
-            claimStatusEndpointAvailable: false,
-            expectedAccountId: accountId,
-            endpointErrorMessage: uiError.message,
-            endpointRetryable: uiError.retryable,
-            retryHref: "/overview",
-          });
         }),
+      ).then((claimState) =>
+        buildDailyClaimViewModel({
+          claimState,
+          nowIso: new Date().toISOString(),
+          claimStatusEndpointAvailable: true,
+          expectedAccountId: accountId,
+        }),
+      ),
+      Promise.resolve(
+        getCommunityTopMetrics({
+          accountId,
+          ...(userId ? { userId } : {}),
+          ...(workspaceId ? { workspaceId } : {}),
+        }),
+      ),
     ]);
     const claimHrefParams = new URLSearchParams({
       account_id: accountId,
@@ -129,6 +126,7 @@ export default async function PointsOverviewPage({ searchParams }: PointsTasksOv
         roleLabel={runtime.workspaceRole.label}
         pointsOverview={pointsOverview}
         tasksOverview={tasksOverview}
+        communityMetrics={communityMetrics}
         claimCta={{
           label: dailyClaim.cta.label,
           href: claimHrefQuery ? `/points?${claimHrefQuery}` : "/points",

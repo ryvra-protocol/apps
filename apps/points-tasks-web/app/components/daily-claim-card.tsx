@@ -25,6 +25,7 @@ import {
 } from "../lib/claim-execution";
 import { executeDailyClaimAttempt } from "../lib/claim-execution-client";
 import type { DailyClaimViewModel } from "../lib/daily-claim";
+import { getFingerprintClaimAriaLabel, resolveFingerprintClaimButtonState } from "../lib/fingerprint-claim-ui";
 import {
   buildDailyClaimLifecycleNotification,
   resolveDailyClaimLifecycleStageFromIntentState,
@@ -49,6 +50,7 @@ export function DailyClaimCard({ surface, model, scope, canOperate, operateDenie
   const [writeGuidance, setWriteGuidance] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [didSucceed, setDidSucceed] = useState(false);
+  const [awardedPoints, setAwardedPoints] = useState<number | null>(null);
   const [isRefreshing, startRefresh] = useTransition();
   const serializedSearchParams = searchParams.toString();
 
@@ -145,6 +147,7 @@ export function DailyClaimCard({ surface, model, scope, canOperate, operateDenie
 
       if (!result.ok) {
         setDidSucceed(false);
+        setAwardedPoints(null);
         setWriteError(result.error);
         setWriteGuidance(result.retry.guidance);
         conversionTracker.trackFailure();
@@ -161,6 +164,7 @@ export function DailyClaimCard({ surface, model, scope, canOperate, operateDenie
       }
 
       setDidSucceed(true);
+      setAwardedPoints(typeof result.awardedPoints === "number" ? result.awardedPoints : null);
       setWriteError(null);
       setWriteGuidance("Claim submitted. Refreshing claim status and points balances.");
       conversionTracker.trackSuccess();
@@ -193,20 +197,65 @@ export function DailyClaimCard({ surface, model, scope, canOperate, operateDenie
 
   const status = didSucceed ? "already_claimed" : model.status;
   const statusLabel = didSucceed ? "Already claimed" : model.statusLabel;
+  const isAlreadyClaimed = model.status === "already_claimed";
   const localizedStatusLabel = translateRuntime(`status.${status.toLowerCase()}`, statusLabel);
   const ctaEnabled = resolveClaimActionEnabled(canOperate, model.cta.enabled) && !didSucceed;
   const ctaDisabledReason = !canOperate ? operateDeniedReason ?? "Operator access is required." : model.cta.reason;
-  const ctaLabel =
-    isSubmitting
-      ? "Submitting claim..."
-      : isRefreshing
-        ? "Refreshing claim..."
-        : didSucceed
-          ? "Claim submitted"
-          : experimentPresentation.ctaLabel;
+  const buttonState = resolveFingerprintClaimButtonState({
+    isSubmitting,
+    isRefreshing,
+    didSucceed,
+    hasError: Boolean(writeError),
+    isAlreadyClaimed,
+  });
+  const ctaLabel = buttonState === "scanning" ? "Scanning..." : buttonState === "success" ? "Scan complete" : "Scan fingerprint";
+  const scanStateMessage =
+    buttonState === "scanning"
+      ? "Fingerprint scan is processing."
+      : buttonState === "success"
+        ? awardedPoints === null
+          ? "Fingerprint scan completed."
+          : `Fingerprint scan complete. +${awardedPoints.toFixed(2)} points awarded.`
+        : buttonState === "already_claimed"
+          ? "Fingerprint already claimed today."
+          : buttonState === "error"
+            ? "Fingerprint scan failed. Retry when ready."
+            : "Ready to scan fingerprint.";
 
   return (
     <Card title={translateRuntime("claim.dailyTitle", "Daily claim")}>
+      <style>{`
+        .daily-claim-fingerprint {
+          border: 1px solid ${themeTokens.color.borderStrong};
+          background: ${themeTokens.color.surface};
+          border-radius: 9999px;
+          min-height: 3.4rem;
+          min-width: 3.4rem;
+          padding: ${themeTokens.spacing.md};
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          font-size: ${themeTokens.typography.size.sm};
+          font-weight: ${themeTokens.typography.weight.semibold};
+          cursor: pointer;
+          color: ${themeTokens.color.text};
+          transition: transform ${themeTokens.motion.fast} ease, border-color ${themeTokens.motion.standard} ease, background-color ${themeTokens.motion.standard} ease;
+        }
+
+        .daily-claim-fingerprint:hover {
+          border-color: ${themeTokens.color.primary};
+          background: ${themeTokens.color.surfaceStrong};
+        }
+
+        .daily-claim-fingerprint:active {
+          transform: translateY(1px);
+        }
+
+        .daily-claim-fingerprint:focus-visible {
+          outline: ${themeTokens.focusRing.width} solid ${themeTokens.color.focusRing};
+          outline-offset: ${themeTokens.focusRing.offset};
+        }
+      `}</style>
       <div style={{ display: "grid", gap: themeTokens.spacing.sm }}>
         <div style={{ display: "flex", alignItems: "center", gap: themeTokens.spacing.sm, flexWrap: "wrap" }}>
           <span style={{ color: themeTokens.color.textMuted }}>{translateRuntime("claim.status", "Status:")}</span>
@@ -239,20 +288,21 @@ export function DailyClaimCard({ surface, model, scope, canOperate, operateDenie
         </p>
 
         <div style={{ display: "grid", gap: themeTokens.spacing.xs }}>
-          <Button
+          <button
             type="button"
+            className="daily-claim-fingerprint"
             disabled={!ctaEnabled || isSubmitting || isRefreshing}
             onClick={() => {
               void submitClaim("new");
             }}
-            aria-label={
-              ctaEnabled
-                ? experimentPresentation.ctaLabel
-                : `Claim disabled: ${ctaDisabledReason ?? translateRuntime("claim.unavailableReason", "Unavailable")}`
-            }
+            aria-label={getFingerprintClaimAriaLabel(buttonState)}
+            aria-busy={buttonState === "scanning" ? "true" : "false"}
           >
             {ctaLabel}
-          </Button>
+          </button>
+          <p role="status" aria-live="polite" style={{ margin: 0, color: themeTokens.color.textMuted, fontSize: themeTokens.typography.size.sm }}>
+            {scanStateMessage}
+          </p>
           {!ctaEnabled && ctaDisabledReason ? (
             <p style={{ margin: 0, color: themeTokens.color.textMuted, fontSize: themeTokens.typography.size.sm }}>{ctaDisabledReason}</p>
           ) : null}

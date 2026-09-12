@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import {
+  claimExecutionSyncTargets,
   createClientGeneratedId,
   createDailyClaimIdempotencyKey,
   normalizeClaimExecutionErrorEnvelope,
@@ -7,7 +8,7 @@ import {
   type ClaimExecutionErrorEnvelope,
   type DailyClaimScope,
 } from "../../../lib/claim-execution";
-import { executeDailyClaimWorkflow, validateDailyClaimExecutionRuntime } from "../../../lib/claim-execution-server";
+import { getFingerprintClaimStatus, submitFingerprintClaim } from "../../../lib/fingerprint-claim";
 import { createPointsTasksRuntimeContext } from "../../../lib/runtime";
 
 interface DailyClaimExecutionRequestBody {
@@ -85,19 +86,6 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  const runtimeGuardError = validateDailyClaimExecutionRuntime(
-    {
-      mode: runtime.config.mode,
-      hasPayAuthToken: runtime.payAuthTokenConfigured,
-    },
-    requestId,
-    correlationId,
-  );
-
-  if (runtimeGuardError) {
-    return jsonError(runtimeGuardError.status, runtimeGuardError.error);
-  }
-
   const intentId = getOptionalString(payload.intentId);
 
   const attempt: ClaimExecutionAttempt = {
@@ -108,42 +96,43 @@ export async function POST(request: NextRequest) {
   };
 
   try {
-    const result = await executeDailyClaimWorkflow({
-      payClient: runtime.payClient,
+    const result = submitFingerprintClaim({
       scope,
-      attempt,
+      nowIso: new Date().toISOString(),
+      idempotencyKey: attempt.idempotencyKey,
+      requestId,
+      correlationId,
     });
 
     if (!result.ok) {
-      const status = typeof result.error.status === "number" ? result.error.status : result.error.retryable ? 503 : 422;
-      return jsonError(status, result.error, {
-        idempotencyKey: result.idempotencyKey,
-        requestId: result.requestId,
-        correlationId: result.correlationId,
-        ...(result.intentId ? { intentId: result.intentId } : {}),
-        ...(result.lastKnownState ? { state: result.lastKnownState } : {}),
-        ...(result.failedTransition ? { failedTransition: result.failedTransition } : {}),
+      return jsonError(result.error.status, result.error, {
+        idempotencyKey: attempt.idempotencyKey,
+        requestId,
+        correlationId,
+        state: result.status.status,
       });
     }
 
-    runtime.logger.info("Executed daily claim via pay intent workflow", {
+    runtime.logger.info("Executed fingerprint daily claim", {
       accountId: scope.accountId,
-      intentId: result.intentId,
+      awardedPoints: result.awardedPoints,
+      claimDateKey: result.claimDateKey,
       requestId,
       correlationId,
-      transitionsApplied: result.transitionsApplied,
     });
 
     return NextResponse.json({
       ok: true,
       data: {
-        intentId: result.intentId,
-        state: result.state,
-        idempotencyKey: result.idempotencyKey,
-        requestId: result.requestId,
-        correlationId: result.correlationId,
-        transitionsApplied: result.transitionsApplied,
-        syncTargets: result.syncTargets,
+        ...(intentId ? { intentId } : {}),
+        state: "settled",
+        idempotencyKey: attempt.idempotencyKey,
+        requestId,
+        correlationId,
+        syncTargets: claimExecutionSyncTargets,
+        awardedPoints: result.awardedPoints,
+        scanTimestamp: result.scanTimestamp,
+        claimDateKey: result.claimDateKey,
       },
     });
   } catch (error) {
@@ -155,4 +144,44 @@ export async function POST(request: NextRequest) {
       ...(attempt.intentId ? { intentId: attempt.intentId } : {}),
     });
   }
+}
+
+export async function GET(request: NextRequest) {
+  const runtime = createPointsTasksRuntimeContext("points-tasks-web:daily-claim-status-api");
+  const requestId = request.headers.get("x-request-id")?.trim() || createClientGeneratedId("req");
+  const correlationId = request.headers.get("x-correlation-id")?.trim() || requestId;
+
+  if (!runtime.authDecision.allowed) {
+    return jsonError(403, {
+      code: "unauthorized",
+      message: "You do not have permission to read daily claim status.",
+      retryable: false,
+      source: "runtime",
+      requestId,
+      correlationId,
+    });
+  }
+
+  const scope = toScope({
+    accountId: request.nextUrl.searchParams.get("accountId"),
+    userId: request.nextUrl.searchParams.get("userId"),
+    workspaceId: request.nextUrl.searchParams.get("workspaceId"),
+  });
+
+  if (!scope) {
+    return jsonError(400, {
+      code: "invalid_request",
+      message: "Daily claim status requires accountId.",
+      retryable: false,
+      source: "runtime",
+      requestId,
+      correlationId,
+    });
+  }
+
+  const status = getFingerprintClaimStatus(scope);
+  return NextResponse.json({
+    ok: true,
+    data: status,
+  });
 }
